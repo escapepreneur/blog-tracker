@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Dashboard — Escapepreneur™</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+
+  
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --F:'Poppins',sans-serif;
+  --teal:#29abac;--teal-d:#209a9b;--teal-l:#e8f7f7;--teal-t:#0d6b6c;
+  --purple:#7c5cbf;--purple-l:#f2eefb;--purple-t:#4a3272;
+  --red:#e04444;--red-l:#fdf0f0;--red-t:#992222;
+  --amber:#e8960a;--amber-l:#fdf6e3;--amber-t:#7a4f00;
+  --green:#2a7d3f;--green-l:#edf7f0;
+  --blue:#1a6bbf;--blue-l:#e8f2fc;
+  --pink:#b5338a;--pink-l:#fceef8;
+  --bg:#fff;--bg2:#f8f8f7;--bg3:#f0f0ee;
+  --border:#e8e8e6;--border-d:#d0d0cc;
+  --text:#1a1a1a;--text2:#5a5a5a;--text3:#9a9a9a;
+  --sh-sm:0 1px 3px rgba(0,0,0,.06);
+  --sh:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --sh-lg:0 12px 32px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
+  --r:12px;--r2:8px;
+}
+body{font-family:var(--F);background:var(--bg3);color:var(--text);font-size:14px;min-height:100vh;line-height:1.5}
+.con-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:linear-gradient(135deg,#f0f9f9 0%,#f8f4ff 100%)}
+.con-card{background:var(--bg);border-radius:20px;padding:2.5rem;width:100%;max-width:440px;box-shadow:var(--sh-lg);border:1px solid var(--border)}
+.con-mark{width:36px;height:36px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;margin-bottom:.75rem}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:1.25rem;border-bottom:1px solid var(--border)}
+.sb-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;margin-bottom:.5rem}
+.sb-name{font-size:13px;font-weight:700;line-height:1.2}
+.sb-sub{font-size:10px;color:var(--text3)}
+.sb-sec{padding:.75rem .75rem .2rem;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
+.sb-nav{padding:.2rem .75rem .75rem}
+.nav-i{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r2);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--F);transition:all .15s}
+.nav-i:hover{background:var(--bg2);color:var(--text)}
+.nav-i.a-esc{background:var(--teal-l);color:var(--teal-d);font-weight:600}
+.nav-i.a-nms{background:var(--purple-l);color:var(--purple-t);font-weight:600}
+.sb-div{height:1px;background:var(--border);margin:.5rem .75rem}
+.blog-sw{padding:.5rem .75rem}
+.bsw-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r2);font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:none;width:100%;margin-bottom:5px;font-family:var(--F);color:var(--text2);transition:all .15s}
+.bsw-btn:hover{border-color:var(--teal);color:var(--teal-d)}
+.bsw-btn.a-esc{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
+.bsw-btn.a-nms{border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)}
+.bsw-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-esc{background:var(--teal)}.dot-nms{background:var(--purple)}
+.sb-btm{margin-top:auto;padding:.75rem;border-top:1px solid var(--border)}
+.sb-btm button{width:100%;padding:7px;font-size:12px;border-radius:var(--r2);border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-family:var(--F);transition:all .15s}
+.sb-btm button:hover{background:var(--bg2);color:var(--text)}
+.main{flex:1;min-width:0;overflow-x:hidden}
+.ph{padding:1.5rem 1.75rem 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pt{font-size:20px;font-weight:700}
+.ps{font-size:12px;color:var(--text3);margin-top:2px}
+.pb{padding:1.25rem 1.75rem 2rem}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh-sm)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.metric{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:1rem;box-shadow:var(--sh-sm);position:relative;overflow:hidden;cursor:pointer;transition:all .15s}
+.metric:hover{box-shadow:var(--sh);transform:translateY(-1px)}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.m-live::before{background:var(--green)}.m-sched::before{background:var(--blue)}
+.m-review::before{background:var(--pink)}.m-drafted::before{background:var(--purple)}
+.m-links::before{background:var(--red)}.m-idx::before{background:var(--amber)}
+.mn{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.ml{font-size:11px;color:var(--text2);font-weight:500}
+.fl{font-size:11px;color:var(--text2);font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+input,select,textarea{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:var(--r2);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--F);outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(41,171,172,.1)}
+input[type=checkbox]{width:auto;padding:0;accent-color:var(--teal)}
+input[type=file]{width:100%}
+.row{display:flex;gap:10px;margin-bottom:10px}
+.row>.fd{flex:1;margin-bottom:0}
+.row>.w2{flex:2}.row>.w3{flex:3}
+.fd{flex:1}
+.btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--r2);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--F);font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--bg2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-p:hover:not(:disabled){background:var(--teal-d)}
+.btn-pp{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-pp:hover:not(:disabled){background:#6a4daa}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-xs{padding:3px 8px;font-size:10px}
+.btn-danger{border-color:var(--red);color:var(--red);background:none}
+.btn-danger:hover{background:var(--red-l)}
+.btn-ghost{background:none;border:1.5px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{background:var(--bg2);color:var(--text)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.b-live{background:#e8f5ee;color:#1a6b37;border:1px solid #b8dfc6}
+.b-scheduled{background:#e8f0fc;color:#1a4d8f;border:1px solid #b8ccf0}
+.b-drafted{background:var(--purple-l);color:var(--purple-t);border:1px solid #d8c8f0}
+.b-review{background:var(--pink-l);color:var(--pink);border:1px solid #f0c8e8}
+.b-idea{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.idx-dot{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+.idx-no{background:#fff0f0;color:#992222;border:1px solid #f0c8c8}
+.idx-req{background:#fff0e6;color:#d4680a;border:1px solid #f0d0a0}
+.idx-yes{background:#e8f5ee;color:#1a6b37;border:1px solid #b8dfc6}
+.idx-dot-circle{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.idc-no{background:#e04444}.idc-req{background:#d4680a}.idc-yes{background:#2a7d3f}
+.post-row{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:11px 14px;margin-bottom:6px;cursor:pointer;transition:all .15s;box-shadow:var(--sh-sm)}
+.post-row:hover{border-color:var(--teal);box-shadow:var(--sh);transform:translateY(-1px)}
+.kw-primary{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+.post-title-sub{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.4}
+.prk{font-size:11px;color:var(--text3);margin-top:2px}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+.pill-g{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.flag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.f-red{background:var(--red-l);color:var(--red-t);border:1px solid #f0c8c8}
+.f-amber{background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0}
+.f-green{background:var(--green-l);color:var(--green);border:1px solid #b8dfc6}
+.step-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid}
+.score-h{background:#fff0f0;color:#992222;border-color:#f0c8c8}
+.score-m{background:var(--amber-l);color:var(--amber-t);border-color:#f0d8a0}
+.score-l{background:var(--green-l);color:var(--green);border-color:#b8dfc6}
+.score-n{background:var(--bg2);color:var(--text3);border-color:var(--border)}
+.filters{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.fchip{padding:5px 12px;font-size:11px;font-weight:500;border:1.5px solid var(--border);border-radius:20px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:var(--F);transition:all .15s}
+.fchip:hover{border-color:var(--teal);color:var(--teal-d)}
+.fchip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.srch{padding:6px 12px;font-size:12px;border:1.5px solid var(--border);border-radius:20px;font-family:var(--F);outline:none;min-width:180px;flex:1;max-width:240px}
+.srch:focus{border-color:var(--teal)}
+/* SCHEDULE WARNING */
+.sched-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:30px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid;transition:all .15s;font-family:var(--F)}
+.sched-red{background:var(--red-l);color:var(--red-t);border-color:#f0c8c8}
+.sched-red:hover{background:#f9e0e0}
+.sched-amber{background:var(--amber-l);color:var(--amber-t);border-color:#f0d8a0}
+.sched-amber:hover{background:#f5ecd0}
+.sched-green{background:var(--green-l);color:var(--green);border-color:#b8dfc6}
+.sched-green:hover{background:#d8f0e0}
+.sched-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* SUPP KW ROWS */
+.kw-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.kw-row input{flex:1}
+.kw-row .kw-score{width:70px;flex-shrink:0}
+.kw-row .kw-vol{width:80px;flex-shrink:0}
+.kw-row-add{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;color:var(--teal-d);cursor:pointer;font-weight:600;background:none;border:none;font-family:var(--F)}
+.kw-row-add:hover{color:var(--teal-t)}
+/* KEYWORD DUMP */
+.kw-dump-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.kw-cluster{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:8px}
+.kw-cluster-title{font-size:12px;font-weight:700;color:var(--teal-d);margin-bottom:8px}
+.kw-cluster-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bg2);font-size:12px}
+.kw-cluster-item:last-child{border-bottom:none}
+/* RANK BOX */
+.kw-rank-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-top:10px}
+.kw-rank-item{padding:8px 0;border-bottom:1px solid var(--border)}
+.kw-rank-item:last-child{border-bottom:none}
+.kw-rank-label{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-bottom:4px}
+.krl-h2{background:#e8f0fc;color:#1a4d8f}
+.krl-intro{background:var(--green-l);color:var(--green)}
+.krl-natural{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+/* NEXT UP */
+.next-up-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm)}
+.nui-num{width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* CHECKLIST */
+.cl-section{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px;overflow:hidden}
+.cl-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--F);transition:background .15s}
+.cl-hdr:hover{background:var(--bg2)}
+.cl-num{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--text);transition:background .3s}
+.cl-num.done{background:var(--teal)}
+.cl-title{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.cl-prog{font-size:10px;color:var(--text3)}
+.cl-body{border-top:1px solid var(--border)}
+.cl-note{background:var(--teal-l);border-bottom:1px solid #c5e6e6;padding:8px 14px;font-size:11px;color:var(--teal-t);line-height:1.55}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--bg2);transition:background .15s}
+.cl-item:hover{background:var(--bg2)}
+.cl-item:last-child{border-bottom:none}
+.cl-item.ck{background:#f5fdf7}
+.cl-cb{width:16px;height:16px;border-radius:3px;flex-shrink:0;margin-top:2px;border:2px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;transition:all .2s}
+.cl-item.ck .cl-cb{background:var(--teal);border-color:var(--teal)}
+.cl-text{font-size:12px;line-height:1.55;color:var(--text);transition:color .2s}
+.cl-item.ck .cl-text{color:var(--teal-d);text-decoration:line-through}
+/* SOCIAL */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:6px}
+.ci{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer;font-size:12px;font-family:var(--F);font-weight:500;user-select:none;transition:all .15s}
+.ci:hover{border-color:var(--teal)}
+.ci input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--teal);flex-shrink:0}
+.ci.done{background:var(--green-l);border-color:#b8dfc6;color:var(--green)}
+.cgl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;margin-top:14px}
+.cgl:first-child{margin-top:0}
+/* GSC */
+.gsc-t{width:100%;border-collapse:collapse;font-size:12px}
+.gsc-t th{text-align:left;padding:7px 10px;background:var(--bg2);font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.gsc-t td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.gsc-t tr:last-child td{border-bottom:none}
+.gsc-t tr:hover td{background:var(--bg2)}
+.pos-up{color:var(--green);font-weight:700}
+.pos-dn{color:var(--red);font-weight:700}
+.lr{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.lr:last-child{border-bottom:none}
+.sug-box{border:1.5px solid var(--teal);border-radius:var(--r2);background:var(--teal-l);padding:12px 14px;margin-top:10px}
+.sug-item{padding:9px 0;border-bottom:1px solid rgba(41,171,172,.15)}
+.sug-item:last-child{border-bottom:none;padding-bottom:0}
+.sug-rsn{font-size:11px;color:var(--teal-t);margin-top:2px;line-height:1.5}
+.spinner{width:13px;height:13px;border:2px solid rgba(41,171,172,.2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(2px)}
+.mbg.on{display:flex}
+.modal{background:var(--bg);border-radius:16px;padding:1.75rem;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg)}
+.mhdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;gap:12px}
+.mtitle{font-size:16px;font-weight:700;line-height:1.3}
+.xbtn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:16px;color:var(--text2);cursor:pointer;padding:4px 8px;line-height:1;transition:all .15s;font-family:var(--F)}
+.xbtn:hover{background:var(--bg3)}
+.mtabs{display:flex;gap:3px;background:var(--bg2);border-radius:var(--r2);padding:3px;margin-bottom:1.25rem;border:1px solid var(--border)}
+.mtab{flex:1;padding:6px;font-size:11px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);border-radius:6px;transition:all .15s;font-family:var(--F)}
+.mtab:hover{color:var(--text)}
+.mtab.on{background:var(--bg);color:var(--teal-d);font-weight:600;box-shadow:var(--sh-sm)}
+.sh{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.confirm-row{display:none;margin-top:8px;align-items:center;gap:8px;flex-wrap:wrap}
+.confirm-row.on{display:flex}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3);font-size:13px}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--r2);font-size:13px;font-weight:500;z-index:1000;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;box-shadow:var(--sh-lg)}
+.toast.on{opacity:1;transform:translateY(0)}
+.prog-bar-wrap{height:4px;background:var(--border);border-radius:99;overflow:hidden;margin-top:6px}
+.prog-bar-fill{height:100%;border-radius:99;background:linear-gradient(90deg,var(--teal),var(--teal-d));transition:width .4s}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border-d);border-radius:3px}
+@media(max-width:768px){.sidebar{display:none}.row{flex-direction:column}.g2,.g3,.g6{grid-template-columns:1fr 1fr}.pb{padding:1rem}}
+/* CELEBRATION */
+.celebrate-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+.celebrate-overlay.on{opacity:1}
+.celebrate-card{background:var(--bg);border-radius:20px;padding:2rem 2.5rem;text-align:center;box-shadow:var(--sh-lg);border:2px solid var(--teal);max-width:340px;transform:scale(.8);transition:transform .3s}
+.celebrate-overlay.on .celebrate-card{transform:scale(1)}
+.celebrate-title{font-size:28px;margin-bottom:.5rem}
+.celebrate-kw{font-size:16px;font-weight:700;color:var(--teal-d);margin-bottom:.5rem}
+.celebrate-sub{font-size:13px;color:var(--text2)}
+.confetti-wrap{position:fixed;inset:0;z-index:1999;pointer-events:none;overflow:hidden}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;opacity:0;animation:confetti-fall 2.5s ease-in forwards}
+@keyframes confetti-fall{0%{opacity:1;transform:translateY(-20px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+.milestone-toast{position:fixed;bottom:5rem;right:1.5rem;background:var(--teal);color:#fff;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:600;z-index:1000;opacity:0;transform:translateY(12px);transition:all .3s;pointer-events:none;box-shadow:var(--sh-lg);max-width:280px;text-align:center}
+.milestone-toast.on{opacity:1;transform:translateY(0)}
+/* NEEDS WORK */
+.stuck-label{font-size:10px;font-weight:600;color:var(--amber-t);background:var(--amber-l);border:1px solid #f0d8a0;border-radius:20px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
+.stuck-label.s-late{color:var(--red-t);background:var(--red-l);border-color:#f0c8c8}
+</style>
+</head>
+<body>
+<!-- CONNECT -->
+<div id="con-screen" class="con-wrap" style="display:none">
+  <div class="con-card">
+    <div class="con-mark">E</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:.4rem">Content Dashboard</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:.25rem;font-weight:600">Escapepreneur™</p>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1.75rem;line-height:1.6">Enter your Supabase project URL and anon key to connect.</p>
+    <div style="margin-bottom:10px"><label class="fl">Project URL</label><input type="url" id="sb-url" placeholder="https://xxxx.supabase.co"></div>
+    <div style="margin-bottom:14px"><label class="fl">Anon key</label><input type="password" id="sb-key" placeholder="eyJ..."></div>
+    <button class="btn btn-p" onclick="connectSB()" style="width:100%;justify-content:center">Connect</button>
+    <div id="con-err" style="font-size:12px;color:var(--red);margin-top:8px;min-height:18px"></div>
+    <p style="font-size:11px;color:var(--text3);margin-top:1rem;text-align:center">Supabase → Project Settings → API</p>
+  </div>
+</div>
+<!-- APP -->
+<div id="main-app" class="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-mark">E</div>
+      <div class="sb-name">Content Dashboard</div>
+      <div class="sb-sub">Escapepreneur™</div>
+    </div>
+    <div class="blog-sw">
+      <button class="bsw-btn a-esc" id="btn-esc" onclick="switchBlog('esc')"><span class="bsw-dot dot-esc"></span>ESC Hub</button>
+      <button class="bsw-btn" id="btn-nms" onclick="switchBlog('nms')"><span class="bsw-dot dot-nms"></span>No More Somedays</button>
+    </div>
+    <div class="sb-div"></div>
+    <div class="sb-sec">Navigation</div>
+    <nav class="sb-nav">
+      <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
+      <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
+      <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
+      <button class="nav-i" onclick="switchTab('ideas')"><span style="width:18px;text-align:center">✦</span>Ideas</button>
+      <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
+      <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">◎</span>Insights</button>
+      <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
+    </nav>
+    <div class="sb-btm"><button onclick="showSettings()">⚙ Settings</button></div>
+  </aside>
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="pane-dashboard" class="pane on">
+      <div class="ph">
+        <div><div class="pt" id="dash-title">Dashboard</div><div class="ps" id="dash-sub"></div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-p btn-sm" onclick="openNewPost()" id="dash-add-btn">+ Log keyword</button>
+          <div id="complete-pill-wrap"></div>
+          <div id="sched-pill-wrap"></div>
+        </div>
+      </div>
+      <div class="pb">
+        <div class="g6" id="dash-metrics"></div>
+        <div style="margin-bottom:1.25rem">
+          <div class="sh">Next up — top 3 by priority score</div>
+          <div id="nextup-list"></div>
+        </div>
+        <div class="g2">
+          <div><div class="sh">Needs links — click to edit</div><div id="dash-links"></div></div>
+          <div><div class="sh">Ranking movement</div><div id="dash-rankings"></div></div>
+        </div>
+        <div class="g2">
+          <div><div class="sh">Social incomplete (live posts)</div><div id="dash-social"></div></div>
+          <div><div class="sh">Recently published</div><div id="dash-recent"></div></div>
+        </div>
+        <div><div class="sh">Indexing status</div><div class="g3" id="dash-indexing"></div></div>
+      </div>
+    </div>
+    <!-- POSTS -->
+    <div id="pane-posts" class="pane">
+      <div class="ph">
+        <div><div class="pt">Posts</div><div class="ps" id="posts-sub"></div></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="bulk-btn" class="btn btn-sm" onclick="toggleBulkMode()">Bulk select</button>
+          <button id="add-post-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+        </div>
+      </div>
+      <div class="pb">
+        <div class="filters">
+          <button class="fchip on" onclick="setFilter('all',this)">All</button>
+          <button class="fchip" onclick="setFilter('live',this)">Live</button>
+          <button class="fchip" onclick="setFilter('scheduled',this)">Scheduled</button>
+          <button class="fchip" onclick="setFilter('review',this)">Review</button>
+          <button class="fchip" onclick="setFilter('drafted',this)">Drafted</button>
+          <button class="fchip" onclick="setFilter('idea',this)">Idea</button>
+          <button class="fchip" onclick="setFilter('needs-work',this)">Needs work</button>
+          <button class="fchip" onclick="setFilter('not-indexed',this)">Not indexed</button>
+          <input type="text" id="post-search" class="srch" placeholder="Search keyword or title..." oninput="renderPosts()">
+        </div>
+        <div id="bulk-actions" style="display:none;align-items:center;gap:8px;background:var(--teal-l);border:1px solid var(--teal);border-radius:var(--r2);padding:8px 12px;margin-bottom:10px;flex-wrap:wrap">
+          <span id="bulk-count" style="font-size:12px;font-weight:600;color:var(--teal-d)">0 selected</span>
+          <span style="font-size:12px;color:var(--text2)">Change status to:</span>
+          <select id="bulk-status-sel" style="width:auto;padding:5px 10px;font-size:12px">
+            <option value="">— select —</option>
+            <option value="idea">Idea</option>
+            <option value="drafted">Drafted</option>
+            <option value="review">Ready for review</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="live">Live</option>
+          </select>
+          <button class="btn btn-p btn-sm" onclick="applyBulkStatus()">Apply</button>
+        </div>
+        <div id="posts-list"></div>
+      </div>
+    </div>
+    <!-- LINKS -->
+    <div id="pane-links" class="pane">
+      <div class="ph"><div><div class="pt">Link tracker</div><div class="ps">Target: 3 outbound links per live post</div></div><div id="links-pill-wrap"></div></div>
+      <div class="pb">
+        <div class="g2">
+          <div><div class="sh">Posts needing links</div><div id="links-needs"></div></div>
+          <div>
+            <div class="sh">Link map</div>
+            <select id="link-map-sel" onchange="renderLinkMap()" style="margin-bottom:10px"><option value="">Select a post…</option></select>
+            <div id="link-map-detail"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- IDEAS -->
+    <div id="pane-ideas" class="pane">
+      <div class="ph">
+        <div><div class="pt">Ideas</div><div class="ps">Ranked by priority score — highest first</div></div>
+        <button id="add-idea-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+      </div>
+      <div class="pb"><div id="ideas-list"></div></div>
+    </div>
+    <!-- CALENDAR -->
+    <div id="pane-calendar" class="pane">
+      <div class="ph"><div><div class="pt">Calendar</div><div class="ps">Scheduled and published posts by date</div></div></div>
+      <div class="pb">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <select id="cal-month" onchange="renderCalendar()" style="width:auto;padding:6px 10px;font-size:13px">
+              <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+              <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+              <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+              <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+            </select>
+            <select id="cal-year" onchange="renderCalendar()" style="width:auto;padding:6px 10px;font-size:13px">
+              <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+            </select>
+            <div style="font-size:11px;color:var(--text3)"><span style="display:inline-block;width:10px;height:10px;background:var(--green-l);border-radius:2px;margin-right:3px"></span>Live
+            <span style="display:inline-block;width:10px;height:10px;background:var(--blue-l);border-radius:2px;margin:0 3px 0 8px"></span>Scheduled</div>
+          </div>
+          <div id="cal-grid"></div>
+        </div>
+      </div>
+    </div>
+    <!-- INSIGHTS -->
+    <div id="pane-insights" class="pane">
+      <div class="ph"><div><div class="pt">Insights</div><div class="ps">Content gaps, quick wins, monthly snapshot</div></div></div>
+      <div class="pb">
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Content gap finder</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Claude analyses your existing posts and finds topics you haven't covered yet</div></div>
+            <button class="btn btn-p btn-sm" id="gap-btn" onclick="findContentGaps()">Find content gaps</button>
+          </div>
+          <div id="gap-result"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Monthly snapshot</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Summary of posts published, links added, indexing status</div></div>
+            <button class="btn btn-p btn-sm" id="snapshot-btn" onclick="generateSnapshot()">Generate snapshot</button>
+          </div>
+          <div id="snapshot-output" style="display:none">
+            <pre id="snapshot-text" style="background:var(--bg2);border-radius:var(--r2);padding:12px;font-size:11px;line-height:1.8;white-space:pre-wrap;font-family:monospace;margin-bottom:8px"></pre>
+            <button class="btn btn-sm" onclick="copySnapshot()">Copy to clipboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- KEYWORDS -->
+    <div id="pane-keywords" class="pane">
+      <div class="ph"><div><div class="pt">Keyword dump</div><div class="ps">Paste keywords you've found — rank and group them with AI</div></div></div>
+      <div class="pb">
+        <div class="card">
+          <div class="sh">Paste keywords — one per line, optionally with volume and KD</div>
+          <textarea id="kw-dump-input" rows="8" style="resize:vertical;margin-bottom:10px" placeholder="b2b sales funnels&#10;sales funnel for coaches 590 20&#10;webinar funnel (390/26)&#10;evergreen funnel&#10;types of funnels 1900 35"></textarea>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-p" id="kw-dump-btn" onclick="rankAndGroupKeywords()">✦ Rank and group</button>
+            <span style="font-size:11px;color:var(--text3)">Claude groups by topic cluster and ranks each by writing priority</span>
+          </div>
+        </div>
+        <div id="kw-dump-result"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="milestone-toast" id="milestone-toast"></div>
+<div class="confetti-wrap" id="confetti-wrap"></div>
+<div class="celebrate-overlay" id="celebrate-overlay">
+  <div class="celebrate-card">
+    <div class="celebrate-title">🎉</div>
+    <div class="celebrate-kw" id="celebrate-kw"></div>
+    <div class="celebrate-sub" id="celebrate-sub">Post complete!</div>
+  </div>
+</div>
+<!-- NEW POST MODAL -->
+<div class="mbg" id="new-post-modal" onclick="mbgClick(event,'new-post-modal')">
+<div class="modal" style="max-width:600px">
+  <div class="mhdr"><div class="mtitle" id="np-title">Log keyword</div><button class="xbtn" onclick="closeModal('new-post-modal')">✕</button></div>
+  <div style="background:var(--teal-l);border:1px solid #c5e6e6;border-radius:var(--r2);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--teal-t);line-height:1.6">
+    Fill in what you know. A priority score is calculated automatically. The brief prompt is built from this data — click "Save to Ideas" to queue it, or "Get brief now" to go straight to Claude.
+  </div>
+  <div id="dup-warning" style="display:none;background:var(--amber-l);border:1px solid #f0d8a0;border-radius:var(--r2);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--amber-t);line-height:1.6"></div>
+  <div class="row">
+    <div class="fd w2"><label class="fl">Primary keyword <span style="color:var(--red)">*</span></label><input type="text" id="np-kw" placeholder="e.g. crm for coaches"></div>
+    <div class="fd"><label class="fl">KS score</label><input type="number" id="np-ks" min="0" max="100" placeholder="e.g. 28"></div>
+    <div class="fd"><label class="fl">Monthly volume</label><input type="number" id="np-vol" placeholder="e.g. 880"></div>
+  </div>
+  <div style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <label class="fl" style="margin-bottom:0">Supplementary keywords</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:10px;color:var(--text3)">keyword · KS · volume</span>
+        <button class="btn btn-xs btn-ghost" id="rank-btn" onclick="rankKeywords()">✦ Rank</button>
+      </div>
+    </div>
+    <div id="np-supp-rows"></div>
+    <button class="kw-row-add" onclick="addSuppRow()">+ Add keyword</button>
+    <div id="kw-rank-result" style="display:none;margin-top:8px"></div>
+  </div>
+  <div class="row">
+    <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="np-serp" placeholder="Google Drive link to SERP export"></div>
+  </div>
+  <div style="margin-bottom:10px"><label class="fl">Unique take / Karen's angle <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— leave blank and Claude will suggest</span></label><textarea id="np-take" rows="2" style="resize:none" placeholder="e.g. Karen's experience testing every CRM before building ESC Hub"></textarea></div>
+  <div style="margin-bottom:16px"><label class="fl">Notes for Sienna <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— context, angle, anything to flag</span></label><textarea id="np-notes" rows="2" style="resize:none" placeholder="e.g. This is a pillar post — make sure it links to the other funnel posts. Target Kajabi audience."></textarea></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-p" id="np-save-btn" onclick="saveToIdeas()" style="flex:2;justify-content:center">Save to Ideas</button>
+    <button class="btn btn-ghost" id="np-brief-btn" onclick="saveAndGetBrief()" style="flex:1;justify-content:center">Get brief now →</button>
+  </div>
+  <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px">"Save to Ideas" queues for later. "Get brief now" saves and opens the Blogging project.</div>
+</div>
+</div>
+<!-- POST DETAIL MODAL -->
+<div class="mbg" id="post-modal" onclick="mbgClick(event,'post-modal')">
+<div class="modal" style="max-width:660px">
+  <div class="mhdr">
+    <div>
+      <div class="mtitle" id="pm-title">Post</div>
+      <div id="pm-kw-display" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+    </div>
+    <button class="xbtn" onclick="closeModal('post-modal')">✕</button>
+  </div>
+  <div class="mtabs">
+    <button class="mtab on" id="ptab-details" onclick="switchPTab('details')">Details</button>
+    <button class="mtab" id="ptab-progress" onclick="switchPTab('progress')">Progress</button>
+    <button class="mtab" id="ptab-social" onclick="switchPTab('social')">Social</button>
+    <button class="mtab" id="ptab-gsc" onclick="switchPTab('gsc')">Rankings</button>
+    <button class="mtab" id="ptab-links" onclick="switchPTab('links')">Links</button>
+  </div>
+  <!-- DETAILS -->
+  <div id="pm-details" class="pane on">
+    <div class="row">
+      <div class="fd w3"><label class="fl">Title</label><input type="text" id="pm-title-i" placeholder="Added after brief is generated"></div>
+      <div class="fd"><label class="fl">Status</label>
+        <select id="pm-status">
+          <option value="idea">Idea</option><option value="drafted">Drafted</option>
+          <option value="review">Ready for review</option><option value="scheduled">Scheduled</option>
+          <option value="live">Live</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="fd w3"><label class="fl">URL</label><input type="url" id="pm-url"></div>
+      <div class="fd"><label class="fl">Scheduled date</label><input type="date" id="pm-sched"></div>
+    </div>
+    <div class="row">
+      <div class="fd"><label class="fl">Published date</label><input type="date" id="pm-pub"></div>
+      <div class="fd"><label class="fl">Indexed</label>
+        <select id="pm-indexed">
+          <option value="no">Not indexed</option><option value="requested">Index requested</option><option value="yes">Indexed</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="fd w2"><label class="fl">Primary keyword</label><input type="text" id="pm-kw"></div>
+      <div class="fd"><label class="fl">KS score</label><input type="number" id="pm-ks"></div>
+      <div class="fd"><label class="fl">Monthly volume</label><input type="number" id="pm-vol"></div>
+    </div>
+    <div style="margin-bottom:10px"><label class="fl">Supplementary keywords</label><textarea id="pm-supp" rows="2" style="resize:none" placeholder="keyword (vol/KD), keyword (vol/KD)..."></textarea></div>
+    <div class="row">
+      <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="pm-serp-link"></div>
+      <div class="fd w2"><label class="fl">Google Doc link</label><input type="url" id="pm-doc-link" placeholder="Link to blog post Google Doc"></div>
+    </div>
+    <div style="margin-bottom:10px"><label class="fl">Unique take / Karen's angle</label><textarea id="pm-take" rows="2" style="resize:none"></textarea></div>
+    <div class="row">
+      <div class="fd"><label class="fl">Word count</label><input type="number" id="pm-wordcount" placeholder="e.g. 1850"></div>
+      <div class="fd w2"><label class="fl">Pinterest board pinned to</label><input type="text" id="pm-pinterest-board" placeholder="e.g. Business Tools for Coaches"></div>
+    </div>
+    <div class="row">
+      <div class="fd"><label class="fl">Email mentioned</label>
+        <select id="pm-email-mentioned">
+          <option value="">Not mentioned</option>
+          <option value="yes">Yes — mentioned in email</option>
+        </select>
+      </div>
+      <div class="fd w2"><label class="fl">Email mention date</label><input type="date" id="pm-email-date"></div>
+    </div>
+    <div style="margin-bottom:14px"><label class="fl">Publishing notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— reminders, update flags, review notes</span></label><textarea id="pm-notes" rows="2" style="resize:none" placeholder="e.g. Update pricing section when ESC Hub plans change. Review in 6 months."></textarea></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button id="pm-save-btn" class="btn btn-p" onclick="savePost()">Save changes</button>
+      <button class="btn btn-ghost btn-sm" onclick="reCopyBrief()">Copy brief prompt</button>
+      <button class="btn btn-ghost btn-sm" id="review-post-btn" onclick="reviewLivePost(curPost)" style="display:none">Review live post</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDel()">Delete</button>
+    </div>
+    <div class="confirm-row" id="pm-del-row">
+      <span style="font-size:12px;color:var(--red-t)">Delete this post and all its data?</span>
+      <button class="btn btn-danger btn-sm" onclick="deletePost()">Yes, delete</button>
+      <button class="btn btn-sm" onclick="document.getElementById('pm-del-row').classList.remove('on')">Cancel</button>
+    </div>
+  </div>
+  <!-- PROGRESS -->
+  <div id="pm-progress" class="pane">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div><div style="font-size:13px;font-weight:600" id="prog-summary">0 of 0 steps complete</div><div class="prog-bar-wrap" style="width:200px"><div class="prog-bar-fill" id="prog-fill" style="width:0%"></div></div></div>
+      <button class="btn btn-xs btn-ghost" onclick="resetChecklist()">Reset</button>
+    </div>
+    <div id="cl-sections"></div>
+  </div>
+  <!-- SOCIAL -->
+  <div id="pm-social" class="pane">
+    <div class="cgl">Pinterest</div>
+    <div class="cg">
+      <label class="ci" id="ci-pin-img"><input type="checkbox" id="ch-pin-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-pin-shared"><input type="checkbox" id="ch-pin-shared" onchange="saveSocial()"> Pinned</label>
+      <label class="ci" id="ci-pin-blog"><input type="checkbox" id="ch-pin-blog" onchange="saveSocial()"> In blog post</label>
+    </div>
+    <div class="cgl">Facebook</div>
+    <div class="cg">
+      <label class="ci" id="ci-fb-img"><input type="checkbox" id="ch-fb-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-fb-shared"><input type="checkbox" id="ch-fb-shared" onchange="saveSocial()"> Shared</label>
+    </div>
+    <div class="cgl">Instagram</div>
+    <div class="cg">
+      <label class="ci" id="ci-ig-img"><input type="checkbox" id="ch-ig-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-ig-shared"><input type="checkbox" id="ch-ig-shared" onchange="saveSocial()"> Shared</label>
+    </div>
+  </div>
+  <!-- RANKINGS -->
+  <div id="pm-gsc" class="pane">
+    <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:12px;font-size:11px;color:#1a4d8f;line-height:1.7">
+      <strong>How to get GSC data:</strong> Go to <a href="https://search.google.com/search-console" target="_blank" style="color:#1a6bbf;font-weight:600">search.google.com/search-console</a> → Select your property → Search results → <strong>Pages tab</strong> → set date range (last 28 days) → <strong>Export → Download CSV</strong> → Settings → Import GSC data → upload the file.
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="sh" style="margin:0">Position history</div>
+      <button class="btn btn-p btn-sm" onclick="showAddGsc()">+ Add entry</button>
+    </div>
+    <div id="gsc-form" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:12px;margin-bottom:12px;border:1px solid var(--border)">
+      <div class="row">
+        <div class="fd"><label class="fl">Date</label><input type="date" id="gsc-date"></div>
+        <div class="fd"><label class="fl">Position</label><input type="number" id="gsc-pos" step="0.1" placeholder="14.3"></div>
+        <div class="fd"><label class="fl">Impressions</label><input type="number" id="gsc-impr"></div>
+        <div class="fd"><label class="fl">Clicks</label><input type="number" id="gsc-clicks"></div>
+      </div>
+      <div style="margin-bottom:8px"><label class="fl">Notes</label><input type="text" id="gsc-notes"></div>
+      <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveGsc()">Save</button><button class="btn btn-sm" onclick="hideAddGsc()">Cancel</button></div>
+    </div>
+    <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>Change</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
+  </div>
+  <!-- LINKS -->
+  <div id="pm-links" class="pane">
+    <div class="sh">Links out — <span id="lc-badge" style="text-transform:none;letter-spacing:0;font-weight:400">0/3</span></div>
+    <div id="pm-link-list" style="margin-bottom:1rem"></div>
+    <div style="margin-bottom:8px"><label class="fl">Add a link to:</label><select id="pm-link-sel"><option value="">— select —</option></select></div>
+    <button id="pm-add-link-btn" class="btn btn-p btn-sm" onclick="addLink()" style="margin-bottom:1.25rem">Add link</button>
+    <div style="border-top:1px solid var(--border);padding-top:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="sh" style="margin:0">AI link suggestions</div>
+        <button id="sug-btn" class="btn btn-p btn-sm" onclick="getSuggestions()">Get suggestions</button>
+      </div>
+      <div id="sug-area"></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.75rem">
+      <div class="sh">Posts linking to this post</div>
+      <div id="pm-inbound"></div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- SETTINGS MODAL -->
+<div class="mbg" id="settings-modal" onclick="mbgClick(event,'settings-modal')">
+<div class="modal" style="max-width:520px">
+  <div class="mhdr"><div class="mtitle">Settings</div><button class="xbtn" onclick="closeModal('settings-modal')">✕</button></div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Supabase connection</div>
+    <div style="margin-bottom:8px"><label class="fl">Project URL</label><input type="url" id="set-sb-url"></div>
+    <div style="margin-bottom:10px"><label class="fl">Anon key</label><input type="password" id="set-sb-key"></div>
+    <button class="btn btn-p btn-sm" onclick="updateSB()">Update connection</button>
+    <div id="set-sb-msg" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+  </div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Claude API key</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">Required for AI features. Stored in your browser only.</div>
+    <div style="display:flex;gap:8px"><input type="password" id="set-api-key" placeholder="sk-ant-..." style="flex:1"><button class="btn btn-p btn-sm" onclick="saveApiKey()">Save</button></div>
+    <div id="set-api-msg" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+  </div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Publishing schedule</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Used to calculate the schedule warning on the dashboard.</div>
+    <div class="row" style="margin-bottom:0">
+      <div class="fd"><label class="fl">Cadence</label>
+        <select id="set-cadence">
+          <option value="1">Daily (7 posts/week)</option>
+          <option value="2">Every 2 days</option>
+          <option value="3">Every 3 days</option>
+          <option value="7">Weekly</option>
+        </select>
+      </div>
+      <div class="fd" style="display:flex;align-items:flex-end"><button class="btn btn-p btn-sm" onclick="saveCadence()">Save</button></div>
+    </div>
+    <div id="set-cadence-msg" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+  </div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Import GSC data</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.6">GSC → Search results → Pages → Export CSV. Upload to log positions for all matching posts.</div>
+    <div style="margin-bottom:8px"><label class="fl">Import date</label><input type="date" id="gsc-import-date"></div>
+    <div style="border:2px dashed var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer" onclick="document.getElementById('gsc-file').click()" id="gsc-drop-zone">
+      <div style="font-size:13px;color:var(--text2)" id="gsc-file-label">Click to upload GSC CSV</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Matches URLs to your posts automatically</div>
+    </div>
+    <input type="file" id="gsc-file" accept=".csv" style="display:none" onchange="handleGscFile(event)">
+    <div id="gsc-import-result" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+  </div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Additional link destinations</div>
+    <div id="dest-list" style="margin-bottom:10px"></div>
+    <div class="row">
+      <div class="fd"><label class="fl">Blog</label><select id="dest-blog"><option value="esc">ESC Hub</option><option value="nms">No More Somedays</option></select></div>
+      <div class="fd"><label class="fl">Label</label><input type="text" id="dest-label"></div>
+      <div class="fd w2"><label class="fl">URL</label><input type="url" id="dest-url"></div>
+      <div class="fd" style="display:flex;align-items:flex-end"><button class="btn btn-p btn-sm" onclick="addDest()">Add</button></div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--border);padding-top:1.25rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.5rem;color:var(--red-t)">Reset blog data</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+      <button class="btn btn-danger btn-xs" onclick="showReset('esc')">Reset ESC Hub</button>
+      <button class="btn btn-danger btn-xs" onclick="showReset('nms')">Reset NMS</button>
+    </div>
+    <div class="confirm-row" id="rst-esc"><span style="font-size:12px;color:var(--red-t)">Delete all ESC Hub data?</span><button class="btn btn-danger btn-xs" onclick="doReset('esc')">Yes</button><button class="btn btn-xs" onclick="hideReset('esc')">Cancel</button></div>
+    <div class="confirm-row" id="rst-nms"><span style="font-size:12px;color:var(--red-t)">Delete all NMS data?</span><button class="btn btn-danger btn-xs" onclick="doReset('nms')">Yes</button><button class="btn btn-xs" onclick="hideReset('nms')">Cancel</button></div>
+  </div>
+</div>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
