@@ -231,15 +231,20 @@ input[type=file]{width:100%}
 .drag-handle{font-size:16px;color:var(--text3);cursor:grab;user-select:none;padding:0 4px;flex-shrink:0}
 .drag-handle:active{cursor:grabbing}
 .research-num{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text2);flex-shrink:0}
-.dash-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;border:none;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;transition:all .15s;box-shadow:var(--sh-sm)}
+.dash-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:30px;border:none;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;transition:all .15s;box-shadow:var(--sh-sm);min-width:130px;justify-content:center}
 .dash-pill:hover{transform:translateY(-1px);box-shadow:var(--sh)}
-.dp-num{font-size:18px;font-weight:700;line-height:1}
-.dp-lbl{font-size:11px;font-weight:500;opacity:.85}
-.dash-pill-green{background:var(--green-l);color:var(--green)}
-.dash-pill-blue{background:var(--blue-l);color:var(--blue)}
-.dash-pill-purple{background:var(--purple-l);color:var(--purple-t)}
-.dash-pill-amber{background:var(--amber-l);color:var(--amber-t)}
-.dash-pill-teal{background:var(--teal-l);color:var(--teal-d)}
+.dp-num{font-size:20px;font-weight:700;line-height:1}
+.dp-lbl{font-size:11px;font-weight:500}
+.dash-pill-green{background:#1a6b37;color:#fff}
+.dash-pill-green:hover{background:#155a2e}
+.dash-pill-blue{background:#1a4d8f;color:#fff}
+.dash-pill-blue:hover{background:#153f78}
+.dash-pill-purple{background:#6a3db0;color:#fff}
+.dash-pill-purple:hover{background:#5a3295}
+.dash-pill-amber{background:#c47d00;color:#fff}
+.dash-pill-amber:hover{background:#a86b00}
+.dash-pill-teal{background:var(--teal);color:#fff}
+.dash-pill-teal:hover{background:var(--teal-d)}
 .weekly-import-btn{font-size:11px;font-weight:600;transition:all .2s}
 .weekly-active{background:var(--teal);color:#fff;border-color:var(--teal)}
 .weekly-active:hover{background:var(--teal-d);border-color:var(--teal-d)}
@@ -402,6 +407,7 @@ input[type=file]{width:100%}
       </div>
       <div class="pb">
         <div class="filters">
+          <button class="fchip" onclick="setFilter('all',this)">All Posts</button>
           <button class="fchip on" onclick="setFilter('live',this)">Live</button>
           <button class="fchip" onclick="setFilter('scheduled',this)">Scheduled</button>
           <button class="fchip" onclick="setFilter('approved',this)">Approved</button>
@@ -598,8 +604,7 @@ input[type=file]{width:100%}
       </div>
     </div>
     <div class="row">
-      <div class="fd w3"><label class="fl">URL</label><input type="url" id="pm-url"></div>
-      <div class="fd"><label class="fl">Scheduled date</label><input type="date" id="pm-sched"></div>
+      <div class="fd"><label class="fl">URL</label><input type="url" id="pm-url"></div>
     </div>
     <div class="row">
       <div class="fd"><label class="fl">Published date</label><input type="date" id="pm-pub"></div>

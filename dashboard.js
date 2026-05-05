@@ -179,7 +179,7 @@ function switchBlog(blog){
   activeBlog=blog;
   document.getElementById('btn-esc').className='bsw-btn'+(blog==='esc'?' a-esc':'');
   document.getElementById('btn-nms').className='bsw-btn'+(blog==='nms'?' a-nms':'');
-  sfilt='live';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===0));
+  sfilt='live';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===1));
   loadLinks().then(()=>{render();updateTabs()});
 }
 function switchTab(name,filter){
@@ -297,6 +297,20 @@ function renderSchedPill(){
 function render(){renderDashboard();renderPosts();renderLinksPane();renderIdeas();renderSchedPill()}
 
 // DASHBOARD
+
+function socialIconRow(s,p){
+  // Returns icon badges for missing items
+  const icons=[];
+  const mkIcon=(label,color,missing)=>missing?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${color}20;color:${color};border:1px solid ${color}40">${label}</span>`:'';
+  icons.push(mkIcon('📌 Pin','#e04444',!s.pinterest_shared));
+  icons.push(mkIcon('🔗 Blog','#e04444',!s.pinterest_in_blog));
+  icons.push(mkIcon('📘 FB','#1877f2',!s.fb_shared));
+  icons.push(mkIcon('📷 IG','#c13584',!s.ig_shared));
+  const filtered=icons.filter(Boolean);
+  if(!filtered.length)return'';
+  return`<div class="post-row" onclick="openPost('${p.id}','social')" style="padding:8px 12px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0;font-size:12px">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><div style="display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0">${filtered.join('')}</div></div></div>`;
+}
+
 function renderDashboard(){
   const posts=bp();
   const today=localToday();
@@ -339,7 +353,7 @@ function renderDashboard(){
   const siEl=document.getElementById('dash-social-incomplete');
   if(siEl){
     if(!si.length){siEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All social complete.</div>'}
-    else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.fb_shared)items.push(s.fb_scheduled?'FB (sched)':'FB');if(!s.ig_shared)items.push(s.ig_scheduled?'IG (sched)':'IG');if(!s.pinterest_shared)items.push('📌');if(!s.pinterest_in_blog)items.push('🔗');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><div style="font-size:11px;color:var(--red-t);flex-shrink:0">${items.join(' · ')}</div></div></div>`}).join('')}
+    else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};return socialIconRow(s,p)}).filter(Boolean).join('')||'<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All social complete.</div>'}
   }
 
   // NEEDS LINKS for dashboard
@@ -413,7 +427,7 @@ function renderTracking(){
   // SOCIAL INCOMPLETE
   const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.pinterest_image_created||!s.pinterest_shared||!s.pinterest_in_blog||!s.fb_shared||!s.ig_shared)});
   const siEl=document.getElementById('track-social');
-  if(siEl)siEl.innerHTML=!si.length?`<div class="empty" style="padding:1rem;color:var(--green)">All social complete.</div>`:si.map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.pinterest_image_created)items.push('Pin image');if(!s.pinterest_shared)items.push('Pinned');if(!s.pinterest_in_blog)items.push('Pin in blog');if(!s.fb_shared)items.push('FB');if(!s.ig_shared)items.push('IG');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><div style="font-size:10px;color:var(--red-t)">${items.join(' · ')}</div></div></div>`}).join('');
+  if(siEl)siEl.innerHTML=!si.length?`<div class="empty" style="padding:1rem;color:var(--green)">All social complete.</div>`:si.map(p=>{const s=p.social_tracking?.[0]||{};return socialIconRow(s,p)}).filter(Boolean).join('');
   // RECENTLY PUBLISHED
   const rc=[...posts].filter(p=>p.status==='live'&&p.published_date).sort((a,b)=>new Date(b.published_date)-new Date(a.published_date)).slice(0,8);
   const rcEl=document.getElementById('track-recent');
@@ -789,19 +803,33 @@ async function openPost(id,tab){
 }
 async function savePost(){
   if(!curPost)return;
-  const u={title:document.getElementById('pm-title-i').value.trim()||null,url:document.getElementById('pm-url').value.trim()||null,status:document.getElementById('pm-status').value,scheduled_date:document.getElementById('pm-sched').value||null,published_date:document.getElementById('pm-pub').value||null,indexed:document.getElementById('pm-indexed').value||'no',primary_keyword:document.getElementById('pm-kw').value.trim()||null,ks_score:parseInt(document.getElementById('pm-ks').value)||null,search_volume:parseInt(document.getElementById('pm-vol').value)||null,supplementary_keywords:document.getElementById('pm-supp').value.trim()||null,serp_notes:document.getElementById('pm-serp-link').value.trim()||null,unique_take:document.getElementById('pm-doc-link').value.trim()||null};
-  // Extra fields stored in metadata
-  const extraMeta={word_count:parseInt(document.getElementById('pm-wordcount')?.value)||null,pinterest_board:document.getElementById('pm-pinterest-board')?.value.trim()||null,email_mentioned:document.getElementById('pm-email-mentioned')?.value||null,email_date:document.getElementById('pm-email-date')?.value||null,pub_notes:document.getElementById('pm-notes')?.value.trim()||null};
-  // Store extras in supplementary_keywords field as JSON suffix if they exist
-  // Actually store publishing notes in title field prefix if title is notes-only
-  if(extraMeta.pub_notes!==null)u.serp_notes=(u.serp_notes||'')+(u.serp_notes?'||NOTES:'+extraMeta.pub_notes:'NOTES:'+extraMeta.pub_notes);
-  const btn=document.getElementById('pm-save-btn');btn.textContent='Saving…';btn.disabled=true;
+  const btn=document.getElementById('pm-save-btn');
+  btn.textContent='Saving…';btn.disabled=true;
   try{
+    const u={
+      title:document.getElementById('pm-title-i')?.value.trim()||null,
+      url:document.getElementById('pm-url')?.value.trim()||null,
+      status:document.getElementById('pm-status')?.value||'idea',
+      scheduled_date:document.getElementById('pm-sched')?.value||null,
+      published_date:document.getElementById('pm-pub')?.value||null,
+      indexed:document.getElementById('pm-indexed')?.value||'no',
+      primary_keyword:document.getElementById('pm-kw')?.value.trim()||null,
+      ks_score:parseInt(document.getElementById('pm-ks')?.value)||null,
+      search_volume:parseInt(document.getElementById('pm-vol')?.value)||null,
+      supplementary_keywords:document.getElementById('pm-supp')?.value.trim()||null,
+      serp_notes:document.getElementById('pm-serp-link')?.value.trim()||null,
+      unique_take:document.getElementById('pm-doc-link')?.value.trim()||null,
+      priority:document.getElementById('pm-priority')?.value||null,
+    };
     const{error}=await sb.from('posts').update(u).eq('id',curPost);
     if(error)throw error;
-    await loadPosts();render();toast('Saved');
-  }catch(e){toast('Error saving: '+e.message);console.error(e)}
-  finally{btn.textContent='Save changes';btn.disabled=false;}
+    await loadPosts();render();toast('Saved ✓');
+  }catch(e){
+    toast('Error: '+e.message);
+    console.error('savePost error:',e);
+  }finally{
+    btn.textContent='Save changes';btn.disabled=false;
+  }
 }
 async function saveSocial(){
   if(!curSocId&&!curPost)return;
