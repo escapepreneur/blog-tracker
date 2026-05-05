@@ -222,6 +222,10 @@ input[type=file]{width:100%}
 .toast.on{opacity:1;transform:translateY(0)}
 .prog-bar-wrap{height:4px;background:var(--border);border-radius:99;overflow:hidden;margin-top:6px}
 .prog-bar-fill{height:100%;border-radius:99;background:linear-gradient(90deg,var(--teal),var(--teal-d));transition:width .4s}
+.weekly-import-btn{font-size:11px;font-weight:600;transition:all .2s}
+.weekly-active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.weekly-active:hover{background:var(--teal-d);border-color:var(--teal-d)}
+.weekly-done{background:var(--green-l);color:var(--green);border-color:#b8dfc6}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border-d);border-radius:3px}
 @media(max-width:768px){.sidebar{display:none}.row{flex-direction:column}.g2,.g3,.g6{grid-template-columns:1fr 1fr}.pb{padding:1rem}}
@@ -276,7 +280,6 @@ input[type=file]{width:100%}
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
-      <button class="nav-i" onclick="switchTab('ideas')"><span style="width:18px;text-align:center">✦</span>Ideas</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">◎</span>Insights</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
@@ -290,6 +293,8 @@ input[type=file]{width:100%}
         <div><div class="pt" id="dash-title">Dashboard</div><div class="ps" id="dash-sub"></div></div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-p btn-sm" onclick="openNewPost()" id="dash-add-btn">+ Log keyword</button>
+          <button id="weekly-sr-btn" class="btn btn-sm weekly-active" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
+          <button id="weekly-gsc-btn" class="btn btn-sm weekly-active" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=new Date().toISOString().split('T')[0]">⬆ Import GSC</button>
           <div id="complete-pill-wrap"></div>
           <div id="sched-pill-wrap"></div>
         </div>
@@ -388,8 +393,10 @@ input[type=file]{width:100%}
             <select id="cal-year" onchange="renderCalendar()" style="width:auto;padding:6px 10px;font-size:13px">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
-            <div style="font-size:11px;color:var(--text3)"><span style="display:inline-block;width:10px;height:10px;background:var(--green-l);border-radius:2px;margin-right:3px"></span>Live
-            <span style="display:inline-block;width:10px;height:10px;background:var(--blue-l);border-radius:2px;margin:0 3px 0 8px"></span>Scheduled</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 12px">
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="display:inline-block;width:10px;height:10px;background:var(--green-l);border:1.5px solid var(--green);border-radius:2px"></span>Live</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="display:inline-block;width:10px;height:10px;background:var(--blue-l);border:1.5px solid var(--blue);border-radius:2px"></span>Scheduled</span>
+            </div>
           </div>
           <div id="cal-grid"></div>
         </div>
@@ -539,13 +546,13 @@ input[type=file]{width:100%}
       <div class="fd w2"><label class="fl">Pinterest board pinned to</label><input type="text" id="pm-pinterest-board" placeholder="e.g. Business Tools for Coaches"></div>
     </div>
     <div class="row">
-      <div class="fd"><label class="fl">Email mentioned</label>
+      <div class="fd"><label class="fl">Added to The Weekly</label>
         <select id="pm-email-mentioned">
-          <option value="">Not mentioned</option>
-          <option value="yes">Yes — mentioned in email</option>
+          <option value="">Not yet</option>
+          <option value="yes">Yes — added to The Weekly</option>
         </select>
       </div>
-      <div class="fd w2"><label class="fl">Email mention date</label><input type="date" id="pm-email-date"></div>
+      <div class="fd w2"><label class="fl">Newsletter date</label><input type="date" id="pm-email-date"></div>
     </div>
     <div style="margin-bottom:14px"><label class="fl">Publishing notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— reminders, update flags, review notes</span></label><textarea id="pm-notes" rows="2" style="resize:none" placeholder="e.g. Update pricing section when ESC Hub plans change. Review in 6 months."></textarea></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -606,7 +613,7 @@ input[type=file]{width:100%}
       <div style="margin-bottom:8px"><label class="fl">Notes</label><input type="text" id="gsc-notes"></div>
       <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveGsc()">Save</button><button class="btn btn-sm" onclick="hideAddGsc()">Cancel</button></div>
     </div>
-    <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>Change</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
+    <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>Change</th><th>Source</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
   </div>
   <!-- LINKS -->
   <div id="pm-links" class="pane">
@@ -690,6 +697,57 @@ input[type=file]{width:100%}
     </div>
     <div class="confirm-row" id="rst-esc"><span style="font-size:12px;color:var(--red-t)">Delete all ESC Hub data?</span><button class="btn btn-danger btn-xs" onclick="doReset('esc')">Yes</button><button class="btn btn-xs" onclick="hideReset('esc')">Cancel</button></div>
     <div class="confirm-row" id="rst-nms"><span style="font-size:12px;color:var(--red-t)">Delete all NMS data?</span><button class="btn btn-danger btn-xs" onclick="doReset('nms')">Yes</button><button class="btn btn-xs" onclick="hideReset('nms')">Cancel</button></div>
+  </div>
+</div>
+</div>
+
+<!-- SERPROBOT IMPORT MODAL -->
+<div class="mbg" id="sr-import-modal" onclick="mbgClick(event,'sr-import-modal')">
+<div class="modal" style="max-width:500px">
+  <div class="mhdr"><div class="mtitle">Import SerpRobot rankings</div><button class="xbtn" onclick="closeModal('sr-import-modal')">✕</button></div>
+  <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1a4d8f;line-height:1.7">
+    <strong>How to export from SerpRobot:</strong><br>
+    1. Log in to <a href="https://serprobot.com" target="_blank" style="color:var(--blue);font-weight:600">serprobot.com</a><br>
+    2. Go to your rank tracking dashboard<br>
+    3. Click <strong>Export</strong> → <strong>CSV</strong><br>
+    4. Upload the file below
+  </div>
+  <div style="margin-bottom:10px"><label class="fl">Import date</label><input type="date" id="sr-import-date"></div>
+  <div style="border:2px dashed var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="document.getElementById('sr-file').click()">
+    <div style="font-size:13px;color:var(--text2)" id="sr-file-label">Click to upload SerpRobot CSV</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Matches keywords to your posts and logs rankings</div>
+  </div>
+  <input type="file" id="sr-file" accept=".csv,.txt" style="display:none" onchange="handleSerpRobotFile(event)">
+  <div id="sr-import-result"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-p btn-sm" onclick="markWeeklyDone('serprobot');updateWeeklyButtons();closeModal('sr-import-modal');toast('SerpRobot import marked as done')">Mark done without importing</button>
+    <button class="btn btn-sm" onclick="closeModal('sr-import-modal')">Close</button>
+  </div>
+</div>
+</div>
+
+<!-- GSC WEEKLY MODAL -->
+<div class="mbg" id="gsc-weekly-modal" onclick="mbgClick(event,'gsc-weekly-modal')">
+<div class="modal" style="max-width:500px">
+  <div class="mhdr"><div class="mtitle">Import GSC data</div><button class="xbtn" onclick="closeModal('gsc-weekly-modal')">✕</button></div>
+  <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1a4d8f;line-height:1.7">
+    <strong>How to export from Google Search Console:</strong><br>
+    1. Go to <a href="https://search.google.com/search-console" target="_blank" style="color:var(--blue);font-weight:600">search.google.com/search-console</a><br>
+    2. Search results → <strong>Pages tab</strong><br>
+    3. Set date range (last 28 days)<br>
+    4. Click <strong>Export → Download CSV</strong><br>
+    5. Upload the file below
+  </div>
+  <div style="margin-bottom:10px"><label class="fl">Import date</label><input type="date" id="gsc-import-date2"></div>
+  <div style="border:2px dashed var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="document.getElementById('gsc-file2').click()">
+    <div style="font-size:13px;color:var(--text2)" id="gsc-file-label2">Click to upload GSC CSV</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Matches URLs to your posts and logs positions</div>
+  </div>
+  <input type="file" id="gsc-file2" accept=".csv" style="display:none" onchange="handleGscFileWeekly(event)">
+  <div id="gsc-weekly-result"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-p btn-sm" onclick="markWeeklyDone('gsc');updateWeeklyButtons();closeModal('gsc-weekly-modal');toast('GSC import marked as done')">Mark done without importing</button>
+    <button class="btn btn-sm" onclick="closeModal('gsc-weekly-modal')">Close</button>
   </div>
 </div>
 </div>

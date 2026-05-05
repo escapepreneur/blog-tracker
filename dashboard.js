@@ -1,6 +1,9 @@
 const BLOGGING_PROJECT_URL='https://claude.ai/project/019cd821-e61f-73e4-bc71-51bda336a345';
 const GSC_URLS={esc:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aeschub.com&item_url=',nms:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aescapepreneur.com&item_url='};
 const CL_STEPS=[
+  {id:'s1b',num:'01',title:'Before You Start',note:'Complete these before generating the brief.',items:[
+    {id:'s1b1',text:'Add the primary keyword to SerpRobot rank tracking (serprobot.com) — check you have slots available, 75 max per bot'},
+  ]},
   {id:'s2',num:'02',title:'Blogging Project → Google Doc',note:'Open a new chat in the Blogging project, paste the brief, and wait. Save the full output to a Google Doc.',items:[
     {id:'cl1',text:'Open a new chat in the Escapepreneur Blogging project (claude.ai)'},
     {id:'cl2',text:'Paste the brief — nothing else needed'},
@@ -120,7 +123,7 @@ function saveCadence(){
 }
 
 // DATA
-async function loadAll(){await Promise.all([loadPosts(),loadDests()]);await loadLinks();render()}
+async function loadAll(){await Promise.all([loadPosts(),loadDests()]);await loadLinks();render();updateWeeklyButtons()}
 async function loadPosts(){const{data}=await sb.from('posts').select('*,social_tracking(*)').order('scheduled_date',{ascending:true,nullsFirst:false});allPosts=data||[]}
 async function loadDests(){const{data}=await sb.from('link_destinations').select('*');allDests=data||[]}
 async function loadLinks(){
@@ -322,9 +325,13 @@ function renderPosts(){
   if(sfilt==='not-indexed')posts=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed));
   else if(sfilt==='needs-work')posts=posts.filter(p=>(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
   else if(sfilt!=='all')posts=posts.filter(p=>p.status===sfilt);
-  if(search)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(search)||(p.primary_keyword||'').toLowerCase().includes(search));
+  if(sfilt==='live')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
+  const searchVal=(document.getElementById('post-search')?.value||'').toLowerCase();
+  if(searchVal)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(searchVal)||(p.primary_keyword||'').toLowerCase().includes(searchVal));
   if(!posts.length){document.getElementById('posts-list').innerHTML='<div class="empty">No posts found.</div>';return}
+  const isN=activeBlog==='nms';
   document.getElementById('posts-list').innerHTML=posts.map(p=>{
+    const isIdea=p.status==='idea'||p.status==='drafted';
     const ln=_links.filter(l=>l.from_post_id===p.id).length;
     const postLn=_links.filter(l=>l.from_post_id===p.id&&l.to_post_id).length;
     const pageLn=_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length;
@@ -334,7 +341,7 @@ function renderPosts(){
     const dateStr=p.status==='live'?fd(p.published_date):p.scheduled_date?fd(p.scheduled_date):'';
     const ix=IDX[p.indexed||'no'];
     const score=calcScore(p.ks_score,p.search_volume);
-    return`<div class="post-row" onclick="openPost('${p.id}','details')">
+    return`<div class="post-row" onclick="${isIdea?'':``}openPost('${p.id}','details')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${sbadge(p.status)}${stepLabel(p.current_step)}${sfilt==='needs-work'?stuckLabel(p.current_step):''}</div>
@@ -345,12 +352,12 @@ function renderPosts(){
             ${dateStr?`<span class="pill pill-g">${dateStr}</span>`:''}
             ${p.status==='live'&&(p.indexed==='no'||!p.indexed)?`<button class="btn btn-xs f-red" style="border:1px solid #f0c8c8;background:var(--red-l);color:var(--red-t)" onclick="event.stopPropagation();requestIndexing('${p.id}')">Request indexing →</button>`:''}
             ${p.status==='live'&&p.indexed==='requested'?`<span class="idx-dot idx-req" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-req"></span>Index requested</span><button class="btn btn-xs" style="font-size:9px;padding:1px 7px" onclick="event.stopPropagation();checkIndexing('${p.id}')">Check →</button><button class="btn btn-xs f-green" style="border:1px solid #b8dfc6;background:var(--green-l);color:var(--green);font-size:9px;padding:1px 7px" onclick="event.stopPropagation();confirmIndexed('${p.id}')">Confirm ✓</button>`:''}
-            ${p.indexed==='yes'?`<span class="idx-dot idx-yes" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-yes"></span>Indexed</span>`:(!p.status==='live'?`<span class="idx-dot ${ix.cls}" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle ${ix.dc}"></span>${ix.label}</span>`:'')}
+            ${p.indexed==='yes'?`<span class="idx-dot idx-yes" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-yes"></span>Indexed</span>`:''}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-          ${score!==null&&(p.status==='idea'||p.status==='drafted')?`<div class="score-badge" style="${activeBlog==='nms'?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
-          <span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>
+          ${score!==null&&isIdea?`<div class="score-badge" style="${isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
+          ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
           ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
         </div>
       </div></div>`;
@@ -694,7 +701,10 @@ async function renderGscHistory(){
   const{data}=await sb.from('gsc_positions').select('*').eq('post_id',curPost).order('recorded_date',{ascending:false});
   const rows=data||[];
   if(!rows.length){document.getElementById('gsc-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">No rankings yet.</td></tr>`;return}
-  document.getElementById('gsc-tbody').innerHTML=rows.map((r,i)=>{const pv=rows[i+1];let ch='—';if(pv&&r.position&&pv.position){const d=pv.position-r.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'—'}return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ch}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
+  document.getElementById('gsc-tbody').innerHTML=rows.map((r,i)=>{const pv=rows[i+1];let ch='—';if(pv&&r.position&&pv.position){const d=pv.position-r.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'—'}
+  const src=r.notes?.startsWith('SerpRobot')?'SerpRobot':r.notes?.startsWith('GSC')?'GSC':'Manual';
+  const srcColor=src==='SerpRobot'?'var(--teal-d)':src==='GSC'?'var(--blue)':'var(--text3)';
+  return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
 }
 async function saveGsc(){
   const e={post_id:curPost,recorded_date:document.getElementById('gsc-date').value||new Date().toISOString().split('T')[0],position:parseFloat(document.getElementById('gsc-pos').value)||null,impressions:parseInt(document.getElementById('gsc-impr').value)||null,clicks:parseInt(document.getElementById('gsc-clicks').value)||null,notes:document.getElementById('gsc-notes').value.trim()||null};
@@ -912,7 +922,143 @@ async function confirmIndexed(id){
   await sb.from('posts').update({indexed:'yes'}).eq('id',id);
   await loadPosts();render();toast('Marked as indexed ✓');
 }
+// ── WEEKLY IMPORT BUTTONS ────────────────────────────────────────
+function getWeekKey(source){
+  const now=new Date();
+  const mon=new Date(now);
+  mon.setDate(now.getDate()-((now.getDay()+6)%7));
+  return source+'-week-'+mon.toISOString().split('T')[0];
+}
+function isWeeklyDone(source){return localStorage.getItem(getWeekKey(source))==='done'}
+function markWeeklyDone(source){localStorage.setItem(getWeekKey(source),'done')}
+function updateWeeklyButtons(){
+  const srBtn=document.getElementById('weekly-sr-btn');
+  const gscBtn=document.getElementById('weekly-gsc-btn');
+  if(!srBtn||!gscBtn)return;
+  const srDone=isWeeklyDone('serprobot');
+  const gscDone=isWeeklyDone('gsc');
+  srBtn.className='btn btn-sm weekly-import-btn'+(srDone?' weekly-done':' weekly-active');
+  srBtn.innerHTML=srDone?'✓ SerpRobot imported':'⬆ Import SerpRobot';
+  gscBtn.className='btn btn-sm weekly-import-btn'+(gscDone?' weekly-done':' weekly-active');
+  gscBtn.innerHTML=gscDone?'✓ GSC imported':'⬆ Import GSC';
+}
+
+// SerpRobot CSV import
+function openSerpRobotImport(){
+  document.getElementById('sr-import-modal').classList.add('on');
+  document.getElementById('sr-import-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('sr-import-result').innerHTML='';
+  document.getElementById('sr-file-label').textContent='Click to upload SerpRobot CSV';
+}
+
+async function handleSerpRobotFile(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('sr-file-label').textContent=file.name+' — processing…';
+  const importDate=document.getElementById('sr-import-date').value||new Date().toISOString().split('T')[0];
+  // SerpRobot CSV is UTF-16 tab-separated: Keyword, Rank, Change, Volume
+  const buffer=await file.arrayBuffer();
+  let text='';
+  try{
+    // Try UTF-16 LE (with BOM)
+    const decoder=new TextDecoder('utf-16le');
+    const raw=decoder.decode(buffer);
+    text=raw.replace(/^\uFEFF/,'');
+  }catch(ex){
+    text=new TextDecoder('utf-8').decode(buffer);
+  }
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length){document.getElementById('sr-import-result').innerHTML='<div style="color:var(--red-t);font-size:12px">Could not read file.</div>';return}
+  const header=lines[0].split('\t').map(h=>h.trim().toLowerCase());
+  const kwIdx=header.findIndex(h=>h.includes('keyword'));
+  const rankIdx=header.findIndex(h=>h.includes('rank'));
+  const changeIdx=header.findIndex(h=>h.includes('change'));
+  const volIdx=header.findIndex(h=>h.includes('volume'));
+  if(kwIdx===-1||rankIdx===-1){document.getElementById('sr-import-result').innerHTML='<div style="color:var(--red-t);font-size:12px">Could not find Keyword and Rank columns. Check your export format.</div>';return}
+  const rows=lines.slice(1).map(l=>l.split('\t').map(c=>c.trim())).filter(r=>r.length>rankIdx);
+  let matched=0,skipped=0,updated=0;
+  for(const row of rows){
+    const kw=(row[kwIdx]||'').toLowerCase().trim();
+    const rank=parseFloat(row[rankIdx]);
+    const change=changeIdx>=0?parseFloat(row[changeIdx])||null:null;
+    const vol=volIdx>=0?parseInt(row[volIdx])||null:null;
+    if(!kw||isNaN(rank))continue;
+    const post=allPosts.find(p=>p.blog===activeBlog&&(p.primary_keyword||'').toLowerCase().trim()===kw);
+    if(!post){skipped++;continue}
+    matched++;
+    // Log to gsc_positions with source=serprobot
+    await sb.from('gsc_positions').insert({post_id:post.id,recorded_date:importDate,position:rank,notes:'SerpRobot'+(change!=null?` | change: ${change>0?'+':''}${change}`:'')});
+    // Update search volume if we have it
+    if(vol&&vol>0){await sb.from('posts').update({search_volume:vol}).eq('id',post.id);updated++}
+  }
+  await loadPosts();
+  document.getElementById('sr-import-result').innerHTML=`<div style="font-size:12px;color:var(--green);font-weight:600">✓ Import complete</div><div style="font-size:12px;color:var(--text2);margin-top:4px">${matched} keywords matched · ${skipped} not found · ${updated} volumes updated</div>`;
+  document.getElementById('sr-file-label').textContent='✓ '+file.name;
+  markWeeklyDone('serprobot');updateWeeklyButtons();
+}
+
+// Updated GSC import with source label
+async function handleGscFile(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('gsc-file-label').textContent=file.name+' — processing…';
+  const importDate=document.getElementById('gsc-import-date').value||new Date().toISOString().split('T')[0];
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(!lines.length)return;
+  const header=lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  const urlIdx=header.findIndex(h=>h.includes('page')||h.includes('url'));
+  const posIdx=header.findIndex(h=>h.includes('position'));
+  const impIdx=header.findIndex(h=>h.includes('impression'));
+  const clkIdx=header.findIndex(h=>h.includes('click'));
+  if(urlIdx===-1||posIdx===-1){document.getElementById('gsc-import-result').innerHTML='<div style="color:var(--red-t)">Could not find URL and Position columns.</div>';return}
+  const rows=lines.slice(1).map(l=>{const cols=l.split(',').map(c=>c.replace(/"/g,'').trim());return cols});
+  let matched=0,skipped=0;
+  for(const row of rows){
+    if(row.length<=posIdx)continue;
+    const url=(row[urlIdx]||'').trim();
+    const pos=parseFloat(row[posIdx]);
+    if(!url||isNaN(pos))continue;
+    const post=allPosts.find(p=>p.url&&(p.url===url||url.includes(p.url)||p.url.includes(url)));
+    if(!post){skipped++;continue}
+    matched++;
+    const impr=impIdx>=0?parseInt(row[impIdx])||null:null;
+    const clicks=clkIdx>=0?parseInt(row[clkIdx])||null:null;
+    await sb.from('gsc_positions').insert({post_id:post.id,recorded_date:importDate,position:pos,impressions:impr,clicks:clicks,notes:'GSC'});
+  }
+  document.getElementById('gsc-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${matched} posts updated · ${skipped} URLs not matched</div>`;
+  document.getElementById('gsc-file-label').textContent='✓ '+file.name;
+  markWeeklyDone('gsc');updateWeeklyButtons();
+}
+
 initApp();
+async function handleGscFileWeekly(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('gsc-file-label2').textContent=file.name+' — processing…';
+  const importDate=document.getElementById('gsc-import-date2').value||new Date().toISOString().split('T')[0];
+  // Reuse same logic but output to weekly modal result div
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  const header=lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  const urlIdx=header.findIndex(h=>h.includes('page')||h.includes('url'));
+  const posIdx=header.findIndex(h=>h.includes('position'));
+  const impIdx=header.findIndex(h=>h.includes('impression'));
+  const clkIdx=header.findIndex(h=>h.includes('click'));
+  if(urlIdx===-1||posIdx===-1){document.getElementById('gsc-weekly-result').innerHTML='<div style="color:var(--red-t);font-size:12px">Could not find URL and Position columns.</div>';return}
+  const rows=lines.slice(1).map(l=>l.split(',').map(c=>c.replace(/"/g,'').trim()));
+  let matched=0,skipped=0;
+  for(const row of rows){
+    if(row.length<=posIdx)continue;
+    const url=(row[urlIdx]||'').trim();const pos=parseFloat(row[posIdx]);
+    if(!url||isNaN(pos))continue;
+    const post=allPosts.find(p=>p.url&&(p.url===url||url.includes(p.url)||p.url.includes(url)));
+    if(!post){skipped++;continue}
+    matched++;
+    await sb.from('gsc_positions').insert({post_id:post.id,recorded_date:importDate,position:pos,impressions:impIdx>=0?parseInt(row[impIdx])||null:null,clicks:clkIdx>=0?parseInt(row[clkIdx])||null:null,notes:'GSC'});
+  }
+  document.getElementById('gsc-weekly-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${matched} posts updated · ${skipped} URLs not matched</div>`;
+  document.getElementById('gsc-file-label2').textContent='✓ '+file.name;
+  markWeeklyDone('gsc');updateWeeklyButtons();
+}
+
 // ── DUPLICATE KEYWORD DETECTOR ──────────────────────────────────
 function checkDuplicateKeyword(kw){
   if(!kw||kw.length<3)return null;
@@ -1046,7 +1192,7 @@ async function applyBulkStatus(){
 function renderCalendar(){
   const el=document.getElementById('cal-grid');
   if(!el)return;
-  const posts=bp().filter(p=>p.scheduled_date||p.published_date);
+  const posts=bp().filter(p=>(p.status==='live'||p.status==='scheduled')&&(p.scheduled_date||p.published_date));
   // Get current month range
   const now=new Date();
   const year=parseInt(document.getElementById('cal-year')?.value||now.getFullYear());
