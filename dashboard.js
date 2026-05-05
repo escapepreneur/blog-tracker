@@ -457,44 +457,69 @@ async function renderTrackingRankings(){
 }
 
 let _dragSrcId=null;
+let _researchSort='score'; // score | volume | ks | manual
+
 function renderResearch(){
-  const ideas=bp().filter(p=>!['scheduled','live'].includes(p.status)).sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
+  // Only show posts with NO proposed date (once dated they move to Pipeline)
+  const all=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date);
   const el=document.getElementById('research-list');if(!el)return;
   const search=(document.getElementById('research-search')?.value||'').toLowerCase();
-  const filtered=search?ideas.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):ideas;
+
+  // Apply sort
+  let sorted=[...all];
+  if(_researchSort==='score')sorted.sort((a,b)=>(calcScore(b.ks_score,b.search_volume)||0)-(calcScore(a.ks_score,a.search_volume)||0));
+  else if(_researchSort==='volume')sorted.sort((a,b)=>(b.search_volume||0)-(a.search_volume||0));
+  else if(_researchSort==='ks')sorted.sort((a,b)=>(a.ks_score||99)-(b.ks_score||99));
+  else sorted.sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)); // manual
+
+  const filtered=search?sorted.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):sorted;
   const isN=activeBlog==='nms';
   const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
-  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':'No keywords queued. Use + Log keyword to add some.'}</div>`;return}
+  const isManual=_researchSort==='manual';
+
+  // Render sort chips
+  const sortEl=document.getElementById('research-sort-chips');
+  if(sortEl){
+    sortEl.innerHTML=['score','volume','ks','manual'].map(s=>`<button class="fchip${_researchSort===s?' on':''}" onclick="setResearchSort('${s}')">${s==='score'?'Priority score':s==='volume'?'Volume':s==='ks'?'KS score (easiest)':'Manual order'}</button>`).join('');
+  }
+
+  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':all.length?'No unplanned keywords. All have proposed dates — see Pipeline.':'No keywords yet. Use + Log keyword to add some.'}</div>`;return}
+
   el.innerHTML=filtered.map((p,i)=>{
     const score=calcScore(p.ks_score,p.search_volume);
-    return`<div class="research-card" draggable="true" data-id="${p.id}" ondragstart="dragStart(event,'${p.id}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${p.id}')" ondragend="dragEnd(event)">
-      <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+    const drag=isManual?`draggable="true" ondragstart="dragStart(event,'${p.id}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${p.id}')" ondragend="dragEnd(event)"`:'' ;
+    return`<div class="research-card" ${drag} data-id="${p.id}">
+      ${isManual?`<div class="drag-handle" title="Drag to reorder">⋮⋮</div>`:''}
       <div class="research-num">${i+1}</div>
       ${score!=null?`<div class="score-badge" style="${badgeStyle};width:32px;height:32px;font-size:11px;flex-shrink:0">${score}</div>`:''}
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','details')">
-        <div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>
+        <div class="kw-primary">${esc(titleCase(p.primary_keyword||'Untitled'))}</div>
         ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,60))}${p.supplementary_keywords.length>60?'…':''}</div>`:''}
         ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
-      <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-        <span style="font-size:10px;color:var(--text3)">Proposed:</span>
-        <input type="date" value="${p.proposed_date||''}" style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:Poppins,sans-serif;color:var(--text2)" onchange="saveProposedDate('${p.id}',this.value)" onclick="event.stopPropagation()">
-      </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <span style="font-size:10px;color:var(--text3)">Proposed:</span>
+          <input type="date" value="${p.proposed_date||''}" style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:Poppins,sans-serif;color:var(--text2)" onchange="saveProposedDate('${p.id}',this.value)" onclick="event.stopPropagation()">
+        </div>
       </div>
       <button class="btn ${isN?'btn-pp':'btn-p'} btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
     </div>`;
   }).join('');
 }
+
+function setResearchSort(s){_researchSort=s;renderResearch()}
+
 async function saveProposedDate(id,val){
   await sb.from('posts').update({proposed_date:val||null}).eq('id',id);
   const p=allPosts.find(x=>x.id===id);if(p)p.proposed_date=val;
-  toast('Proposed date saved');
+  await loadPosts();renderResearch();renderPipeline();renderDashboard();
+  toast(val?'Added to pipeline — '+fd(val):'Proposed date cleared');
 }
 function dragStart(e,id){_dragSrcId=id;e.currentTarget.style.opacity='0.4';e.dataTransfer.effectAllowed='move'}
 function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';return false}
 function dragEnd(e){e.currentTarget.style.opacity='1'}
 async function dragDrop(e,targetId){
   e.preventDefault();if(_dragSrcId===targetId)return;
-  const ideas=bp().filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
+  const ideas=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date).sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
   const srcIdx=ideas.findIndex(p=>p.id===_dragSrcId),tgtIdx=ideas.findIndex(p=>p.id===targetId);
   if(srcIdx===-1||tgtIdx===-1)return;
   const reordered=[...ideas];const[moved]=reordered.splice(srcIdx,1);reordered.splice(tgtIdx,0,moved);

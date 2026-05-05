@@ -26,7 +26,7 @@
   --sh-sm:0 1px 3px rgba(0,0,0,.06);
   --sh:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
   --sh-lg:0 12px 32px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
-  --r:12px;--r2:8px;
+  --r:12px;--r2:8px;--rb:30px;
 }
 body{font-family:var(--F);background:var(--bg3);color:var(--text);font-size:14px;min-height:100vh;line-height:1.5}
 .con-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:linear-gradient(135deg,#f0f9f9 0%,#f8f4ff 100%)}
@@ -82,7 +82,7 @@ input[type=file]{width:100%}
 .row>.fd{flex:1;margin-bottom:0}
 .row>.w2{flex:2}.row>.w3{flex:3}
 .fd{flex:1}
-.btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--r2);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--F);font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--rb);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--F);font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--bg2)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}
@@ -391,13 +391,14 @@ input[type=file]{width:100%}
         </div>
         <!-- RESEARCH QUEUE -->
         <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div class="sh" style="margin:0">Research queue — drag to reorder</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="sh" style="margin:0">Research queue — unplanned keywords</div>
             <div style="position:relative;display:inline-flex;align-items:center">
               <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:220px;padding-right:28px;font-size:12px">
               <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
             </div>
           </div>
+          <div id="research-sort-chips" class="filters" style="margin-bottom:10px"></div>
           <div id="research-list"></div>
         </div>
       </div>
@@ -605,7 +606,7 @@ input[type=file]{width:100%}
       <div id="pm-kw-display" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <a id="pm-live-link" href="#" target="_blank" class="btn btn-sm" style="display:none;font-size:11px;text-decoration:none;color:var(--teal-d);border-color:var(--teal)">🔗 View live post</a>
+      <a id="pm-live-link" href="#" target="_blank" class="btn btn-sm" style="display:none;font-size:11px;text-decoration:none;color:var(--teal-d);border-color:var(--teal);white-space:nowrap">🔗 View live post</a>
       <button class="xbtn" onclick="closeModal('post-modal')">✕</button>
     </div>
   </div>
