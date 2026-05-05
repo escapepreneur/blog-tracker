@@ -302,10 +302,11 @@ input[type=file]{width:100%}
     <nav class="sb-nav">
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
+      <button class="nav-i" onclick="switchTab('pipeline')"><span style="width:18px;text-align:center">▶</span>Pipeline</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
-      <button class="nav-i" onclick="switchTab('research')"><span style="width:18px;text-align:center">✦</span>Research</button>
-      <button class="nav-i" onclick="switchTab('tracking')"><span style="width:18px;text-align:center">◎</span>Tracking</button>
+      <button class="nav-i" onclick="switchTab('planning')"><span style="width:18px;text-align:center">📋</span>Planning</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
+      <button class="nav-i" onclick="switchTab('tracking')"><span style="width:18px;text-align:center">◎</span>Tracking</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
     </nav>
@@ -331,8 +332,8 @@ input[type=file]{width:100%}
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div class="sh" style="margin:0">Next up — from your research queue</div>
-              <button class="btn btn-xs" onclick="switchTab('research')" style="font-size:10px">View all →</button>
+              <div class="sh" style="margin:0">Pipeline — next up</div>
+              <button class="btn btn-xs" onclick="switchTab('pipeline')" style="font-size:10px">Full pipeline →</button>
             </div>
             <div id="nextup-list"></div>
           </div>
@@ -365,22 +366,44 @@ input[type=file]{width:100%}
       </div>
     </div>
 
-    <!-- RESEARCH -->
-    <div id="pane-research" class="pane">
+    <!-- PIPELINE -->
+    <div id="pane-pipeline" class="pane">
       <div class="ph">
-        <div><div class="pt">Research</div><div class="ps">Drag to set Shaun's working order — top 3 feed into the dashboard</div></div>
-        <button id="add-research-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+        <div><div class="pt">Pipeline</div><div class="ps">All posts with a proposed date — ordered by date, excluding scheduled and live</div></div>
       </div>
       <div class="pb">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-          <div style="position:relative;display:inline-flex;align-items:center">
-            <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:260px;padding-right:28px">
-            <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
-          </div>
-        </div>
-        <div id="research-list"></div>
+        <div id="pipeline-list"></div>
       </div>
     </div>
+
+    <!-- PLANNING (Karen) -->
+    <div id="pane-planning" class="pane">
+      <div class="ph">
+        <div><div class="pt">Planning</div><div class="ps">Review pending posts and manage your research queue</div></div>
+        <button id="add-planning-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+      </div>
+      <div class="pb">
+        <!-- PENDING REVIEW -->
+        <div style="margin-bottom:20px">
+          <div class="sh" style="margin-bottom:10px">Pending your review</div>
+          <div id="planning-review-list"></div>
+        </div>
+        <!-- RESEARCH QUEUE -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="sh" style="margin:0">Research queue — drag to reorder</div>
+            <div style="position:relative;display:inline-flex;align-items:center">
+              <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:220px;padding-right:28px;font-size:12px">
+              <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
+            </div>
+          </div>
+          <div id="research-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESEARCH (kept for backwards compat, hidden) -->
+    <div id="pane-research" class="pane" style="display:none"></div>
 
     <!-- TRACKING -->
     <div id="pane-tracking" class="pane">
@@ -478,6 +501,7 @@ input[type=file]{width:100%}
             <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 12px">
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="display:inline-block;width:10px;height:10px;background:var(--green-l);border:1.5px solid var(--green);border-radius:2px"></span>Live</span>
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="display:inline-block;width:10px;height:10px;background:var(--blue-l);border:1.5px solid var(--blue);border-radius:2px"></span>Scheduled</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text3)"><span style="display:inline-block;width:10px;height:10px;background:var(--bg2);border:1.5px dashed var(--border-d);border-radius:2px"></span>Proposed</span>
             </div>
           </div>
           <div id="cal-grid"></div>

@@ -198,6 +198,8 @@ function switchTab(name,filter){
   if(name==='links')renderLinksPane();
   if(name==='ideas')renderIdeas();
   if(name==='research')renderResearch();
+  if(name==='pipeline')renderPipeline();
+  if(name==='planning'){renderPlanning();}
   if(name==='tracking')renderTracking();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -220,7 +222,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','research','tracking','calendar','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','pipeline','links','planning','calendar','tracking','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -331,13 +333,13 @@ function renderDashboard(){
     <button class="dash-pill dash-pill-amber" onclick="switchTab('posts','not-indexed')"><span class="dp-num">${notIdx+idxReq}</span><span class="dp-lbl">Indexing needed</span></button>
     <button class="dash-pill dash-pill-teal" onclick="switchTab('research')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
 
-  // NEXT UP — directly under metrics
+  // NEXT UP — pipeline order (proposed date, not yet scheduled/live)
   const isN=activeBlog==='nms';
-  const queue=posts.filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)).slice(0,3);
+  const pipelinePosts=posts.filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status)).sort((a,b)=>new Date(a.proposed_date)-new Date(b.proposed_date)).slice(0,3);
   const nuEl=document.getElementById('nextup-list');
   if(nuEl){
-    if(!queue.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No keywords queued yet. Add some in Research.</div>'}
-    else{nuEl.innerHTML=queue.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}</div><button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="getBriefForPost('${p.id}')">Get brief →</button></div>`).join('')}
+    if(!pipelinePosts.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No proposed dates set yet. Add in Planning → Research queue.</div>'}
+    else{nuEl.innerHTML=pipelinePosts.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div><div style="display:flex;align-items:center;gap:6px;margin-top:2px">${sbadge(p.status)}<span class="prk" style="margin:0">${fd(p.proposed_date)}</span></div></div><button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="openPost('${p.id}','details')">Open →</button></div>`).join('')}
   }
 
   // TODAY — posts scheduled for today
@@ -767,7 +769,7 @@ async function openPost(id,tab){
   document.getElementById('pm-title-i').value=title;
   document.getElementById('pm-url').value=post.url||'';
   document.getElementById('pm-status').value=post.status||'idea';
-  document.getElementById('pm-sched').value=post.scheduled_date||'';
+  const pmSched=document.getElementById('pm-sched');if(pmSched)pmSched.value=post.scheduled_date||'';
   document.getElementById('pm-pub').value=post.published_date||'';
   document.getElementById('pm-indexed').value=post.indexed||'no';
   document.getElementById('pm-kw').value=kw;
@@ -1425,32 +1427,82 @@ async function applyBulkStatus(){
 }
 
 // ── CALENDAR VIEW ───────────────────────────────────────────────
+function renderPipeline(){
+  const el=document.getElementById('pipeline-list');if(!el)return;
+  const posts=bp().filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status)).sort((a,b)=>new Date(a.proposed_date)-new Date(b.proposed_date));
+  const isN=activeBlog==='nms';
+  if(!posts.length){el.innerHTML='<div class="empty">No posts with proposed dates yet. Set dates in Planning → Research queue.</div>';return}
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="display:contents;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">#</div>
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Keyword</div>
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Date</div>
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Status</div>
+      </div>
+      ${posts.map((p,i)=>`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','details')">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600">${i+1}</div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
+          ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+        </div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap">${fd(p.proposed_date)}</div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">${sbadge(p.status)}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+function renderPlanning(){
+  const isN=activeBlog==='nms';
+  // PENDING REVIEW
+  const reviewPosts=bp().filter(p=>p.status==='pending-review');
+  const rvEl=document.getElementById('planning-review-list');
+  if(rvEl){
+    if(!reviewPosts.length){rvEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ Nothing waiting for review.</div>'}
+    else{rvEl.innerHTML=reviewPosts.map(p=>`
+      <div class="post-row" style="border-left:3px solid var(--amber)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
+            ${p.serp_notes?`<div class="prk" style="margin-top:3px;font-style:italic">${esc(p.serp_notes.replace('NOTES:','').slice(0,80))}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>
+            <button class="btn btn-xs" onclick="event.stopPropagation();openPost('${p.id}','details')">View</button>
+          </div>
+        </div>
+      </div>`).join('')}
+  }
+  // RESEARCH QUEUE
+  renderResearch();
+}
+
 function renderCalendar(){
   const el=document.getElementById('cal-grid');
   if(!el)return;
+  // Live and scheduled posts
   const posts=bp().filter(p=>(p.status==='live'||p.status==='scheduled')&&(p.scheduled_date||p.published_date));
-  // Get current month range
+  // Proposed date posts (idea/drafted/pending-review/approved with proposed_date)
+  const proposedPosts=bp().filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status));
   const now=new Date();
   const year=parseInt(document.getElementById('cal-year')?.value||now.getFullYear());
   const month=parseInt(document.getElementById('cal-month')?.value??now.getMonth());
   const firstDay=new Date(year,month,1);
   const lastDay=new Date(year,month+1,0);
   const startDow=firstDay.getDay();
-  
   let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">';
   ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:4px">${d}</div>`);
   html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
-  
-  // Empty cells before first day
   for(let i=0;i<startDow;i++)html+=`<div style="min-height:60px"></div>`;
-  
   for(let day=1;day<=lastDay.getDate();day++){
     const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dayPosts=posts.filter(p=>(p.scheduled_date||p.published_date)===dateStr);
+    const dayProposed=proposedPosts.filter(p=>p.proposed_date===dateStr);
     const isToday=dateStr===localToday();
     html+=`<div style="min-height:60px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px">
       <div style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'};margin-bottom:2px">${day}</div>
-      ${dayPosts.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.primary_keyword||p.title||'Post')}</div>`).join('')}
+      ${dayPosts.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||'Post'))}</div>`).join('')}
+      ${dayProposed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:var(--bg2);color:var(--text3);border:1px dashed var(--border-d);border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(sbadge(p.status))}">${esc(titleCase(p.primary_keyword||p.title||'Post'))}</div>`).join('')}
     </div>`;
   }
   html+='</div>';
