@@ -158,6 +158,8 @@ function switchTab(name,filter){
   }
   if(name==='links')renderLinksPane();
   if(name==='ideas')renderIdeas();
+  if(name==='research')renderResearch();
+  if(name==='tracking')renderTracking();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -179,11 +181,11 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','ideas','calendar','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','research','posts','links','tracking','calendar','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
-  ['add-post-btn','add-idea-btn','dash-add-btn'].forEach(id=>{
+  ['add-post-btn','add-idea-btn','dash-add-btn','add-research-btn'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.className='btn '+(isN?'btn-pp':'btn-p')+' btn-sm';
   });
 }
@@ -254,69 +256,141 @@ function render(){renderDashboard();renderPosts();renderLinksPane();renderIdeas(
 // DASHBOARD
 function renderDashboard(){
   const posts=bp();
-  document.getElementById('dash-title').textContent=BM[activeBlog].name+' Dashboard';
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('dash-title').textContent=BM[activeBlog].name;
   document.getElementById('dash-sub').textContent=BM[activeBlog].sub;
   const live=posts.filter(p=>p.status==='live').length;
   const sched=posts.filter(p=>p.status==='scheduled').length;
-  const review=posts.filter(p=>p.status==='review').length;
   const drafted=posts.filter(p=>p.status==='drafted').length;
-  const needsLinks=posts.filter(p=>p.status==='live'&&_links.filter(l=>l.from_post_id===p.id).length<3).length;
   const notIdx=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)).length;
+  const idxReq=posts.filter(p=>p.indexed==='requested').length;
   document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric m-live" onclick="switchTab('posts','live')"><div class="mn" style="color:var(--green)">${live}</div><div class="ml">Live</div></div>
-    <div class="metric m-sched" onclick="switchTab('posts','scheduled')"><div class="mn" style="color:var(--blue)">${sched}</div><div class="ml">Scheduled</div></div>
-    <div class="metric m-review" onclick="switchTab('posts','review')"><div class="mn" style="color:var(--pink)">${review}</div><div class="ml">Ready for review</div></div>
-    <div class="metric m-drafted" onclick="switchTab('posts','drafted')"><div class="mn" style="color:var(--purple)">${drafted}</div><div class="ml">Drafted</div></div>
-    <div class="metric m-links" onclick="switchTab('links')"><div class="mn" style="color:var(--red)">${needsLinks}</div><div class="ml">Need links</div></div>
-    <div class="metric m-idx" onclick="goToNotIndexed()" style="cursor:pointer"><div class="mn" style="color:var(--amber)">${notIdx}</div><div class="ml">Not indexed</div></div>`;
+    <div class="metric m-live" onclick="switchTab('posts','live')" style="cursor:pointer"><div class="mn" style="color:var(--green)">${live}</div><div class="ml">Live</div></div>
+    <div class="metric m-sched" onclick="switchTab('posts','scheduled')" style="cursor:pointer"><div class="mn" style="color:var(--blue)">${sched}</div><div class="ml">Scheduled</div></div>
+    <div class="metric m-drafted" onclick="switchTab('posts','drafted')" style="cursor:pointer"><div class="mn" style="color:var(--purple)">${drafted}</div><div class="ml">Drafted</div></div>
+    <div class="metric m-idx" onclick="switchTab('posts','not-indexed')" style="cursor:pointer"><div class="mn" style="color:var(--amber)">${notIdx+idxReq}</div><div class="ml">Indexing needed</div></div>`;
 
-  // NEXT UP — top 3 by score
-  const ideas=bp().filter(p=>p.status==='idea');
-  const scored=ideas.map(p=>({...p,_score:calcScore(p.ks_score,p.search_volume)||0})).sort((a,b)=>b._score-a._score).slice(0,3);
-  if(!scored.length){document.getElementById('nextup-list').innerHTML='<div class="empty" style="padding:1rem">No ideas in the queue yet. Use + Log keyword to add some.</div>'}
-  else{document.getElementById('nextup-list').innerHTML=scored.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''} · Score ${p._score}</div>`:''}</div><button class="btn btn-p btn-xs" onclick="getBriefForPost('${p.id}')">Get brief</button></div>`).join('')}
+  // TODAY — posts scheduled for today needing confirmation
+  const todayPosts=posts.filter(p=>p.status==='scheduled'&&p.scheduled_date===today);
+  const todayEl=document.getElementById('dash-today');
+  if(todayEl){
+    if(!todayPosts.length){todayEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0">No posts scheduled for today.</div>'}
+    else{todayEl.innerHTML=todayPosts.map(p=>`<div class="post-row" style="border-left:3px solid var(--teal)"><div class="kw-primary">${esc(p.primary_keyword||p.title||'Post')}</div>${p.title&&p.primary_keyword?`<div class="post-title-sub">${esc(p.title)}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="confirmGoLive('${p.id}')">✓ Confirm live + socials</button><button class="btn btn-sm" onclick="openPost('${p.id}','details')">View</button></div></div>`).join('')}
+  }
 
-  const nl=posts.filter(p=>p.status==='live'&&_links.filter(l=>l.from_post_id===p.id).length<3).slice(0,6);
-  document.getElementById('dash-links').innerHTML=!nl.length?`<div class="empty" style="padding:1rem;color:var(--green)">All live posts have 3+ links.</div>`:nl.map(p=>{const n=_links.filter(l=>l.from_post_id===p.id).length,lv=fl(n);return`<div class="post-row" onclick="openPost('${p.id}','links')" style="border-left:3px solid var(--${lv==='red'?'red':lv==='amber'?'amber':'green'})"><div style="display:flex;align-items:center;justify-content:space-between"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div>${p.title&&p.primary_keyword?`<div class="post-title-sub">${esc(p.title)}</div>`:''}</div><span class="flag f-${lv}">${n}/3</span></div></div>`}).join('');
+  // PINTEREST ACTION — live posts where pinning/linking not done
+  const pinNeeded=posts.filter(p=>{const s=p.social_tracking?.[0];return p.status==='live'&&s&&(!s.pinterest_shared||!s.pinterest_in_blog)});
+  const pinEl=document.getElementById('dash-pinterest-action');
+  if(pinEl){
+    if(!pinNeeded.length){pinEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:8px 0">✓ All Pinterest actions complete.</div>'}
+    else{pinEl.innerHTML=pinNeeded.map(p=>{const s=p.social_tracking?.[0]||{};return`<div class="post-row" onclick="openPost('${p.id}','social')" style="border-left:3px solid #e04444"><div style="display:flex;align-items:center;justify-content:space-between"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);margin-top:2px">${!s.pinterest_shared?'📌 Not yet pinned · ':''}${!s.pinterest_in_blog?'🔗 Not linked in blog':''}</div></div></div></div>`}).join('')}
+  }
 
-  renderDashRankings();
-  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.pinterest_image_created||!s.pinterest_shared||!s.fb_shared||!s.ig_shared)}).slice(0,5);
-  document.getElementById('dash-social').innerHTML=!si.length?`<div class="empty" style="padding:1rem">No incomplete social items.</div>`:si.map(p=>{const s=p.social_tracking?.[0]||{};const done=[s.pinterest_image_created,s.pinterest_shared,s.pinterest_in_blog,s.fb_image_created,s.fb_shared,s.ig_image_created,s.ig_shared].filter(Boolean).length;return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><span class="flag f-amber">${done}/7</span></div></div>`}).join('');
-  const rc=[...posts].filter(p=>p.status==='live'&&p.published_date).sort((a,b)=>new Date(b.published_date)-new Date(a.published_date)).slice(0,5);
-  document.getElementById('dash-recent').innerHTML=!rc.length?`<div class="empty" style="padding:1rem">No live posts yet.</div>`:rc.map(p=>`<div class="post-row" onclick="openPost('${p.id}','details')"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div>${p.title&&p.primary_keyword?`<div class="post-title-sub">${esc(p.title)}</div>`:''}<div class="prk">${fd(p.published_date)}</div></div>`).join('');
-  // Complete posts pill
+  // INDEXING
+  const idxGroups={no:posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)),requested:posts.filter(p=>p.indexed==='requested'),'yes':posts.filter(p=>p.indexed==='yes')};
+  let idxHtml='';
+  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxGroups[k];idxHtml+=`<div class="card" style="padding:.75rem 1rem"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:18px;font-weight:700">${ps.length}</span></div>${ps.slice(0,3).map(p=>`<div style="font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>3?`<div style="font-size:10px;color:var(--text3);margin-top:4px">+${ps.length-3} more</div>`:''}</div>`});
+  const idxEl=document.getElementById('dash-indexing');if(idxEl)idxEl.innerHTML=idxHtml;
+
+  // NEXT UP — from Research queue
+  const isN=activeBlog==='nms';
+  const queue=posts.filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)).slice(0,3);
+  const nuEl=document.getElementById('nextup-list');
+  if(nuEl){
+    if(!queue.length){nuEl.innerHTML='<div class="empty" style="padding:1rem">No keywords queued. Add some in Research.</div>'}
+    else{nuEl.innerHTML=queue.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}</div><button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="getBriefForPost('${p.id}')">Get brief →</button></div>`).join('')}
+  }
+
+  // PILLS
   const completePosts=posts.filter(p=>p.current_step>=6).length;
   const totalPosts=posts.filter(p=>p.status!=='idea').length;
   const completePct=totalPosts>0?Math.round(completePosts/totalPosts*100):0;
-  let cpCls=completePct>=80?'sched-green':completePct>=40?'sched-amber':'sched-red';
   const cpWrap=document.getElementById('complete-pill-wrap');
-  if(cpWrap)cpWrap.innerHTML=`<button class="sched-pill ${cpCls}" onclick="switchTab('posts','needs-work')"><span class="sched-dot" style="${completePct>=80?'background:#2a7d3f':completePct>=40?'background:#e8960a':'background:#e04444'}"></span>${completePosts}/${totalPosts} complete</button>`;
-  // Links pill
-  const needsLinkCount=posts.filter(p=>p.status==='live'&&_links.filter(l=>l.from_post_id===p.id).length<3).length;
-  const lpWrap=document.getElementById('links-pill-wrap');
-  if(lpWrap){const lpCls=needsLinkCount===0?'sched-green':needsLinkCount<=10?'sched-amber':'sched-red';lpWrap.innerHTML=`<button class="sched-pill ${lpCls}" onclick="switchTab('links')"><span class="sched-dot" style="${needsLinkCount===0?'background:#2a7d3f':needsLinkCount<=10?'background:#e8960a':'background:#e04444'}"></span>${needsLinkCount} need links</button>`}
-  const idxG={no:posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)),requested:posts.filter(p=>p.indexed==='requested'),'yes':posts.filter(p=>p.indexed==='yes')};
-  let idxHtml='';
-  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxG[k];idxHtml+=`<div class="card" style="padding:.75rem 1rem"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:18px;font-weight:700">${ps.length}</span></div>${ps.slice(0,3).map(p=>`<div style="font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>3?`<div style="font-size:10px;color:var(--text3);margin-top:4px">+${ps.length-3} more</div>`:''}</div>`});
-  document.getElementById('dash-indexing').innerHTML=idxHtml;
+  if(cpWrap){const cpCls=completePct>=80?'sched-green':completePct>=40?'sched-amber':'sched-red';cpWrap.innerHTML=`<button class="sched-pill ${cpCls}" onclick="switchTab('posts','needs-work')"><span class="sched-dot" style="${completePct>=80?'background:#2a7d3f':completePct>=40?'background:#e8960a':'background:#e04444'}"></span>${completePosts}/${totalPosts} complete</button>`}
 }
 
-async function renderDashRankings(){
+async function confirmGoLive(id){
+  const p=gp(id);if(!p)return;
+  await sb.from('posts').update({status:'live',published_date:new Date().toISOString().split('T')[0]}).eq('id',id);
+  const s=p.social_tracking?.[0];
+  if(s){await sb.from('social_tracking').update({fb_shared:true,ig_shared:true,pinterest_image_created:true}).eq('id',s.id)}
+  await loadPosts();render();
+  toast('✓ Post live — FB and IG marked done. Pinterest still needs pinning.',4000);
+}
+
+function renderTracking(){
+  const posts=bp();
+  // NEEDS LINKS
+  const nl=posts.filter(p=>p.status==='live').map(p=>({...p,postLn:_links.filter(l=>l.from_post_id===p.id&&l.to_post_id).length,pageLn:_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length})).filter(p=>p.postLn<3||p.pageLn<2);
+  const nlEl=document.getElementById('track-links');
+  if(nlEl)nlEl.innerHTML=!nl.length?`<div class="empty" style="padding:1rem;color:var(--green)">All live posts fully linked.</div>`:nl.map(p=>{const lv=p.postLn>=3&&p.pageLn>=2?'green':(p.postLn>0||p.pageLn>0)?'amber':'red';return`<div class="post-row" onclick="openPost('${p.id}','links')" style="border-left:3px solid var(--${lv})"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><span class="flag f-${lv}">${p.postLn}/3 · ${p.pageLn}/2</span></div></div>`}).join('');
+  // SOCIAL INCOMPLETE
+  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.pinterest_image_created||!s.pinterest_shared||!s.pinterest_in_blog||!s.fb_shared||!s.ig_shared)});
+  const siEl=document.getElementById('track-social');
+  if(siEl)siEl.innerHTML=!si.length?`<div class="empty" style="padding:1rem;color:var(--green)">All social complete.</div>`:si.map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.pinterest_image_created)items.push('Pin image');if(!s.pinterest_shared)items.push('Pinned');if(!s.pinterest_in_blog)items.push('Pin in blog');if(!s.fb_shared)items.push('FB');if(!s.ig_shared)items.push('IG');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><div style="font-size:10px;color:var(--red-t)">${items.join(' · ')}</div></div></div>`}).join('');
+  // RECENTLY PUBLISHED
+  const rc=[...posts].filter(p=>p.status==='live'&&p.published_date).sort((a,b)=>new Date(b.published_date)-new Date(a.published_date)).slice(0,8);
+  const rcEl=document.getElementById('track-recent');
+  if(rcEl)rcEl.innerHTML=!rc.length?`<div class="empty" style="padding:1rem">No live posts yet.</div>`:rc.map(p=>`<div class="post-row" onclick="openPost('${p.id}','details')"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div class="prk">${fd(p.published_date)}</div></div>`).join('');
+  renderTrackingRankings();
+}
+
+async function renderTrackingRankings(){
   const posts=bp().filter(p=>p.status==='live');
-  if(!posts.length){document.getElementById('dash-rankings').innerHTML=`<div class="empty" style="padding:1rem">No live posts yet.</div>`;return}
+  const rankEl=document.getElementById('track-rankings');if(!rankEl)return;
+  if(!posts.length){rankEl.innerHTML='<div class="empty" style="padding:1rem">No live posts yet.</div>';return}
   const{data}=await sb.from('gsc_positions').select('*').in('post_id',posts.map(p=>p.id)).order('recorded_date',{ascending:false});
-  if(!data||!data.length){document.getElementById('dash-rankings').innerHTML=`<div class="empty" style="padding:1rem">No GSC data yet. Import from Settings or open a post to add manually.</div>`;return}
+  if(!data||!data.length){rankEl.innerHTML='<div class="empty" style="padding:1rem">No ranking data yet. Import from SerpRobot or GSC.</div>';return}
   const byPost={};data.forEach(r=>{if(!byPost[r.post_id])byPost[r.post_id]=[];if(byPost[r.post_id].length<2)byPost[r.post_id].push(r)});
   let html='';
-  Object.entries(byPost).slice(0,8).forEach(([pid,ents])=>{
+  Object.entries(byPost).forEach(([pid,ents])=>{
     const post=gp(pid);if(!post)return;
     const lt=ents[0],pv=ents[1];let ch='';
     if(pv&&lt.position&&pv.position){const d=pv.position-lt.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'<span style="color:var(--text3)">—</span>'}
-    html+=`<div class="post-row" onclick="openPost('${pid}','gsc')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(post.primary_keyword||post.title)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700">${lt.position||'—'}</div>${ch}</div></div></div>`;
+    const src=lt.notes?.startsWith('SerpRobot')?'SR':lt.notes?.startsWith('GSC')?'GSC':'';
+    html+=`<div class="post-row" onclick="openPost('${pid}','gsc')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(post.primary_keyword||post.title)}</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${src?`<span style="font-size:9px;font-weight:700;color:var(--text3)">${src}</span>`:''}<div style="font-size:16px;font-weight:700">${lt.position||'—'}</div>${ch}</div></div></div>`;
   });
-  document.getElementById('dash-rankings').innerHTML=html||`<div class="empty" style="padding:1rem">No data.</div>`;
+  rankEl.innerHTML=html||'<div class="empty" style="padding:1rem">No data.</div>';
 }
 
+let _dragSrcId=null;
+function renderResearch(){
+  const ideas=bp().filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
+  const el=document.getElementById('research-list');if(!el)return;
+  const search=(document.getElementById('research-search')?.value||'').toLowerCase();
+  const filtered=search?ideas.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):ideas;
+  const isN=activeBlog==='nms';
+  const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
+  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':'No keywords queued. Use + Log keyword to add some.'}</div>`;return}
+  el.innerHTML=filtered.map((p,i)=>{
+    const score=calcScore(p.ks_score,p.search_volume);
+    return`<div class="research-card" draggable="true" data-id="${p.id}" ondragstart="dragStart(event,'${p.id}')" ondragover="dragOver(event)" ondrop="dragDrop(event,'${p.id}')" ondragend="dragEnd(event)">
+      <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+      <div class="research-num">${i+1}</div>
+      ${score!=null?`<div class="score-badge" style="${badgeStyle};width:32px;height:32px;font-size:11px;flex-shrink:0">${score}</div>`:''}
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','details')">
+        <div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>
+        ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,60))}${p.supplementary_keywords.length>60?'…':''}</div>`:''}
+        ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+      </div>
+      <button class="btn ${isN?'btn-pp':'btn-p'} btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
+    </div>`;
+  }).join('');
+}
+function dragStart(e,id){_dragSrcId=id;e.currentTarget.style.opacity='0.4';e.dataTransfer.effectAllowed='move'}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';return false}
+function dragEnd(e){e.currentTarget.style.opacity='1'}
+async function dragDrop(e,targetId){
+  e.preventDefault();if(_dragSrcId===targetId)return;
+  const ideas=bp().filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
+  const srcIdx=ideas.findIndex(p=>p.id===_dragSrcId),tgtIdx=ideas.findIndex(p=>p.id===targetId);
+  if(srcIdx===-1||tgtIdx===-1)return;
+  const reordered=[...ideas];const[moved]=reordered.splice(srcIdx,1);reordered.splice(tgtIdx,0,moved);
+  await Promise.all(reordered.map((p,i)=>sb.from('posts').update({sort_order:i+1}).eq('id',p.id)));
+  await loadPosts();renderResearch();renderDashboard();
+}
+
+async function renderDashRankings(){const el=document.getElementById('dash-rankings');if(el)el.innerHTML=''}
 // POSTS LIST
 function renderPosts(){
   document.getElementById('posts-sub').textContent=BM[activeBlog].sub;

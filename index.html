@@ -222,6 +222,12 @@ input[type=file]{width:100%}
 .toast.on{opacity:1;transform:translateY(0)}
 .prog-bar-wrap{height:4px;background:var(--border);border-radius:99;overflow:hidden;margin-top:6px}
 .prog-bar-fill{height:100%;border-radius:99;background:linear-gradient(90deg,var(--teal),var(--teal-d));transition:width .4s}
+.research-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm);transition:box-shadow .15s,opacity .15s}
+.research-card:hover{box-shadow:var(--sh);border-color:var(--teal)}
+.research-card.drag-over{border-color:var(--teal);background:var(--teal-l)}
+.drag-handle{font-size:16px;color:var(--text3);cursor:grab;user-select:none;padding:0 4px;flex-shrink:0}
+.drag-handle:active{cursor:grabbing}
+.research-num{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text2);flex-shrink:0}
 .weekly-import-btn{font-size:11px;font-weight:600;transition:all .2s}
 .weekly-active{background:var(--teal);color:#fff;border-color:var(--teal)}
 .weekly-active:hover{background:var(--teal-d);border-color:var(--teal-d)}
@@ -278,10 +284,12 @@ input[type=file]{width:100%}
     <div class="sb-sec">Navigation</div>
     <nav class="sb-nav">
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
+      <button class="nav-i" onclick="switchTab('research')"><span style="width:18px;text-align:center">✦</span>Research</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
+      <button class="nav-i" onclick="switchTab('tracking')"><span style="width:18px;text-align:center">◎</span>Tracking</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
-      <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">◎</span>Insights</button>
+      <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
     </nav>
     <div class="sb-btm"><button onclick="showSettings()">⚙ Settings</button></div>
@@ -296,24 +304,62 @@ input[type=file]{width:100%}
           <button id="weekly-sr-btn" class="btn btn-sm weekly-active" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
           <button id="weekly-gsc-btn" class="btn btn-sm weekly-active" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=new Date().toISOString().split('T')[0]">⬆ Import GSC</button>
           <div id="complete-pill-wrap"></div>
-          <div id="sched-pill-wrap"></div>
         </div>
       </div>
       <div class="pb">
-        <div class="g6" id="dash-metrics"></div>
-        <div style="margin-bottom:1.25rem">
-          <div class="sh">Next up — top 3 by priority score</div>
-          <div id="nextup-list"></div>
+        <div class="g4" id="dash-metrics" style="margin-bottom:16px"></div>
+
+        <!-- TODAY'S POSTS -->
+        <div class="card" style="margin-bottom:14px;border-left:4px solid var(--teal)">
+          <div class="sh" style="margin-bottom:8px">📅 Today's posts — confirm they went live</div>
+          <div id="dash-today"></div>
+        </div>
+
+        <!-- PINTEREST ACTION -->
+        <div class="card" style="margin-bottom:14px;border-left:4px solid #e04444">
+          <div class="sh" style="margin-bottom:8px">📌 Pinterest still needed</div>
+          <div id="dash-pinterest-action"></div>
+        </div>
+
+        <div class="g2" style="margin-bottom:14px">
+          <!-- NEXT UP -->
+          <div class="card">
+            <div class="sh" style="margin-bottom:8px">Next up — from your research queue</div>
+            <div id="nextup-list"></div>
+          </div>
+          <!-- INDEXING -->
+          <div>
+            <div class="sh" style="margin-bottom:8px">Indexing status</div>
+            <div id="dash-indexing"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESEARCH -->
+    <div id="pane-research" class="pane">
+      <div class="ph">
+        <div><div class="pt">Research</div><div class="ps">Drag to set Shaun's working order — top 3 feed into the dashboard</div></div>
+        <button id="add-research-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+      </div>
+      <div class="pb">
+        <div style="margin-bottom:12px"><input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="max-width:300px;width:100%"></div>
+        <div id="research-list"></div>
+      </div>
+    </div>
+
+    <!-- TRACKING -->
+    <div id="pane-tracking" class="pane">
+      <div class="ph"><div><div class="pt">Tracking</div><div class="ps">Rankings, links, social, recently published</div></div></div>
+      <div class="pb">
+        <div class="g2" style="margin-bottom:14px">
+          <div><div class="sh">Ranking movement</div><div id="track-rankings"></div></div>
+          <div><div class="sh">Recently published</div><div id="track-recent"></div></div>
         </div>
         <div class="g2">
-          <div><div class="sh">Needs links — click to edit</div><div id="dash-links"></div></div>
-          <div><div class="sh">Ranking movement</div><div id="dash-rankings"></div></div>
+          <div><div class="sh">Needs links</div><div id="track-links"></div></div>
+          <div><div class="sh">Social incomplete</div><div id="track-social"></div></div>
         </div>
-        <div class="g2">
-          <div><div class="sh">Social incomplete (live posts)</div><div id="dash-social"></div></div>
-          <div><div class="sh">Recently published</div><div id="dash-recent"></div></div>
-        </div>
-        <div><div class="sh">Indexing status</div><div class="g3" id="dash-indexing"></div></div>
       </div>
     </div>
     <!-- POSTS -->
