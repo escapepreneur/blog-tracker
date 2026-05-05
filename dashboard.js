@@ -82,6 +82,33 @@ function localNow(){
   const offset=parseInt(localStorage.getItem('tz-offset')||'0');
   return new Date(Date.now()+offset*60*60*1000);
 }
+function titleCase(str){
+  if(!str)return str;
+  const minors=new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','vs','via','per']);
+  return str.replace(/[^\s-]+/g,(word,idx)=>{
+    const w=word.toLowerCase();
+    if(idx===0||!minors.has(w))return w.charAt(0).toUpperCase()+w.slice(1);
+    return w;
+  });
+}
+
+function calcNextAvailableDate(){
+  const cadence=parseInt(localStorage.getItem('pub-cadence')||'1');
+  // Get all posts with proposed/scheduled dates that aren't live yet
+  const taken=new Set(allPosts.filter(p=>p.blog===activeBlog&&(p.status==='approved'||p.status==='scheduled')&&p.scheduled_date).map(p=>p.scheduled_date));
+  let d=new Date(localNow());
+  d.setHours(0,0,0,0);
+  // Start from tomorrow
+  d.setDate(d.getDate()+1);
+  let attempts=0;
+  while(attempts<365){
+    const ds=d.toISOString().split('T')[0];
+    if(!taken.has(ds))return ds;
+    d.setDate(d.getDate()+cadence);
+    attempts++;
+  }
+  return null;
+}
 
 // SCORE
 function calcScore(ks,vol){
@@ -221,7 +248,11 @@ function gt(id){const p=allPosts.find(x=>x.id===id);if(p)return{label:p.title||p
 function fl(n){return n===0?'red':n<3?'amber':'green'}
 function fd(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function sbadge(s){const m={live:'b-live',scheduled:'b-scheduled',drafted:'b-drafted',review:'b-review',idea:'b-idea'};return`<span class="badge ${m[s]||'b-idea'}">${s==='review'?'Review':s}</span>`}
+function sbadge(s){
+  const m={live:'b-live',scheduled:'b-scheduled',approved:'b-approved',review:'b-review','pending-review':'b-review',drafted:'b-drafted',idea:'b-idea'};
+  const labels={live:'Live',scheduled:'Scheduled',approved:'Approved',review:'Pending Review','pending-review':'Pending Review',drafted:'Drafted',idea:'Idea'};
+  return`<span class="badge ${m[s]||'b-idea'}">${labels[s]||s}</span>`;
+}
 function idxBadge(v){const x=IDX[v||'no'];return`<span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span>`}
 function stepLabel(n){if(!n||n===0)return'<span class="step-badge" style="color:var(--text3)">Step 0/6</span>';if(n>=6)return`<span class="step-badge" style="background:var(--green-l);color:var(--green);border:1px solid #b8dfc6">✓ Done</span>`;return`<span class="step-badge">Step ${n}/6</span>`}
 const STEP_NAMES={0:'Brief not started',2:'Blogging Project',3:'Create Assets',4:'Claude Review',5:'Set Up in ESC Hub',6:'Go-Live steps'};
@@ -308,7 +339,7 @@ function renderDashboard(){
   const siEl=document.getElementById('dash-social-incomplete');
   if(siEl){
     if(!si.length){siEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All social complete.</div>'}
-    else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.fb_shared)items.push('FB');if(!s.ig_shared)items.push('IG');if(!s.pinterest_shared)items.push('📌');if(!s.pinterest_in_blog)items.push('🔗');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);flex-shrink:0">${items.join(' · ')}</div></div></div>`}).join('')}
+    else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.fb_shared)items.push(s.fb_scheduled?'FB (sched)':'FB');if(!s.ig_shared)items.push(s.ig_scheduled?'IG (sched)':'IG');if(!s.pinterest_shared)items.push('📌');if(!s.pinterest_in_blog)items.push('🔗');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><div style="font-size:11px;color:var(--red-t);flex-shrink:0">${items.join(' · ')}</div></div></div>`}).join('')}
   }
 
   // PINTEREST ACTION
@@ -340,6 +371,29 @@ async function confirmGoLive(id){
   if(s){await sb.from('social_tracking').update({fb_shared:true,ig_shared:true,pinterest_image_created:true}).eq('id',s.id)}
   await loadPosts();render();
   toast('✓ Post live — FB and IG marked done. Pinterest still needs pinning.',4000);
+}
+
+async function approvePost(id,sendBack=false,note=''){
+  const p=gp(id);if(!p)return;
+  if(sendBack){
+    await sb.from('posts').update({status:'drafted',serp_notes:(p.serp_notes||'')+(note?'\nKaren: '+note:'')}).eq('id',id);
+    await loadPosts();render();closeModal('approve-modal');toast('Sent back to Drafted');return;
+  }
+  const nextDate=calcNextAvailableDate();
+  await sb.from('posts').update({status:'approved',scheduled_date:nextDate}).eq('id',id);
+  await loadPosts();render();closeModal('approve-modal');
+  toast('✓ Approved — proposed date: '+(nextDate||'none available'),3000);
+}
+
+function openApproveModal(id){
+  curPost=id;const p=gp(id);if(!p)return;
+  document.getElementById('approve-kw').textContent=titleCase(p.primary_keyword||p.title||'Post');
+  document.getElementById('approve-title').textContent=p.title||'';
+  document.getElementById('approve-note').value='';
+  // Show next available date
+  const nd=calcNextAvailableDate();
+  document.getElementById('approve-date-preview').textContent=nd?'Proposed date: '+nd:'No available slots — check cadence in Settings';
+  document.getElementById('approve-modal').classList.add('on');
 }
 
 function renderTracking(){
@@ -421,9 +475,11 @@ function renderPosts(){
   const search=(document.getElementById('post-search')?.value||'').toLowerCase();
   let posts=bp();
   if(sfilt==='not-indexed')posts=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed||p.indexed==='requested'));
-  else if(sfilt==='needs-work')posts=posts.filter(p=>p.status!=='idea'&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
+  else if(sfilt==='needs-work')posts=posts.filter(p=>!['idea','pending-review','approved'].includes(p.status)&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
   else if(sfilt!=='all')posts=posts.filter(p=>p.status===sfilt);
   if(sfilt==='live'||sfilt==='all')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
+  if(sfilt==='approved')posts=[...posts].sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)||new Date(a.scheduled_date||'9999')-new Date(b.scheduled_date||'9999'));
+  if(sfilt==='review'||sfilt==='pending-review')posts=[...posts].sort((a,b)=>new Date(a.updated_at||0)-new Date(b.updated_at||0));
   const searchVal=(document.getElementById('post-search')?.value||'').toLowerCase();
   if(searchVal)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(searchVal)||(p.primary_keyword||'').toLowerCase().includes(searchVal));
   if(!posts.length){document.getElementById('posts-list').innerHTML='<div class="empty">No posts found.</div>';return}
@@ -443,7 +499,7 @@ function renderPosts(){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${sbadge(p.status)}${stepLabel(p.current_step)}${sfilt==='needs-work'?stuckLabel(p.current_step):''}</div>
-          <div class="kw-primary">${esc(p.primary_keyword||p.title||'Untitled')}</div>
+          <div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
           ${p.title?`<div class="post-title-sub">${esc(p.title)}</div>`:''}
           ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
@@ -455,7 +511,7 @@ function renderPosts(){
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
           ${score!==null&&isIdea?`<div class="score-badge" style="${isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
-          ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
+          ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:p.status==='pending-review'?`<button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>`:`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
           ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
         </div>
       </div></div>`;
@@ -695,13 +751,19 @@ async function openPost(id,tab){
   document.getElementById('pm-add-link-btn').className='btn '+(isN?'btn-pp':'btn-p')+' btn-sm';
   document.getElementById('sug-btn').className='btn '+(isN?'btn-pp':'btn-p')+' btn-sm';
   const social=post.social_tracking?.[0];curSocId=social?.id||null;
-  const cks=['pin-img','pin-shared','pin-blog','fb-img','fb-shared','ig-img','ig-shared'];
-  const flds=['pinterest_image_created','pinterest_shared','pinterest_in_blog','fb_image_created','fb_shared','ig_image_created','ig_shared'];
+  const cks=['pin-img','pin-sched','pin-shared','pin-blog','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'];
+  const flds=['pinterest_image_created','pinterest_scheduled','pinterest_shared','pinterest_in_blog','fb_image_created','fb_scheduled','fb_shared','ig_image_created','ig_scheduled','ig_shared'];
   cks.forEach((c,i)=>{const el=document.getElementById('ch-'+c),ci=document.getElementById('ci-'+c);if(el){el.checked=!!(social?.[flds[i]]);if(ci)ci.classList.toggle('done',el.checked)}});
   document.getElementById('pm-del-row').classList.remove('on');
   document.getElementById('sug-area').innerHTML='';
   document.getElementById('sug-btn').textContent='Get suggestions';
   document.getElementById('sug-btn').disabled=false;
+  // Show/hide live post link
+  const liveLink=document.getElementById('pm-live-link');
+  if(liveLink){
+    if(post.status==='live'&&post.url){liveLink.style.display='inline-flex';liveLink.href=post.url}
+    else{liveLink.style.display='none';liveLink.href='#'}
+  }
   // Show review button only for live posts with a URL
   const reviewBtn=document.getElementById('review-post-btn');
   if(reviewBtn)reviewBtn.style.display=(post.status==='live'&&post.url)?'inline-flex':'none';
@@ -717,14 +779,32 @@ async function savePost(){
   // Actually store publishing notes in title field prefix if title is notes-only
   if(extraMeta.pub_notes!==null)u.serp_notes=(u.serp_notes||'')+(u.serp_notes?'||NOTES:'+extraMeta.pub_notes:'NOTES:'+extraMeta.pub_notes);
   const btn=document.getElementById('pm-save-btn');btn.textContent='Saving…';btn.disabled=true;
-  await sb.from('posts').update(u).eq('id',curPost);
-  await loadPosts();render();toast('Saved');
-  btn.textContent='Save changes';btn.disabled=false;
+  try{
+    const{error}=await sb.from('posts').update(u).eq('id',curPost);
+    if(error)throw error;
+    await loadPosts();render();toast('Saved');
+  }catch(e){toast('Error saving: '+e.message);console.error(e)}
+  finally{btn.textContent='Save changes';btn.disabled=false;}
 }
 async function saveSocial(){
   if(!curSocId&&!curPost)return;
-  const u={pinterest_image_created:document.getElementById('ch-pin-img').checked,pinterest_shared:document.getElementById('ch-pin-shared').checked,pinterest_in_blog:document.getElementById('ch-pin-blog').checked,fb_image_created:document.getElementById('ch-fb-img').checked,fb_shared:document.getElementById('ch-fb-shared').checked,ig_image_created:document.getElementById('ch-ig-img').checked,ig_shared:document.getElementById('ch-ig-shared').checked};
-  ['pin-img','pin-shared','pin-blog','fb-img','fb-shared','ig-img','ig-shared'].forEach(c=>{const ci=document.getElementById('ci-'+c),el=document.getElementById('ch-'+c);if(ci&&el)ci.classList.toggle('done',el.checked)});
+  const u={
+    pinterest_image_created:document.getElementById('ch-pin-img').checked,
+    pinterest_scheduled:document.getElementById('ch-pin-sched')?.checked||false,
+    pinterest_shared:document.getElementById('ch-pin-shared').checked,
+    pinterest_in_blog:document.getElementById('ch-pin-blog').checked,
+    fb_image_created:document.getElementById('ch-fb-img').checked,
+    fb_scheduled:document.getElementById('ch-fb-sched')?.checked||false,
+    fb_shared:document.getElementById('ch-fb-shared').checked,
+    ig_image_created:document.getElementById('ch-ig-img').checked,
+    ig_scheduled:document.getElementById('ch-ig-sched')?.checked||false,
+    ig_shared:document.getElementById('ch-ig-shared').checked
+  };
+  // Update UI
+  ['pin-img','pin-sched','pin-shared','pin-blog','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'].forEach(c=>{
+    const ci=document.getElementById('ci-'+c),el=document.getElementById('ch-'+c);
+    if(ci&&el)ci.classList.toggle('done',el.checked);
+  });
   if(curSocId){await sb.from('social_tracking').update(u).eq('id',curSocId)}
   else{const{data}=await sb.from('social_tracking').insert({...u,post_id:curPost}).select().single();if(data)curSocId=data.id}
   await loadPosts();renderDashboard();renderPosts();

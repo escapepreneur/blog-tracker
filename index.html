@@ -98,8 +98,9 @@ input[type=file]{width:100%}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
 .b-live{background:#e8f5ee;color:#1a6b37;border:1px solid #b8dfc6}
 .b-scheduled{background:#e8f0fc;color:#1a4d8f;border:1px solid #b8ccf0}
+.b-approved{background:#e8f5ee;color:#1a6b37;border:1px solid #2a7d3f}
 .b-drafted{background:var(--purple-l);color:var(--purple-t);border:1px solid #d8c8f0}
-.b-review{background:var(--pink-l);color:var(--pink);border:1px solid #f0c8e8}
+.b-review{background:#fff0e6;color:#d4680a;border:1px solid #f0d0a0}
 .b-idea{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
 .idx-dot{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
 .idx-no{background:#fff0f0;color:#992222;border:1px solid #f0c8c8}
@@ -394,7 +395,8 @@ input[type=file]{width:100%}
         <div class="filters">
           <button class="fchip on" onclick="setFilter('live',this)">Live</button>
           <button class="fchip" onclick="setFilter('scheduled',this)">Scheduled</button>
-          <button class="fchip" onclick="setFilter('review',this)">Review</button>
+          <button class="fchip" onclick="setFilter('approved',this)">Approved</button>
+          <button class="fchip" onclick="setFilter('pending-review',this)">Pending Review</button>
           <button class="fchip" onclick="setFilter('drafted',this)">Drafted</button>
           <button class="fchip" onclick="setFilter('idea',this)">Idea</button>
           <button class="fchip" onclick="setFilter('needs-work',this)">Needs work</button>
@@ -408,7 +410,8 @@ input[type=file]{width:100%}
             <option value="">— select —</option>
             <option value="idea">Idea</option>
             <option value="drafted">Drafted</option>
-            <option value="review">Ready for review</option>
+            <option value="pending-review">Pending Review</option>
+            <option value="approved">Approved</option>
             <option value="scheduled">Scheduled</option>
             <option value="live">Live</option>
           </select>
@@ -561,7 +564,10 @@ input[type=file]{width:100%}
       <div class="mtitle" id="pm-title">Post</div>
       <div id="pm-kw-display" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
     </div>
-    <button class="xbtn" onclick="closeModal('post-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a id="pm-live-link" href="#" target="_blank" class="btn btn-sm" style="display:none;font-size:11px;text-decoration:none;color:var(--teal-d);border-color:var(--teal)">🔗 View live post</a>
+      <button class="xbtn" onclick="closeModal('post-modal')">✕</button>
+    </div>
   </div>
   <div class="mtabs">
     <button class="mtab on" id="ptab-details" onclick="switchPTab('details')">Details</button>
@@ -577,8 +583,8 @@ input[type=file]{width:100%}
       <div class="fd"><label class="fl">Status</label>
         <select id="pm-status">
           <option value="idea">Idea</option><option value="drafted">Drafted</option>
-          <option value="review">Ready for review</option><option value="scheduled">Scheduled</option>
-          <option value="live">Live</option>
+          <option value="pending-review">Pending Review</option><option value="approved">Approved</option>
+          <option value="scheduled">Scheduled</option><option value="live">Live</option>
         </select>
       </div>
     </div>
@@ -644,17 +650,20 @@ input[type=file]{width:100%}
     <div class="cgl">Pinterest</div>
     <div class="cg">
       <label class="ci" id="ci-pin-img"><input type="checkbox" id="ch-pin-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-pin-sched"><input type="checkbox" id="ch-pin-sched" onchange="saveSocial()"> Scheduled</label>
       <label class="ci" id="ci-pin-shared"><input type="checkbox" id="ch-pin-shared" onchange="saveSocial()"> Pinned</label>
       <label class="ci" id="ci-pin-blog"><input type="checkbox" id="ch-pin-blog" onchange="saveSocial()"> In blog post</label>
     </div>
     <div class="cgl">Facebook</div>
     <div class="cg">
       <label class="ci" id="ci-fb-img"><input type="checkbox" id="ch-fb-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-fb-sched"><input type="checkbox" id="ch-fb-sched" onchange="saveSocial()"> Scheduled</label>
       <label class="ci" id="ci-fb-shared"><input type="checkbox" id="ch-fb-shared" onchange="saveSocial()"> Shared</label>
     </div>
     <div class="cgl">Instagram</div>
     <div class="cg">
       <label class="ci" id="ci-ig-img"><input type="checkbox" id="ch-ig-img" onchange="saveSocial()"> Image created</label>
+      <label class="ci" id="ci-ig-sched"><input type="checkbox" id="ch-ig-sched" onchange="saveSocial()"> Scheduled</label>
       <label class="ci" id="ci-ig-shared"><input type="checkbox" id="ch-ig-shared" onchange="saveSocial()"> Shared</label>
     </div>
   </div>
@@ -820,6 +829,21 @@ input[type=file]{width:100%}
   <div style="display:flex;gap:8px;margin-top:14px">
     <button class="btn btn-p btn-sm" onclick="markWeeklyDone('gsc');updateWeeklyButtons();closeModal('gsc-weekly-modal');toast('GSC import marked as done')">Mark done without importing</button>
     <button class="btn btn-sm" onclick="closeModal('gsc-weekly-modal')">Close</button>
+  </div>
+</div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div class="mbg" id="approve-modal" onclick="mbgClick(event,'approve-modal')">
+<div class="modal" style="max-width:480px">
+  <div class="mhdr"><div class="mtitle">Review post</div><button class="xbtn" onclick="closeModal('approve-modal')">✕</button></div>
+  <div style="margin-bottom:6px"><div style="font-size:15px;font-weight:700" id="approve-kw"></div><div style="font-size:12px;color:var(--text3);margin-top:2px" id="approve-title"></div></div>
+  <div style="background:var(--teal-l);border:1px solid var(--teal);border-radius:var(--r2);padding:10px 14px;font-size:12px;color:var(--teal-t);margin:12px 0" id="approve-date-preview"></div>
+  <div style="margin-bottom:14px"><label class="fl">Send back note (optional)</label><textarea id="approve-note" rows="2" style="resize:none" placeholder="What needs changing?"></textarea></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-p" onclick="approvePost(curPost,false)">✓ Approve — assign date</button>
+    <button class="btn btn-danger" onclick="approvePost(curPost,true,document.getElementById('approve-note').value)">← Send back to Drafted</button>
+    <button class="btn" onclick="closeModal('approve-modal')">Cancel</button>
   </div>
 </div>
 </div>
