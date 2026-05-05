@@ -458,7 +458,7 @@ async function renderTrackingRankings(){
 
 let _dragSrcId=null;
 function renderResearch(){
-  const ideas=bp().filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
+  const ideas=bp().filter(p=>!['scheduled','live'].includes(p.status)).sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999));
   const el=document.getElementById('research-list');if(!el)return;
   const search=(document.getElementById('research-search')?.value||'').toLowerCase();
   const filtered=search?ideas.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):ideas;
@@ -555,7 +555,7 @@ function renderPosts(){
 // IDEAS
 function renderIdeas(){
   const isN=activeBlog==='nms';
-  const ideaPosts=bp().filter(p=>p.status==='idea');
+  const ideaPosts=bp().filter(p=>!['scheduled','live'].includes(p.status));
   const el=document.getElementById('ideas-list');if(!el)return;
   const search=(document.getElementById('ideas-search')?.value||'').toLowerCase();
   const sorted=[...ideaPosts].map(p=>({...p,_score:calcScore(p.ks_score,p.search_volume)||0})).sort((a,b)=>b._score-a._score);
@@ -1481,11 +1481,8 @@ function renderPlanning(){
 }
 
 function renderCalendar(){
-  const el=document.getElementById('cal-grid');
-  if(!el)return;
-  // Live and scheduled posts
-  const posts=bp().filter(p=>(p.status==='live'||p.status==='scheduled')&&(p.scheduled_date||p.published_date));
-  // Proposed date posts (idea/drafted/pending-review/approved with proposed_date)
+  const el=document.getElementById('cal-grid');if(!el)return;
+  const fixedPosts=bp().filter(p=>(p.status==='live'||p.status==='scheduled')&&(p.scheduled_date||p.published_date));
   const proposedPosts=bp().filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status));
   const now=new Date();
   const year=parseInt(document.getElementById('cal-year')?.value||now.getFullYear());
@@ -1495,21 +1492,93 @@ function renderCalendar(){
   const startDow=firstDay.getDay();
   let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">';
   ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:4px">${d}</div>`);
-  html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
-  for(let i=0;i<startDow;i++)html+=`<div style="min-height:60px"></div>`;
+  html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+  for(let i=0;i<startDow;i++)html+=`<div style="min-height:70px"></div>`;
   for(let day=1;day<=lastDay.getDate();day++){
     const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayPosts=posts.filter(p=>(p.scheduled_date||p.published_date)===dateStr);
-    const dayProposed=proposedPosts.filter(p=>p.proposed_date===dateStr);
+    const dayFixed=fixedPosts.filter(p=>(p.scheduled_date||p.published_date)===dateStr);
+    const dayProp=proposedPosts.filter(p=>p.proposed_date===dateStr);
     const isToday=dateStr===localToday();
-    html+=`<div style="min-height:60px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px">
-      <div style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'};margin-bottom:2px">${day}</div>
-      ${dayPosts.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||'Post'))}</div>`).join('')}
-      ${dayProposed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:var(--bg2);color:var(--text3);border:1px dashed var(--border-d);border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(sbadge(p.status))}">${esc(titleCase(p.primary_keyword||p.title||'Post'))}</div>`).join('')}
+    html+=`<div class="cal-day" data-date="${dateStr}"
+      ondragover="calDragOver(event)"
+      ondrop="calDrop(event,'${dateStr}')"
+      ondragleave="calDragLeave(event)"
+      style="min-height:70px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
+        <button onclick="calAddPost('${dateStr}')" style="opacity:0;transition:opacity .15s;background:none;border:none;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;padding:0 2px;font-weight:700" class="cal-plus" title="Add post to this date">+</button>
+      </div>
+      ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
+      ${dayProp.map(p=>`<div draggable="true"
+        ondragstart="calDragStart(event,'${p.id}')"
+        ondragend="calDragEnd(event)"
+        onclick="openPost('${p.id}','details')"
+        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        title="${esc(titleCase(p.primary_keyword||p.title||''))}">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
     </div>`;
   }
   html+='</div>';
   el.innerHTML=html;
+  // Show + buttons on hover
+  el.querySelectorAll('.cal-day').forEach(d=>{
+    d.addEventListener('mouseenter',()=>d.querySelector('.cal-plus').style.opacity='1');
+    d.addEventListener('mouseleave',()=>d.querySelector('.cal-plus').style.opacity='0');
+  });
+}
+
+// Calendar drag and drop for proposed entries
+let _calDragId=null;
+function calDragStart(e,id){_calDragId=id;e.dataTransfer.effectAllowed='move';e.currentTarget.style.opacity='0.4'}
+function calDragEnd(e){e.currentTarget.style.opacity='1'}
+function calDragOver(e){e.preventDefault();e.currentTarget.style.background='var(--teal-l)';e.currentTarget.style.borderColor='var(--teal)'}
+function calDragLeave(e){const d=e.currentTarget;d.style.background='';d.style.borderColor=''}
+async function calDrop(e,dateStr){
+  e.preventDefault();
+  const d=e.currentTarget;d.style.background='';d.style.borderColor='';
+  if(!_calDragId)return;
+  await saveProposedDate(_calDragId,dateStr);
+  await loadPosts();renderCalendar();renderPipeline();renderDashboard();
+  toast('Moved to '+fd(dateStr));
+  _calDragId=null;
+}
+
+// Calendar + button — pick existing post or log new keyword for this date
+function calAddPost(dateStr){
+  const posts=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date);
+  let html=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;margin-bottom:6px">Add to ${fd(dateStr)}</div>`;
+  if(posts.length){
+    html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">Assign an existing post:</div>`;
+    html+=`<select id="cal-post-sel" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px"><option value="">— select a post —</option>`;
+    posts.forEach(p=>{html+=`<option value="${p.id}">${esc(titleCase(p.primary_keyword||p.title||'Untitled'))} (${p.status})</option>`});
+    html+=`</select>`;
+    html+=`<button class="btn btn-p btn-sm" onclick="calAssignPost('${dateStr}')" style="width:100%;justify-content:center;margin-bottom:12px">Assign to this date</button>`;
+  }
+  html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Or log a new keyword:</div>`;
+  html+=`<input type="text" id="cal-new-kw" placeholder="Primary keyword" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px">`;
+  html+=`<button class="btn btn-p btn-sm" onclick="calAddNewKw('${dateStr}')" style="width:100%;justify-content:center">Add keyword to pipeline</button>`;
+  html+=`</div>`;
+  // Show in a small popover-style modal
+  document.getElementById('cal-popup-body').innerHTML=html;
+  document.getElementById('cal-popup-date').textContent=fd(dateStr);
+  document.getElementById('cal-popup-modal').classList.add('on');
+}
+
+async function calAssignPost(dateStr){
+  const sel=document.getElementById('cal-post-sel');
+  if(!sel||!sel.value)return;
+  await saveProposedDate(sel.value,dateStr);
+  await loadPosts();renderCalendar();renderPipeline();renderDashboard();
+  closeModal('cal-popup-modal');toast('Added to '+fd(dateStr));
+}
+
+async function calAddNewKw(dateStr){
+  const kw=document.getElementById('cal-new-kw')?.value.trim();
+  if(!kw)return;
+  const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw,status:'idea',current_step:0,indexed:'no',proposed_date:dateStr}).select().single();
+  if(error){toast('Error: '+error.message);return}
+  await sb.from('social_tracking').insert({post_id:data.id});
+  await loadPosts();renderCalendar();renderPipeline();renderDashboard();
+  closeModal('cal-popup-modal');toast('Added to pipeline — '+fd(dateStr));
 }
 
 // ── CONTENT GAP FINDER ──────────────────────────────────────────
