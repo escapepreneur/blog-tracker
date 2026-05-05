@@ -66,7 +66,7 @@ const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
-let sfilt='all',curPost=null,curSocId=null;
+let sfilt='live',curPost=null,curSocId=null;
 let allPosts=[],allDests=[],_links=[],_clChecked={};
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
@@ -140,7 +140,7 @@ function switchBlog(blog){
   activeBlog=blog;
   document.getElementById('btn-esc').className='bsw-btn'+(blog==='esc'?' a-esc':'');
   document.getElementById('btn-nms').className='bsw-btn'+(blog==='nms'?' a-nms':'');
-  sfilt='all';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===0));
+  sfilt='live';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===0));
   loadLinks().then(()=>{render();updateTabs()});
 }
 function switchTab(name,filter){
@@ -322,10 +322,10 @@ function renderPosts(){
   document.getElementById('posts-sub').textContent=BM[activeBlog].sub;
   const search=(document.getElementById('post-search')?.value||'').toLowerCase();
   let posts=bp();
-  if(sfilt==='not-indexed')posts=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed));
-  else if(sfilt==='needs-work')posts=posts.filter(p=>(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
+  if(sfilt==='not-indexed')posts=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed||p.indexed==='requested'));
+  else if(sfilt==='needs-work')posts=posts.filter(p=>p.status!=='idea'&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
   else if(sfilt!=='all')posts=posts.filter(p=>p.status===sfilt);
-  if(sfilt==='live')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
+  if(sfilt==='live'||sfilt==='all')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
   const searchVal=(document.getElementById('post-search')?.value||'').toLowerCase();
   if(searchVal)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(searchVal)||(p.primary_keyword||'').toLowerCase().includes(searchVal));
   if(!posts.length){document.getElementById('posts-list').innerHTML='<div class="empty">No posts found.</div>';return}
@@ -914,9 +914,12 @@ async function requestIndexing(id){
   toast('Marked as index requested — submit in GSC');
 }
 async function checkIndexing(id){
-  const p=gp(id);if(!p||!p.url)return;
+  const p=gp(id);if(!p||!p.url){toast('No URL set for this post');return}
   const gscUrl=GSC_URLS[p.blog]+encodeURIComponent(p.url);
   window.open(gscUrl,'_blank');
+  // Copy URL to clipboard as fallback in case GSC doesn't pre-fill
+  try{await navigator.clipboard.writeText(p.url)}catch(e){}
+  toast('Post URL copied to clipboard — paste into GSC URL inspection if needed',3500);
 }
 async function confirmIndexed(id){
   await sb.from('posts').update({indexed:'yes'}).eq('id',id);
