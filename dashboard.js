@@ -220,7 +220,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','research','posts','links','tracking','calendar','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','links','research','tracking','calendar','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -342,6 +342,14 @@ function renderDashboard(){
     else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.fb_shared)items.push(s.fb_scheduled?'FB (sched)':'FB');if(!s.ig_shared)items.push(s.ig_scheduled?'IG (sched)':'IG');if(!s.pinterest_shared)items.push('📌');if(!s.pinterest_in_blog)items.push('🔗');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><div style="font-size:11px;color:var(--red-t);flex-shrink:0">${items.join(' · ')}</div></div></div>`}).join('')}
   }
 
+  // NEEDS LINKS for dashboard
+  const nlDash=posts.filter(p=>p.status==='live').map(p=>({...p,postLn:_links.filter(l=>l.from_post_id===p.id&&l.to_post_id).length,pageLn:_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length})).filter(p=>p.postLn<3||p.pageLn<2);
+  const nlDashEl=document.getElementById('dash-needs-links');
+  if(nlDashEl){
+    if(!nlDash.length){nlDashEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All posts fully linked.</div>'}
+    else{nlDashEl.innerHTML=nlDash.slice(0,5).map(p=>{const lv=p.postLn>=3&&p.pageLn>=2?'green':(p.postLn>0||p.pageLn>0)?'amber':'red';return`<div class="post-row" onclick="openPost('${p.id}','links')"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><span class="flag f-${lv}">${p.postLn}/3·${p.pageLn}/2</span></div></div>`}).join('')+(nlDash.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px;cursor:pointer" onclick="switchTab('tracking')">+${nlDash.length-5} more → Tracking</div>`:'')}
+  }
+
   // PINTEREST ACTION
   const pinNeeded=posts.filter(p=>{const s=p.social_tracking?.[0];return p.status==='live'&&s&&(!s.pinterest_shared||!s.pinterest_in_blog)});
   const pinEl=document.getElementById('dash-pinterest-action');
@@ -450,10 +458,19 @@ function renderResearch(){
         <div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>
         ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,60))}${p.supplementary_keywords.length>60?'…':''}</div>`:''}
         ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        <span style="font-size:10px;color:var(--text3)">Proposed:</span>
+        <input type="date" value="${p.proposed_date||''}" style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:Poppins,sans-serif;color:var(--text2)" onchange="saveProposedDate('${p.id}',this.value)" onclick="event.stopPropagation()">
+      </div>
       </div>
       <button class="btn ${isN?'btn-pp':'btn-p'} btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
     </div>`;
   }).join('');
+}
+async function saveProposedDate(id,val){
+  await sb.from('posts').update({proposed_date:val||null}).eq('id',id);
+  const p=allPosts.find(x=>x.id===id);if(p)p.proposed_date=val;
+  toast('Proposed date saved');
 }
 function dragStart(e,id){_dragSrcId=id;e.currentTarget.style.opacity='0.4';e.dataTransfer.effectAllowed='move'}
 function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';return false}
@@ -474,7 +491,7 @@ function renderPosts(){
   document.getElementById('posts-sub').textContent=BM[activeBlog].sub;
   const search=(document.getElementById('post-search')?.value||'').toLowerCase();
   let posts=bp();
-  if(sfilt==='not-indexed')posts=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed||p.indexed==='requested'));
+  if(sfilt==='not-indexed')posts=posts.filter(p=>(p.indexed==='no'||!p.indexed||p.indexed==='requested')&&p.status!=='idea');
   else if(sfilt==='needs-work')posts=posts.filter(p=>!['idea','pending-review','approved'].includes(p.status)&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
   else if(sfilt!=='all')posts=posts.filter(p=>p.status===sfilt);
   if(sfilt==='live'||sfilt==='all')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
@@ -1415,7 +1432,9 @@ function renderCalendar(){
 // ── CONTENT GAP FINDER ──────────────────────────────────────────
 async function findContentGaps(){
   const apiKey=localStorage.getItem('claude-api-key');
-  if(!apiKey){document.getElementById('gap-result').innerHTML='<div style="color:var(--amber-t);font-size:12px">Add Claude API key in Settings first.</div>';return}
+  const resultEl=document.getElementById('gap-result');
+  if(!resultEl)return;
+  if(!apiKey){resultEl.innerHTML='<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r2);padding:10px 12px;font-size:12px;color:var(--amber-t)">⚠️ No Claude API key found. Add it in Settings → Claude API key.</div>';return}
   const posts=bp().filter(p=>p.status==='live'||p.status==='drafted'||p.status==='scheduled');
   if(posts.length<3){document.getElementById('gap-result').innerHTML='<div style="font-size:12px;color:var(--text3)">Add more posts first — need at least 3 to find gaps.</div>';return}
   const btn=document.getElementById('gap-btn');

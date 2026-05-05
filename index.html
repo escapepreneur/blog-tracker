@@ -20,7 +20,7 @@
   --green:#2a7d3f;--green-l:#edf7f0;
   --blue:#1a6bbf;--blue-l:#e8f2fc;
   --pink:#b5338a;--pink-l:#fceef8;
-  --bg:#fff;--bg2:#f8f8f7;--bg3:#f0f0ee;
+  --bg:#fff;--bg2:#f8f8f7;--bg3:#E9F7F7;
   --border:#e8e8e6;--border-d:#d0d0cc;
   --text:#1a1a1a;--text2:#5a5a5a;--text3:#9a9a9a;
   --sh-sm:0 1px 3px rgba(0,0,0,.06);
@@ -136,6 +136,8 @@ input[type=file]{width:100%}
 .sched-amber:hover{background:#f5ecd0}
 .sched-green{background:var(--green-l);color:var(--green);border-color:#b8dfc6}
 .sched-green:hover{background:#d8f0e0}
+.sched-teal{background:var(--teal);color:#fff;border-color:var(--teal-d)}
+.sched-teal:hover{background:var(--teal-d)}
 .sched-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 /* SUPP KW ROWS */
 .kw-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
@@ -294,9 +296,9 @@ input[type=file]{width:100%}
     <div class="sb-sec">Navigation</div>
     <nav class="sb-nav">
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
-      <button class="nav-i" onclick="switchTab('research')"><span style="width:18px;text-align:center">✦</span>Research</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
+      <button class="nav-i" onclick="switchTab('research')"><span style="width:18px;text-align:center">✦</span>Research</button>
       <button class="nav-i" onclick="switchTab('tracking')"><span style="width:18px;text-align:center">◎</span>Tracking</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
@@ -310,9 +312,9 @@ input[type=file]{width:100%}
       <div class="ph">
         <div><div class="pt" id="dash-title">Dashboard</div><div class="ps" id="dash-sub"></div></div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-p btn-sm" onclick="openNewPost()" id="dash-add-btn">+ Log keyword</button>
-          <button id="weekly-sr-btn" class="btn btn-sm weekly-active" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
-          <button id="weekly-gsc-btn" class="btn btn-sm weekly-active" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=localToday()">⬆ Import GSC</button>
+          <button class="sched-pill sched-teal" onclick="openNewPost()" id="dash-add-btn">+ Log keyword</button>
+          <button id="weekly-sr-btn" class="sched-pill sched-teal" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
+          <button id="weekly-gsc-btn" class="sched-pill sched-teal" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=localToday()">⬆ Import GSC</button>
           <div id="complete-pill-wrap"></div>
         </div>
       </div>
@@ -320,32 +322,34 @@ input[type=file]{width:100%}
         <!-- METRIC PILLS -->
         <div id="dash-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
 
-        <!-- NEXT UP -->
-        <div class="card" style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="sh" style="margin:0">Next up — from your research queue</div>
-            <button class="btn btn-xs" onclick="switchTab('research')" style="font-size:10px">View all →</button>
+        <!-- ROW 1: NEXT UP + TODAY -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div class="sh" style="margin:0">Next up — from your research queue</div>
+              <button class="btn btn-xs" onclick="switchTab('research')" style="font-size:10px">View all →</button>
+            </div>
+            <div id="nextup-list"></div>
           </div>
-          <div id="nextup-list"></div>
-        </div>
-
-        <!-- 3-COL ACTION ROW -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
-          <!-- TODAY -->
-          <div class="card" style="border-left:4px solid var(--teal)">
+          <div class="card">
             <div class="sh" style="margin-bottom:8px">📅 Today's posts</div>
             <div id="dash-today"></div>
           </div>
-          <!-- PINTEREST + SOCIAL -->
-          <div>
-            <div class="card" style="border-left:4px solid #e04444;margin-bottom:10px">
-              <div class="sh" style="margin-bottom:6px">📌 Pinterest needed</div>
-              <div id="dash-pinterest-action"></div>
-            </div>
-            <div class="card">
-              <div class="sh" style="margin-bottom:6px">Social incomplete</div>
-              <div id="dash-social-incomplete"></div>
-            </div>
+        </div>
+
+        <!-- ROW 2: 3 COLS -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+          <!-- LINKS NEEDED -->
+          <div class="card">
+            <div class="sh" style="margin-bottom:8px">Needs links</div>
+            <div id="dash-needs-links"></div>
+          </div>
+          <!-- SOCIAL + PINTEREST -->
+          <div class="card">
+            <div class="sh" style="margin-bottom:6px">Social incomplete</div>
+            <div id="dash-social-incomplete" style="margin-bottom:12px"></div>
+            <div class="sh" style="margin-bottom:6px">📌 Pinterest needed</div>
+            <div id="dash-pinterest-action"></div>
           </div>
           <!-- INDEXING -->
           <div class="card">
@@ -363,7 +367,12 @@ input[type=file]{width:100%}
         <button id="add-research-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
       </div>
       <div class="pb">
-        <div style="margin-bottom:12px"><input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="max-width:300px;width:100%"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <div style="position:relative;display:inline-flex;align-items:center">
+            <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:260px;padding-right:28px">
+            <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
+          </div>
+        </div>
         <div id="research-list"></div>
       </div>
     </div>
