@@ -1506,7 +1506,6 @@ function renderCalendar(){
       style="min-height:70px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
-        <button onclick="calAddPost('${dateStr}')" style="opacity:0;transition:opacity .15s;background:none;border:none;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;padding:0 2px;font-weight:700" class="cal-plus" title="Add post to this date">+</button>
       </div>
       ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
       ${dayProp.map(p=>`<div draggable="true"
@@ -1515,6 +1514,9 @@ function renderCalendar(){
         onclick="openPost('${p.id}','details')"
         style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
         title="${esc(titleCase(p.primary_keyword||p.title||''))}">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
+      <div style="display:flex;justify-content:center;margin-top:2px">
+        <button onclick="calAddPost('${dateStr}')" style="opacity:0;transition:opacity .15s;background:none;border:1px solid var(--teal);border-radius:50%;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700" class="cal-plus" title="Add post to this date">+</button>
+      </div>
     </div>`;
   }
   html+='</div>';
@@ -1545,22 +1547,45 @@ async function calDrop(e,dateStr){
 // Calendar + button — pick existing post or log new keyword for this date
 function calAddPost(dateStr){
   const posts=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date);
-  let html=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;margin-bottom:6px">Add to ${fd(dateStr)}</div>`;
+  let html=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">Add to ${fd(dateStr)}</div>`;
   if(posts.length){
-    html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">Assign an existing post:</div>`;
-    html+=`<select id="cal-post-sel" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px"><option value="">— select a post —</option>`;
-    posts.forEach(p=>{html+=`<option value="${p.id}">${esc(titleCase(p.primary_keyword||p.title||'Untitled'))} (${p.status})</option>`});
-    html+=`</select>`;
-    html+=`<button class="btn btn-p btn-sm" onclick="calAssignPost('${dateStr}')" style="width:100%;justify-content:center;margin-bottom:12px">Assign to this date</button>`;
+    html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600">Assign an existing post:</div>`;
+    html+=`<input type="text" id="cal-search" placeholder="Search posts…" oninput="calFilterPosts()" style="width:100%;padding:7px 10px;border:1.5px solid var(--teal);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:6px;outline:none">`;
+    html+=`<div id="cal-post-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px">`;
+    posts.forEach(p=>{
+      html+=`<div class="cal-post-item" data-id="${p.id}" data-kw="${esc((p.primary_keyword||p.title||'').toLowerCase())}" onclick="calSelectPost(this,'${dateStr}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:center;justify-content:space-between;transition:background .1s">
+        <span>${esc(titleCase(p.primary_keyword||p.title||'Untitled'))}</span>
+        ${sbadge(p.status)}
+      </div>`;
+    });
+    html+=`</div>`;
   }
-  html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Or log a new keyword:</div>`;
-  html+=`<input type="text" id="cal-new-kw" placeholder="Primary keyword" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px">`;
-  html+=`<button class="btn btn-p btn-sm" onclick="calAddNewKw('${dateStr}')" style="width:100%;justify-content:center">Add keyword to pipeline</button>`;
+  html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;border-top:1px solid var(--border);padding-top:10px">Or log a new keyword for this date:</div>`;
+  html+=`<input type="text" id="cal-new-kw" placeholder="Primary keyword" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px;outline:none">`;
+  html+=`<button class="btn btn-p btn-sm" onclick="calAddNewKw('${dateStr}')" style="width:100%;justify-content:center">Add to pipeline</button>`;
   html+=`</div>`;
-  // Show in a small popover-style modal
   document.getElementById('cal-popup-body').innerHTML=html;
   document.getElementById('cal-popup-date').textContent=fd(dateStr);
   document.getElementById('cal-popup-modal').classList.add('on');
+  setTimeout(()=>document.getElementById('cal-search')?.focus(),100);
+}
+
+function calFilterPosts(){
+  const q=(document.getElementById('cal-search')?.value||'').toLowerCase();
+  document.querySelectorAll('.cal-post-item').forEach(item=>{
+    const kw=item.dataset.kw||'';
+    item.style.display=kw.includes(q)?'flex':'none';
+  });
+}
+
+async function calSelectPost(el,dateStr){
+  const id=el.dataset.id;
+  document.querySelectorAll('.cal-post-item').forEach(i=>i.style.background='');
+  el.style.background='var(--teal-l)';
+  await saveProposedDate(id,dateStr);
+  await loadPosts();renderCalendar();renderPipeline();renderDashboard();
+  closeModal('cal-popup-modal');
+  toast('Added to '+fd(dateStr));
 }
 
 async function calAssignPost(dateStr){
