@@ -325,7 +325,10 @@ function renderPosts(){
   if(search)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(search)||(p.primary_keyword||'').toLowerCase().includes(search));
   if(!posts.length){document.getElementById('posts-list').innerHTML='<div class="empty">No posts found.</div>';return}
   document.getElementById('posts-list').innerHTML=posts.map(p=>{
-    const ln=_links.filter(l=>l.from_post_id===p.id).length,lv=fl(ln);
+    const ln=_links.filter(l=>l.from_post_id===p.id).length;
+    const postLn=_links.filter(l=>l.from_post_id===p.id&&l.to_post_id).length;
+    const pageLn=_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length;
+    const lv=postLn>=3&&pageLn>=2?'green':(postLn>0||pageLn>0)?'amber':'red';
     const s=p.social_tracking?.[0]||{};
     const sd=[s.pinterest_image_created,s.pinterest_shared,s.fb_shared,s.ig_shared].filter(Boolean).length;
     const dateStr=p.status==='live'?fd(p.published_date):p.scheduled_date?fd(p.scheduled_date):'';
@@ -347,7 +350,7 @@ function renderPosts(){
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
           ${score!==null&&(p.status==='idea'||p.status==='drafted')?`<div class="score-badge ${scoreClass(score)}">${score}</div>`:''}
-          <span class="flag f-${lv}">${ln}/3</span>
+          <span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>
           ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
         </div>
       </div></div>`;
@@ -529,7 +532,12 @@ async function rankAndGroupKeywords(){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
-    const clusters=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
+    if(!res.ok){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">API error ${res.status}: ${esc(rd.error?.message||JSON.stringify(rd))}</div>`;return}
+    const rawText=rd.content?.[0]?.text||'';
+    if(!rawText){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Empty response from Claude. Check your API key in Settings.</div>`;return}
+    let clusters=[];
+    try{clusters=JSON.parse(rawText.replace(/```json|```/g,'').trim())}
+    catch(pe){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Could not parse response. Raw output:<br><pre style="font-size:10px;white-space:pre-wrap;margin-top:6px">${esc(rawText.slice(0,500))}</pre></div>`;return}
     let html='';
     clusters.forEach(c=>{
       html+=`<div class="kw-cluster"><div class="kw-cluster-title">${esc(c.cluster)}</div>`;
@@ -541,7 +549,7 @@ async function rankAndGroupKeywords(){
       });
       html+='</div>';
     });
-    document.getElementById('kw-dump-result').innerHTML=html||'<div class="empty">No results.</div>';
+    document.getElementById('kw-dump-result').innerHTML=html||'<div class="empty">No clusters returned.</div>';
   }catch(e){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Error: ${esc(e.message)}</div>`}
   finally{btn.textContent='✦ Rank and group';btn.disabled=false}
 }
@@ -623,14 +631,25 @@ function renderChecklist(){
   const total=ALL_ITEM_IDS.length,done=ALL_ITEM_IDS.filter(id=>_clChecked[id]).length,pct=Math.round((done/total)*100);
   document.getElementById('prog-summary').textContent=`${done} of ${total} steps complete (${pct}%)`;
   document.getElementById('prog-fill').style.width=pct+'%';
+  // Remember which sections are open before wiping
+  const openSections=new Set();
+  CL_STEPS.forEach(s=>{const b=document.getElementById('cl-body-'+s.id);if(b&&b.style.display!=='none')openSections.add(s.id)});
   let html='';
   CL_STEPS.forEach(step=>{
     const sd=step.items.filter(i=>_clChecked[i.id]).length,allDone=sd===step.items.length;
-    html+=`<div class="cl-section"><button class="cl-hdr" onclick="toggleClStep('${step.id}')"><div class="cl-num ${allDone?'done':''}">${allDone?'✓':step.num}</div><div class="cl-title">${step.title}</div><div class="cl-prog">${sd}/${step.items.length}</div><span id="cl-arr-${step.id}" style="font-size:13px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span></button><div id="cl-body-${step.id}" class="cl-body" style="display:none">${step.note?`<div class="cl-note">💡 ${esc(step.note)}</div>`:''}${step.items.map(item=>`<div class="cl-item${_clChecked[item.id]?' ck':''}" onclick="toggleClItem('${item.id}')"><div class="cl-cb">${_clChecked[item.id]?'✓':''}</div><span class="cl-text">${esc(item.text)}</span></div>`).join('')}</div></div>`;
+    html+=`<div class="cl-section"><button class="cl-hdr" onclick="toggleClStep('${step.id}')"><div class="cl-num ${allDone?'done':''}">${allDone?'✓':step.num}</div><div class="cl-title">${step.title}</div><div class="cl-prog">${sd}/${step.items.length}</div><span id="cl-arr-${step.id}" style="font-size:13px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span></button><div id="cl-body-${step.id}" class="cl-body" style="display:none">${step.note?`<div class="cl-note">💡 ${esc(step.note)}</div>`:''}${step.items.map(item=>`<div class="cl-item${_clChecked[item.id]?' ck':''}"><div class="cl-cb" onclick="toggleClItem('${item.id}')" title="Mark as done">${_clChecked[item.id]?'✓':''}</div><span class="cl-text">${esc(item.text)}</span></div>`).join('')}</div></div>`;
   });
   document.getElementById('cl-sections').innerHTML=html;
-  const activeStep=CL_STEPS.find(s=>s.items.some(i=>!_clChecked[i.id]));
-  if(activeStep){const body=document.getElementById('cl-body-'+activeStep.id),arr=document.getElementById('cl-arr-'+activeStep.id);if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}}
+  // Restore open sections first
+  openSections.forEach(id=>{
+    const body=document.getElementById('cl-body-'+id),arr=document.getElementById('cl-arr-'+id);
+    if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}
+  });
+  // If nothing was open yet, auto-open the first incomplete step
+  if(!openSections.size){
+    const activeStep=CL_STEPS.find(s=>s.items.some(i=>!_clChecked[i.id]));
+    if(activeStep){const body=document.getElementById('cl-body-'+activeStep.id),arr=document.getElementById('cl-arr-'+activeStep.id);if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}}
+  }
 }
 function toggleClStep(id){const body=document.getElementById('cl-body-'+id),arr=document.getElementById('cl-arr-'+id);if(!body)return;const open=body.style.display!=='none';body.style.display=open?'none':'block';if(arr)arr.style.transform=open?'rotate(0)':'rotate(180deg)'}
 async function toggleClItem(itemId){
@@ -723,17 +742,26 @@ async function handleGscFile(event){
 async function renderModalLinks(){
   if(!curPost)return;await loadLinks();
   const out=_links.filter(l=>l.from_post_id===curPost),inc=_links.filter(l=>l.to_post_id===curPost);
-  document.getElementById('lc-badge').textContent=`${out.length} / 3 target`;
+  // Split outbound into blog post links and page/dest links
+  const postLinks=out.filter(l=>l.to_post_id);
+  const pageLinks=out.filter(l=>l.to_dest_id);
+  const pl=postLinks.length,pgl=pageLinks.length;
+  const plLv=pl>=3?'green':pl>0?'amber':'red';
+  const pglLv=pgl>=2?'green':pgl>0?'amber':'red';
+  document.getElementById('lc-badge').innerHTML=`<span class="flag f-${plLv}" style="margin-right:4px">${pl}/3 posts</span><span class="flag f-${pglLv}">${pgl}/2 pages</span>`;
   let html='';
-  if(!out.length)html='<div style="font-size:12px;color:var(--text3);padding:4px 0 10px">No outbound links yet</div>';
-  else{html=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">${out.length} of 3</div>`;out.forEach(l=>{const t=gt(l.to_post_id||l.to_dest_id);if(!t)return;html+=`<div class="lr"><div style="flex:1;font-size:12px;font-weight:500">${esc(t.label)} ${t.type==='dest'?`<span class="pill pill-g">page</span>`:''}</div><button class="btn btn-danger btn-xs" onclick="removeLink('${l.id}')">Remove</button></div>`})}
+  if(!out.length)html='<div style="font-size:12px;color:var(--text3);padding:4px 0 10px">No outbound links yet. Aim for 3 blog posts + 2 pages.</div>';
+  else{
+    if(postLinks.length){html+=`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:2px">Blog posts (${pl}/3)</div>`;postLinks.forEach(l=>{const t=gt(l.to_post_id||l.to_dest_id);if(!t)return;html+=`<div class="lr"><div style="flex:1;font-size:12px;font-weight:500">${esc(t.label)}</div><button class="btn btn-danger btn-xs" onclick="removeLink('${l.id}')">Remove</button></div>`})}
+    if(pageLinks.length){html+=`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:10px">Pages (${pgl}/2)</div>`;pageLinks.forEach(l=>{const t=gt(l.to_post_id||l.to_dest_id);if(!t)return;html+=`<div class="lr"><div style="flex:1;font-size:12px;font-weight:500">${esc(t.label)} <span class="pill pill-g">page</span></div><button class="btn btn-danger btn-xs" onclick="removeLink('${l.id}')">Remove</button></div>`})}
+  }
   document.getElementById('pm-link-list').innerHTML=html;
   const sel=document.getElementById('pm-link-sel');sel.innerHTML='<option value="">— select —</option>';
   const li=new Set(out.map(l=>l.to_post_id||l.to_dest_id));
   const ap=bp().filter(p=>p.id!==curPost&&!li.has(p.id));
   const ad=bd().filter(d=>!li.has(d.id));
-  if(ap.length){const og=document.createElement('optgroup');og.label='Blog posts';ap.forEach(p=>{const o=document.createElement('option');o.value='p:'+p.id;o.textContent=(p.primary_keyword||p.title||'Untitled');og.appendChild(o)});sel.appendChild(og)}
-  if(ad.length){const og=document.createElement('optgroup');og.label='Pages';ad.forEach(d=>{const o=document.createElement('option');o.value='d:'+d.id;o.textContent=d.label;og.appendChild(o)});sel.appendChild(og)}
+  if(ap.length){const og=document.createElement('optgroup');og.label='Blog posts (aim for 3)';ap.forEach(p=>{const o=document.createElement('option');o.value='p:'+p.id;o.textContent=(p.primary_keyword||p.title||'Untitled');og.appendChild(o)});sel.appendChild(og)}
+  if(ad.length){const og=document.createElement('optgroup');og.label='Pages (aim for 2)';ad.forEach(d=>{const o=document.createElement('option');o.value='d:'+d.id;o.textContent=d.label;og.appendChild(o)});sel.appendChild(og)}
   let inh='';
   if(!inc.length)inh='<div style="font-size:12px;color:var(--text3);padding:4px 0">No posts link here yet</div>';
   else inc.forEach(l=>{const f=gp(l.from_post_id);if(!f)return;inh+=`<div class="lr"><span style="color:var(--text3)">←</span><div style="font-size:12px;font-weight:500">${esc(f.primary_keyword||f.title)}</div></div>`});
@@ -850,7 +878,7 @@ function checkMilestone(){
   for(const m of milestones){
     if(completePosts>=m&&reached<m){
       localStorage.setItem(key,m);
-      const msgs={5:'5 posts fully complete — great start!',10:'10 posts done — you're building momentum!',25:'25 posts complete — a quarter century! 🌟',50:'50 posts fully complete — halfway hero! 🏆',100:'100 posts complete — absolutely incredible! 🚀'};
+      const msgs={5:'5 posts fully complete — great start!',10:'10 posts done — you are building momentum!',25:'25 posts complete — a quarter century! 🌟',50:'50 posts fully complete — halfway hero! 🏆',100:'100 posts complete — absolutely incredible! 🚀'};
       showMilestone(msgs[m]||`${m} posts complete!`);
       break;
     }
