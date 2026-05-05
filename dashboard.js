@@ -1525,9 +1525,9 @@ function renderCalendar(){
   const firstDay=new Date(year,month,1);
   const lastDay=new Date(year,month+1,0);
   const startDow=firstDay.getDay();
-  let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">';
+  let html='<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-bottom:6px">';
   ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:4px">${d}</div>`);
-  html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+  html+='</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px">';
   for(let i=0;i<startDow;i++)html+=`<div style="height:100px"></div>`;
   for(let day=1;day<=lastDay.getDate();day++){
     const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
@@ -1538,7 +1538,7 @@ function renderCalendar(){
       ondragover="calDragOver(event)"
       ondrop="calDrop(event,'${dateStr}')"
       ondragleave="calDragLeave(event)"
-      style="height:100px;overflow-y:auto;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
+      style="height:100px;overflow-y:auto;min-width:0;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
       </div>
