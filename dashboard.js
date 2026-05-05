@@ -248,7 +248,7 @@ function bd(){return allDests.filter(d=>d.blog===activeBlog)}
 function gp(id){return allPosts.find(p=>p.id===id)}
 function gt(id){const p=allPosts.find(x=>x.id===id);if(p)return{label:p.title||p.primary_keyword,url:p.url,type:'post'};const d=allDests.find(x=>x.id===id);if(d)return{label:d.label,url:d.url,type:'dest'};return null}
 function fl(n){return n===0?'red':n<3?'amber':'green'}
-function fd(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+function fd(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function sbadge(s){
   const m={live:'b-live',scheduled:'b-scheduled',approved:'b-approved',review:'b-review','pending-review':'b-review',drafted:'b-drafted',idea:'b-idea'};
@@ -292,7 +292,7 @@ function renderSchedPill(){
   if(pct>=1){cls='sched-green';dot='background:#2a7d3f';label=`${scheduled}/${needed} scheduled ✓`}
   else if(pct>=0.5){cls='sched-amber';dot='background:#e8960a';label=`${scheduled}/${needed} scheduled`}
   else{cls='sched-red';dot='background:#e04444';label=`${scheduled}/${needed} scheduled`}
-  document.getElementById('sched-pill-wrap').innerHTML=`<button class="sched-pill ${cls}" onclick="switchTab('posts','scheduled')"><span class="sched-dot" style="${dot}"></span>${label}</button>`;
+  const spw=document.getElementById('sched-pill-wrap');if(spw)spw.innerHTML=`<button class="sched-pill ${cls}" onclick="switchTab('posts','scheduled')"><span class="sched-dot" style="${dot}"></span>${label}</button>`;
 }
 
 // RENDER
@@ -314,6 +314,7 @@ function socialIconRow(s,p){
 }
 
 function renderDashboard(){
+  if(activeTab!=='dashboard')return;
   const posts=bp();
   const today=localToday();
   document.getElementById('dash-title').textContent=BM[activeBlog].name;
@@ -326,12 +327,12 @@ function renderDashboard(){
   const ideas=posts.filter(p=>p.status==='idea').length;
 
   // HORIZONTAL METRIC PILLS
-  document.getElementById('dash-metrics').innerHTML=`
+  const dmEl=document.getElementById('dash-metrics');if(dmEl)dmEl.innerHTML=`
     <button class="dash-pill dash-pill-green" onclick="switchTab('posts','live')"><span class="dp-num">${live}</span><span class="dp-lbl">Live</span></button>
     <button class="dash-pill dash-pill-blue" onclick="switchTab('posts','scheduled')"><span class="dp-num">${sched}</span><span class="dp-lbl">Scheduled</span></button>
     <button class="dash-pill dash-pill-purple" onclick="switchTab('posts','drafted')"><span class="dp-num">${drafted}</span><span class="dp-lbl">Drafted</span></button>
     <button class="dash-pill dash-pill-amber" onclick="switchTab('posts','not-indexed')"><span class="dp-num">${notIdx+idxReq}</span><span class="dp-lbl">Indexing needed</span></button>
-    <button class="dash-pill dash-pill-teal" onclick="switchTab('research')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
+    <button class="dash-pill dash-pill-teal" onclick="switchTab('planning')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
 
   // NEXT UP — pipeline order (proposed date, not yet scheduled/live)
   const isN=activeBlog==='nms';
@@ -770,7 +771,8 @@ async function openPost(id,tab){
   document.getElementById('pm-url').value=post.url||'';
   document.getElementById('pm-status').value=post.status||'idea';
   const pmSched=document.getElementById('pm-sched');if(pmSched)pmSched.value=post.scheduled_date||'';
-  document.getElementById('pm-pub').value=post.published_date||'';
+  const pmPub=document.getElementById('pm-pub');if(pmPub)pmPub.value=post.published_date||'';
+  const pmProp=document.getElementById('pm-proposed');if(pmProp)pmProp.value=post.proposed_date||'';
   document.getElementById('pm-indexed').value=post.indexed||'no';
   document.getElementById('pm-kw').value=kw;
   document.getElementById('pm-ks').value=post.ks_score!=null?post.ks_score:'';
@@ -814,6 +816,7 @@ async function savePost(){
       status:document.getElementById('pm-status')?.value||'idea',
       scheduled_date:document.getElementById('pm-sched')?.value||null,
       published_date:document.getElementById('pm-pub')?.value||null,
+      proposed_date:document.getElementById('pm-proposed')?.value||null,
       indexed:document.getElementById('pm-indexed')?.value||'no',
       primary_keyword:document.getElementById('pm-kw')?.value.trim()||null,
       ks_score:parseInt(document.getElementById('pm-ks')?.value)||null,
