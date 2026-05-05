@@ -763,16 +763,34 @@ async function rankAndGroupKeywords(){
     try{clusters=JSON.parse(rawText.replace(/```json|```/g,'').trim())}
     catch(pe){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Could not parse response. Raw output:<br><pre style="font-size:10px;white-space:pre-wrap;margin-top:6px">${esc(rawText.slice(0,500))}</pre></div>`;return}
     let html='';
-    clusters.forEach(c=>{
-      html+=`<div class="kw-cluster"><div class="kw-cluster-title">${esc(c.cluster)}</div>`;
+    let _clusterData={};
+    clusters.forEach((c,ci)=>{
+      // Pick best primary = highest priority then highest score
+      const ranked=[...c.keywords].sort((a,b)=>{
+        const pOrder={high:0,medium:1,low:2};
+        const pd=(pOrder[a.priority||'medium']||1)-(pOrder[b.priority||'medium']||1);
+        if(pd!==0)return pd;
+        return(calcScore(b.ks,b.volume)||0)-(calcScore(a.ks,a.volume)||0);
+      });
+      _clusterData[ci]=ranked;
+      const primary=ranked[0];
+      const suppArr=ranked.slice(1).map(k=>k.keyword);
+      html+=`<div class="kw-cluster">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="kw-cluster-title" style="margin:0">${esc(c.cluster)}</div>
+          <button class="btn btn-p btn-xs" onclick="addClusterAsPost(${ci})" style="white-space:nowrap;flex-shrink:0">＋ Add cluster as post</button>
+        </div>`;
       c.keywords.forEach(k=>{
         const sc=calcScore(k.ks,k.volume);
         const pri=k.priority||'medium';
         const priColor=pri==='high'?'var(--red-t)':pri==='medium'?'var(--amber-t)':'var(--green)';
-        html+=`<div class="kw-cluster-item"><div style="flex:1"><div style="font-size:12px;font-weight:600">${esc(k.keyword)}</div><div style="font-size:11px;color:var(--text3)">${esc(k.reason)}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${k.ks!=null?`<span class="pill pill-g">KS ${k.ks}</span>`:''}<span style="font-size:10px;font-weight:700;color:${priColor}">${pri.toUpperCase()}</span><button class="btn btn-p btn-xs" onclick="addKwToIdeas(this)" data-kw="${esc(k.keyword)}" data-ks="${k.ks||''}" data-vol="${k.volume||''}">+ Add</button></div></div>`;
+        const isPrimary=k.keyword===primary.keyword;
+        html+=`<div class="kw-cluster-item" style="${isPrimary?'background:var(--teal-l);border-left:3px solid var(--teal);':''}"><div style="flex:1"><div style="font-size:12px;font-weight:600">${esc(k.keyword)}${isPrimary?' <span style="font-size:9px;background:var(--teal);color:#fff;border-radius:10px;padding:1px 6px;font-weight:600;vertical-align:middle">PRIMARY</span>':''}</div><div style="font-size:11px;color:var(--text3)">${esc(k.reason)}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${k.ks!=null?`<span class="pill pill-g">KS ${k.ks}</span>`:''}<span style="font-size:10px;font-weight:700;color:${priColor}">${pri.toUpperCase()}</span><button class="btn btn-xs" onclick="addKwToIdeas(this)" data-kw="${esc(k.keyword)}" data-ks="${k.ks||''}" data-vol="${k.volume||''}">+ Add</button></div></div>`;
       });
-      html+='</div>';
+      html+=`</div>`;
     });
+    // Store cluster data globally for addClusterAsPost
+    window._kwClusterData=_clusterData;
     document.getElementById('kw-dump-result').innerHTML=html||'<div class="empty">No clusters returned.</div>';
   }catch(e){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Error: ${esc(e.message)}</div>`}
   finally{btn.textContent='✦ Rank and group';btn.disabled=false}
@@ -782,7 +800,34 @@ async function addKwToIdeas(el){const kw=el.dataset.kw,ks=el.dataset.ks,vol=el.d
   const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw,ks_score:parseInt(ks)||null,search_volume:parseInt(vol)||null,status:'idea',current_step:0,indexed:'no'}).select().single();
   if(error){toast('Error: '+error.message);return}
   await sb.from('social_tracking').insert({post_id:data.id});
-  await loadPosts();render();toast('Added to Ideas: '+kw);
+  el.textContent='✓ Added';el.disabled=true;el.style.cssText='background:var(--green-l);color:var(--green);border:1px solid #b8dfc6;font-size:10px;padding:3px 8px;border-radius:30px';
+  await loadPosts();toast('Added: '+kw);
+}
+
+async function addClusterAsPost(ci){
+  const cluster=window._kwClusterData?.[ci];
+  if(!cluster||!cluster.length)return;
+  const primary=cluster[0];
+  const supp=cluster.slice(1).map(k=>{
+    const parts=[k.keyword];
+    if(k.volume)parts.push(k.volume);
+    if(k.ks!=null)parts.push('KS'+k.ks);
+    return parts.join(' ');
+  }).join(', ');
+  const{data,error}=await sb.from('posts').insert({
+    blog:activeBlog,
+    primary_keyword:primary.keyword,
+    ks_score:parseInt(primary.ks)||null,
+    search_volume:parseInt(primary.volume)||null,
+    supplementary_keywords:supp||null,
+    status:'idea',current_step:0,indexed:'no'
+  }).select().single();
+  if(error){toast('Error: '+error.message);return}
+  await sb.from('social_tracking').insert({post_id:data.id});
+  await loadPosts();toast(`✓ Cluster added — "${titleCase(primary.keyword)}" as primary, ${cluster.length-1} supplementary`);
+  // Mark the button as done
+  const btns=document.querySelectorAll('.kw-cluster button');
+  btns.forEach(b=>{if(b.textContent.includes('Add cluster')&&b.getAttribute('onclick')===`addClusterAsPost(${ci})`){b.textContent='✓ Added';b.disabled=true;b.style.cssText='background:var(--green-l);color:var(--green);border:1px solid #b8dfc6;border-radius:30px;font-size:10px;padding:3px 10px'}});
 }
 
 // POST MODAL
