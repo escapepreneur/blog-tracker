@@ -589,7 +589,7 @@ input[type=file]{width:100%}
     <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="np-serp" placeholder="Google Drive link to SERP export"></div>
   </div>
   <div style="margin-bottom:10px"><label class="fl">Unique take / Karen's angle <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— leave blank and Claude will suggest</span></label><textarea id="np-take" rows="2" style="resize:none" placeholder="e.g. Karen's experience testing every CRM before building ESC Hub"></textarea></div>
-  <div style="margin-bottom:16px"><label class="fl">Notes for Sienna <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— context, angle, anything to flag</span></label><textarea id="np-notes" rows="2" style="resize:none" placeholder="e.g. This is a pillar post — make sure it links to the other funnel posts. Target Kajabi audience."></textarea></div>
+  <div style="margin-bottom:16px"><label class="fl">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— context, angle, anything to flag</span></label><textarea id="np-notes" rows="2" style="resize:none" placeholder="e.g. This is a pillar post — make sure it links to the other funnel posts. Target Kajabi audience."></textarea></div>
   <div style="display:flex;gap:8px">
     <button class="btn btn-p" id="np-save-btn" onclick="saveToIdeas()" style="flex:2;justify-content:center">Save to Ideas</button>
     <button class="btn btn-ghost" id="np-brief-btn" onclick="saveAndGetBrief()" style="flex:1;justify-content:center">Get brief now →</button>
@@ -672,7 +672,7 @@ input[type=file]{width:100%}
       <button class="btn btn-ghost btn-sm" id="review-post-btn" onclick="reviewLivePost(curPost)" style="display:none">Review live post</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDel()">Delete</button>
     </div>
-    <div class="confirm-row" id="pm-del-row">
+    <div class="confirm-row" id="pm-del-row" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <span style="font-size:12px;color:var(--red-t)">Delete this post and all its data?</span>
       <button class="btn btn-danger btn-sm" onclick="deletePost()">Yes, delete</button>
       <button class="btn btn-sm" onclick="document.getElementById('pm-del-row').classList.remove('on')">Cancel</button>

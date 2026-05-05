@@ -732,7 +732,7 @@ async function rankKeywords(){
   result.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;color:var(--text2)"><div class="spinner"></div>Ranking keywords…</div>`;
   const prompt=`You are helping plan SEO content for a blog post targeting coaches and solopreneurs.\n\nPrimary keyword: "${kw}"\nSupplementary keywords: ${supp}\n\nFor each supplementary keyword recommend where to use it: H2 heading, intro_meta (intro and meta description), or natural (mention once naturally).\n\nRespond ONLY with JSON:\n[{"keyword":"exact keyword","category":"H2"|"intro_meta"|"natural","reason":"brief reason"}]`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
     const recs=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
     const catMap={'H2':'krl-h2','intro_meta':'krl-intro','natural':'krl-natural'};
@@ -754,7 +754,7 @@ async function rankAndGroupKeywords(){
   document.getElementById('kw-dump-result').innerHTML=`<div class="card"><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><div class="spinner"></div>Grouping and ranking keywords…</div></div>`;
   const prompt=`You are a content strategist for ${BM[activeBlog].name}, a blog targeting coaches and solopreneurs.\n\nHere are keywords to group and rank:\n${input}\n\nGroup them into topic clusters. Within each cluster, rank by writing priority based on: lower KD = better, higher volume = better.\n\nFor each keyword note: estimated KD (if provided), volume (if provided), and why it's worth writing.\n\nRespond ONLY with JSON:\n[{"cluster":"cluster name","keywords":[{"keyword":"kw","ks":null,"volume":null,"priority":"high|medium|low","reason":"brief reason"}]}]`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
     if(!res.ok){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">API error ${res.status}: ${esc(rd.error?.message||JSON.stringify(rd))}</div>`;return}
     const rawText=rd.content?.[0]?.text||'';
@@ -1055,7 +1055,7 @@ async function getSuggestions(){
   const cl=cands.map((p,i)=>`${i+1}. "${p.primary_keyword||p.title}"${p.supplementary_keywords?' | '+p.supplementary_keywords:''}`).join('\n');
   const prompt=`Internal link suggestions for ${BM[activeBlog].name} blog.\n\nPost: "${post.primary_keyword||post.title}"\n${post.supplementary_keywords?'Supp: '+post.supplementary_keywords:''}\n\nAvailable live posts:\n${cl}\n\nRecommend 3 most relevant. One sentence reason each.\n\nJSON only:\n[{"index":1,"title":"keyword or title","reason":"reason"}]`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
     const sugs=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
     let html='<div class="sug-box">';
@@ -1375,7 +1375,7 @@ Report findings clearly. If everything looks good say so. Keep it brief.`;
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-5',
         max_tokens:1000,
         tools:[{type:'web_search_20250305',name:'web_search'}],
         messages:[{role:'user',content:prompt}]
@@ -1461,22 +1461,32 @@ function renderPipeline(){
   const isN=activeBlog==='nms';
   if(!posts.length){el.innerHTML='<div class="empty">No posts with proposed dates yet. Set dates in Planning → Research queue.</div>';return}
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--r)">
+    <div style="display:grid;grid-template-columns:40px 1fr 140px 120px 60px;gap:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--r)">
       <div style="display:contents;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">
-        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">#</div>
-        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Keyword</div>
-        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Date</div>
-        <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2)">Status</div>
+        <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2)">#</div>
+        <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2)">Keyword</div>
+        <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2)">Date</div>
+        <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2)">Status</div>
+        <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2);text-align:center">Score</div>
       </div>
-      ${posts.map((p,i)=>`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','details')">
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600">${i+1}</div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
-          ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
-        </div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap">${fd(p.proposed_date)}</div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">${sbadge(p.status)}</div>
-      </div>`).join('')}
+      ${posts.map((p,i)=>{
+        const score=calcScore(p.ks_score,p.search_volume);
+        const isN=activeBlog==='nms';
+        const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
+        const bg=i%2===0?'var(--bg)':'var(--bg2)';
+        return`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','details')">
+          <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600;background:${bg};display:flex;align-items:center">${i+1}</div>
+          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
+              ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+            </div>
+          </div>
+          <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(p.proposed_date)}</div>
+          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">${sbadge(p.status)}</div>
+          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">${score!=null?`<span style="font-size:12px;font-weight:700;color:${isN?'var(--purple-t)':'var(--teal-d)'}">${score}</span>`:'—'}</div>
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -1518,7 +1528,7 @@ function renderCalendar(){
   let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">';
   ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:4px">${d}</div>`);
   html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
-  for(let i=0;i<startDow;i++)html+=`<div style="min-height:70px"></div>`;
+  for(let i=0;i<startDow;i++)html+=`<div style="height:100px"></div>`;
   for(let day=1;day<=lastDay.getDate();day++){
     const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dayFixed=fixedPosts.filter(p=>(p.scheduled_date||p.published_date)===dateStr);
@@ -1528,17 +1538,23 @@ function renderCalendar(){
       ondragover="calDragOver(event)"
       ondrop="calDrop(event,'${dateStr}')"
       ondragleave="calDragLeave(event)"
-      style="min-height:70px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
+      style="height:100px;overflow-y:auto;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px;position:relative">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
       </div>
-      ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
-      ${dayProp.map(p=>`<div draggable="true"
+      ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
+      ${dayProp.map(p=>{
+        const sc=calcScore(p.ks_score,p.search_volume);
+        return`<div draggable="true"
         ondragstart="calDragStart(event,'${p.id}')"
         ondragend="calDragEnd(event)"
         onclick="openPost('${p.id}','details')"
-        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-        title="${esc(titleCase(p.primary_keyword||p.title||''))}">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
+        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px"
+        title="${esc(titleCase(p.primary_keyword||p.title||''))}">
+        <span style="overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
+        ${sc!=null?`<span style="flex-shrink:0;font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
+        </div>`;
+      }).join('')}
       <div style="display:flex;justify-content:center;margin-top:2px">
         <button onclick="calAddPost('${dateStr}')" style="opacity:0;transition:opacity .15s;background:none;border:1px solid var(--teal);border-radius:50%;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700" class="cal-plus" title="Add post to this date">+</button>
       </div>
@@ -1571,30 +1587,38 @@ async function calDrop(e,dateStr){
 
 // Calendar + button — pick existing post or log new keyword for this date
 function calAddPost(dateStr){
-  const posts=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date);
-  let html=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">Add to ${fd(dateStr)}</div>`;
+  const allUnplanned=bp().filter(p=>!['scheduled','live'].includes(p.status)&&!p.proposed_date);
+  const posts=[...allUnplanned].sort((a,b)=>(calcScore(b.ks_score,b.search_volume)||0)-(calcScore(a.ks_score,a.search_volume)||0));
+  const existing=bp().filter(p=>p.proposed_date===dateStr&&!['scheduled','live'].includes(p.status));
+  let html='<div>';
+  if(existing.length){
+    html+=`<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r2);padding:8px 12px;font-size:11px;color:var(--amber-t);margin-bottom:12px">⚠️ ${existing.length} post${existing.length>1?'s':''} already planned for this date: ${existing.map(p=>esc(titleCase(p.primary_keyword||p.title||''))).join(', ')}</div>`;
+  }
   if(posts.length){
     html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600">Assign an existing post:</div>`;
-    html+=`<input type="text" id="cal-search" placeholder="Search posts…" oninput="calFilterPosts()" style="width:100%;padding:7px 10px;border:1.5px solid var(--teal);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:6px;outline:none">`;
-    html+=`<div id="cal-post-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px">`;
+    html+=`<input type="text" id="cal-search" placeholder="Search posts…" oninput="calFilterPosts()" style="width:100%;padding:7px 10px;border:1.5px solid var(--teal);border-radius:30px;font-size:12px;font-family:Poppins,sans-serif;margin-bottom:6px;outline:none">`;
+    html+=`<div id="cal-post-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px">`;
     posts.forEach(p=>{
-      html+=`<div class="cal-post-item" data-id="${p.id}" data-kw="${esc((p.primary_keyword||p.title||'').toLowerCase())}" onclick="calSelectPost(this,'${dateStr}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:center;justify-content:space-between;transition:background .1s">
-        <span>${esc(titleCase(p.primary_keyword||p.title||'Untitled'))}</span>
-        ${sbadge(p.status)}
+      const sc=calcScore(p.ks_score,p.search_volume);
+      html+=`<div class="cal-post-item" data-id="${p.id}" data-kw="${esc((p.primary_keyword||p.title||'').toLowerCase())}" onclick="calSelectPost(this,'${dateStr}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .1s">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(titleCase(p.primary_keyword||p.title||'Untitled'))}</span>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          ${sc!=null?`<span style="font-size:11px;font-weight:700;color:var(--teal-d)">${sc}</span>`:''}
+          ${sbadge(p.status)}
+        </div>
       </div>`;
     });
     html+=`</div>`;
   }
   html+=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;border-top:1px solid var(--border);padding-top:10px">Or log a new keyword for this date:</div>`;
-  html+=`<input type="text" id="cal-new-kw" placeholder="Primary keyword" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px;outline:none">`;
+  html+=`<input type="text" id="cal-new-kw" placeholder="Primary keyword" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:30px;font-size:12px;font-family:Poppins,sans-serif;margin-bottom:8px;outline:none">`;
   html+=`<button class="btn btn-p btn-sm" onclick="calAddNewKw('${dateStr}')" style="width:100%;justify-content:center">Add to pipeline</button>`;
-  html+=`</div>`;
+  html+='</div>';
   document.getElementById('cal-popup-body').innerHTML=html;
   document.getElementById('cal-popup-date').textContent=fd(dateStr);
   document.getElementById('cal-popup-modal').classList.add('on');
   setTimeout(()=>document.getElementById('cal-search')?.focus(),100);
 }
-
 function calFilterPosts(){
   const q=(document.getElementById('cal-search')?.value||'').toLowerCase();
   document.querySelectorAll('.cal-post-item').forEach(item=>{
@@ -1665,7 +1689,7 @@ Respond ONLY with JSON:
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1200,messages:[{role:'user',content:prompt}]})
     });
     const rd=await res.json();
     const gaps=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
