@@ -1,5 +1,5 @@
 const BLOGGING_PROJECT_URL='https://claude.ai/project/019cd821-e61f-73e4-bc71-51bda336a345';
-const GSC_URLS={esc:'https://search.google.com/search-console/inspect?resource_id=sc-domain:eschub.com&url=',nms:'https://search.google.com/search-console/inspect?resource_id=https://escapepreneur.com/&url='};
+const GSC_URLS={esc:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aeschub.com&item_url=',nms:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aescapepreneur.com&item_url='};
 const CL_STEPS=[
   {id:'s2',num:'02',title:'Blogging Project → Google Doc',note:'Open a new chat in the Blogging project, paste the brief, and wait. Save the full output to a Google Doc.',items:[
     {id:'cl1',text:'Open a new chat in the Escapepreneur Blogging project (claude.ai)'},
@@ -30,7 +30,7 @@ const CL_STEPS=[
   ]},
   {id:'s5',num:'05',title:'Set Up & Schedule in ESC Hub',note:'All content and images are approved and converted. Build the post in ESC Hub and schedule it.',items:[
     {id:'p1',text:'Paste the article from the Google Doc into the ESC Hub blog editor'},
-    {id:'p2',text:'At the top of the page, add a Code Block and enter the code from: docs.google.com/document/d/1w2KiNdQBKAsp7pxksz_c7_t17aOMQI5aWZZMe4n_Ot8/edit'},
+    {id:'p2',text:'Under the introduction, add a Code Block and enter the code from: docs.google.com/document/d/1w2KiNdQBKAsp7pxksz_c7_t17aOMQI5aWZZMe4n_Ot8/edit'},
     {id:'p3',text:'Upload all WebP images to the Blogging folder in the ESC Hub media library'},
     {id:'p4',text:'Find each [Insert Image: filename.webp] marker — insert the matching image, add alt text, delete the markers'},
     {id:'p5',text:'At the bottom of the post, insert the Pinterest image — set width to 350 and leave height blank'},
@@ -78,7 +78,7 @@ function calcScore(ks,vol){
   const cf=k<=30?1-(k/30)*0.25:k<=40?0.75-(k-30)/10*0.35:Math.max(0.05,0.4-(k-40)/20*0.35);
   return Math.min(100,Math.max(1,Math.round(vf*cf)));
 }
-function scoreClass(s){if(s===null)return'score-n';if(s>=60)return'score-h';if(s>=30)return'score-m';return'score-l';}
+function scoreClass(s){return s===null?'score-n':'score-badge';}
 
 // INIT
 function initApp(){
@@ -349,7 +349,7 @@ function renderPosts(){
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-          ${score!==null&&(p.status==='idea'||p.status==='drafted')?`<div class="score-badge ${scoreClass(score)}">${score}</div>`:''}
+          ${score!==null&&(p.status==='idea'||p.status==='drafted')?`<div class="score-badge" style="${activeBlog==='nms'?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
           <span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>
           ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
         </div>
@@ -359,20 +359,24 @@ function renderPosts(){
 
 // IDEAS
 function renderIdeas(){
+  const isN=activeBlog==='nms';
   const ideaPosts=bp().filter(p=>p.status==='idea');
   const el=document.getElementById('ideas-list');if(!el)return;
-  if(!ideaPosts.length){el.innerHTML='<div class="empty">No ideas yet. Use + Log keyword to queue posts for writing.</div>';return}
+  const search=(document.getElementById('ideas-search')?.value||'').toLowerCase();
   const sorted=[...ideaPosts].map(p=>({...p,_score:calcScore(p.ks_score,p.search_volume)||0})).sort((a,b)=>b._score-a._score);
-  el.innerHTML=sorted.map(p=>`<div class="post-row">
+  const filtered=search?sorted.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.supplementary_keywords||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):sorted;
+  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match that search.':'No ideas yet. Use + Log keyword to queue posts for writing.'}</div>`;return}
+  const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
+  el.innerHTML=filtered.map(p=>`<div class="post-row">
     <div style="display:flex;align-items:flex-start;gap:10px">
-      <div class="score-badge ${scoreClass(p._score||null)}" style="margin-top:2px">${p._score||'?'}</div>
+      <div class="score-badge" style="${p._score?badgeStyle:'background:var(--bg2);color:var(--text3);border-color:var(--border)'};margin-top:2px">${p._score||'?'}</div>
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','details')">
         <div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>
         ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,80))}${p.supplementary_keywords.length>80?'…':''}</div>`:''}
         ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-        <button class="btn btn-p btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
+        <button class="btn ${isN?'btn-pp':'btn-p'} btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
         <button class="btn btn-ghost btn-xs" onclick="openPost('${p.id}','details')">Edit</button>
       </div>
     </div>

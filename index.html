@@ -119,10 +119,7 @@ input[type=file]{width:100%}
 .f-amber{background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0}
 .f-green{background:var(--green-l);color:var(--green);border:1px solid #b8dfc6}
 .step-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
-.score-badge{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid}
-.score-h{background:#fff0f0;color:#992222;border-color:#f0c8c8}
-.score-m{background:var(--amber-l);color:var(--amber-t);border-color:#f0d8a0}
-.score-l{background:var(--green-l);color:var(--green);border-color:#b8dfc6}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid var(--teal);background:var(--teal-l);color:var(--teal-d)}
 .score-n{background:var(--bg2);color:var(--text3);border-color:var(--border)}
 .filters{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
 .fchip{padding:5px 12px;font-size:11px;font-weight:500;border:1.5px solid var(--border);border-radius:20px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:var(--F);transition:all .15s}
@@ -371,7 +368,10 @@ input[type=file]{width:100%}
         <div><div class="pt">Ideas</div><div class="ps">Ranked by priority score — highest first</div></div>
         <button id="add-idea-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
       </div>
-      <div class="pb"><div id="ideas-list"></div></div>
+      <div class="pb">
+        <div style="margin-bottom:12px"><input type="text" id="ideas-search" class="srch" placeholder="Search keywords…" oninput="renderIdeas()" style="max-width:300px;width:100%"></div>
+        <div id="ideas-list"></div>
+      </div>
     </div>
     <!-- CALENDAR -->
     <div id="pane-calendar" class="pane">
