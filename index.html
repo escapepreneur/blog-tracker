@@ -228,6 +228,15 @@ input[type=file]{width:100%}
 .drag-handle{font-size:16px;color:var(--text3);cursor:grab;user-select:none;padding:0 4px;flex-shrink:0}
 .drag-handle:active{cursor:grabbing}
 .research-num{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text2);flex-shrink:0}
+.dash-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;border:none;cursor:pointer;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;transition:all .15s;box-shadow:var(--sh-sm)}
+.dash-pill:hover{transform:translateY(-1px);box-shadow:var(--sh)}
+.dp-num{font-size:18px;font-weight:700;line-height:1}
+.dp-lbl{font-size:11px;font-weight:500;opacity:.85}
+.dash-pill-green{background:var(--green-l);color:var(--green)}
+.dash-pill-blue{background:var(--blue-l);color:var(--blue)}
+.dash-pill-purple{background:var(--purple-l);color:var(--purple-t)}
+.dash-pill-amber{background:var(--amber-l);color:var(--amber-t)}
+.dash-pill-teal{background:var(--teal-l);color:var(--teal-d)}
 .weekly-import-btn{font-size:11px;font-weight:600;transition:all .2s}
 .weekly-active{background:var(--teal);color:#fff;border-color:var(--teal)}
 .weekly-active:hover{background:var(--teal-d);border-color:var(--teal-d)}
@@ -302,33 +311,43 @@ input[type=file]{width:100%}
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-p btn-sm" onclick="openNewPost()" id="dash-add-btn">+ Log keyword</button>
           <button id="weekly-sr-btn" class="btn btn-sm weekly-active" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
-          <button id="weekly-gsc-btn" class="btn btn-sm weekly-active" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=new Date().toISOString().split('T')[0]">⬆ Import GSC</button>
+          <button id="weekly-gsc-btn" class="btn btn-sm weekly-active" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=localToday()">⬆ Import GSC</button>
           <div id="complete-pill-wrap"></div>
         </div>
       </div>
       <div class="pb">
-        <div class="g4" id="dash-metrics" style="margin-bottom:16px"></div>
+        <!-- METRIC PILLS -->
+        <div id="dash-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
 
-        <!-- TODAY'S POSTS -->
-        <div class="card" style="margin-bottom:14px;border-left:4px solid var(--teal)">
-          <div class="sh" style="margin-bottom:8px">📅 Today's posts — confirm they went live</div>
-          <div id="dash-today"></div>
+        <!-- NEXT UP -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="sh" style="margin:0">Next up — from your research queue</div>
+            <button class="btn btn-xs" onclick="switchTab('research')" style="font-size:10px">View all →</button>
+          </div>
+          <div id="nextup-list"></div>
         </div>
 
-        <!-- PINTEREST ACTION -->
-        <div class="card" style="margin-bottom:14px;border-left:4px solid #e04444">
-          <div class="sh" style="margin-bottom:8px">📌 Pinterest still needed</div>
-          <div id="dash-pinterest-action"></div>
-        </div>
-
-        <div class="g2" style="margin-bottom:14px">
-          <!-- NEXT UP -->
-          <div class="card">
-            <div class="sh" style="margin-bottom:8px">Next up — from your research queue</div>
-            <div id="nextup-list"></div>
+        <!-- 3-COL ACTION ROW -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+          <!-- TODAY -->
+          <div class="card" style="border-left:4px solid var(--teal)">
+            <div class="sh" style="margin-bottom:8px">📅 Today's posts</div>
+            <div id="dash-today"></div>
+          </div>
+          <!-- PINTEREST + SOCIAL -->
+          <div>
+            <div class="card" style="border-left:4px solid #e04444;margin-bottom:10px">
+              <div class="sh" style="margin-bottom:6px">📌 Pinterest needed</div>
+              <div id="dash-pinterest-action"></div>
+            </div>
+            <div class="card">
+              <div class="sh" style="margin-bottom:6px">Social incomplete</div>
+              <div id="dash-social-incomplete"></div>
+            </div>
           </div>
           <!-- INDEXING -->
-          <div>
+          <div class="card">
             <div class="sh" style="margin-bottom:8px">Indexing status</div>
             <div id="dash-indexing"></div>
           </div>
@@ -696,6 +715,14 @@ input[type=file]{width:100%}
     <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">Required for AI features. Stored in your browser only.</div>
     <div style="display:flex;gap:8px"><input type="password" id="set-api-key" placeholder="sk-ant-..." style="flex:1"><button class="btn btn-p btn-sm" onclick="saveApiKey()">Save</button></div>
     <div id="set-api-msg" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+  </div>
+  <div style="margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Timezone</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">Set your UTC offset so "today's posts" shows the correct date for your location. Mexico City (CST) = -6. Bulgaria (EET) = +2.</div>
+    <div class="row" style="margin-bottom:0;align-items:flex-end">
+      <div class="fd"><label class="fl">UTC offset (hours)</label><input type="number" id="set-tz-offset" min="-12" max="14" step="0.5" placeholder="e.g. -6 for Mexico City"></div>
+      <div class="fd" style="display:flex;align-items:flex-end;gap:8px"><button class="btn btn-p btn-sm" onclick="saveTzOffset()">Save</button><span id="set-tz-preview" style="font-size:11px;color:var(--teal-d);align-self:center"></span></div>
+    </div>
   </div>
   <div style="margin-bottom:1.5rem">
     <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Publishing schedule</div>

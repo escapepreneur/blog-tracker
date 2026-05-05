@@ -71,6 +71,18 @@ let allPosts=[],allDests=[],_links=[],_clChecked={};
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
+// TIMEZONE
+function localToday(){
+  const offset=parseInt(localStorage.getItem('tz-offset')||'0');
+  const now=new Date();
+  const local=new Date(now.getTime()+offset*60*60*1000);
+  return local.toISOString().split('T')[0];
+}
+function localNow(){
+  const offset=parseInt(localStorage.getItem('tz-offset')||'0');
+  return new Date(Date.now()+offset*60*60*1000);
+}
+
 // SCORE
 function calcScore(ks,vol){
   if(!vol&&ks==null)return null;
@@ -256,7 +268,7 @@ function render(){renderDashboard();renderPosts();renderLinksPane();renderIdeas(
 // DASHBOARD
 function renderDashboard(){
   const posts=bp();
-  const today=new Date().toISOString().split('T')[0];
+  const today=localToday();
   document.getElementById('dash-title').textContent=BM[activeBlog].name;
   document.getElementById('dash-sub').textContent=BM[activeBlog].sub;
   const live=posts.filter(p=>p.status==='live').length;
@@ -264,44 +276,56 @@ function renderDashboard(){
   const drafted=posts.filter(p=>p.status==='drafted').length;
   const notIdx=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)).length;
   const idxReq=posts.filter(p=>p.indexed==='requested').length;
-  document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric m-live" onclick="switchTab('posts','live')" style="cursor:pointer"><div class="mn" style="color:var(--green)">${live}</div><div class="ml">Live</div></div>
-    <div class="metric m-sched" onclick="switchTab('posts','scheduled')" style="cursor:pointer"><div class="mn" style="color:var(--blue)">${sched}</div><div class="ml">Scheduled</div></div>
-    <div class="metric m-drafted" onclick="switchTab('posts','drafted')" style="cursor:pointer"><div class="mn" style="color:var(--purple)">${drafted}</div><div class="ml">Drafted</div></div>
-    <div class="metric m-idx" onclick="switchTab('posts','not-indexed')" style="cursor:pointer"><div class="mn" style="color:var(--amber)">${notIdx+idxReq}</div><div class="ml">Indexing needed</div></div>`;
+  const ideas=posts.filter(p=>p.status==='idea').length;
 
-  // TODAY — posts scheduled for today needing confirmation
+  // HORIZONTAL METRIC PILLS
+  document.getElementById('dash-metrics').innerHTML=`
+    <button class="dash-pill dash-pill-green" onclick="switchTab('posts','live')"><span class="dp-num">${live}</span><span class="dp-lbl">Live</span></button>
+    <button class="dash-pill dash-pill-blue" onclick="switchTab('posts','scheduled')"><span class="dp-num">${sched}</span><span class="dp-lbl">Scheduled</span></button>
+    <button class="dash-pill dash-pill-purple" onclick="switchTab('posts','drafted')"><span class="dp-num">${drafted}</span><span class="dp-lbl">Drafted</span></button>
+    <button class="dash-pill dash-pill-amber" onclick="switchTab('posts','not-indexed')"><span class="dp-num">${notIdx+idxReq}</span><span class="dp-lbl">Indexing needed</span></button>
+    <button class="dash-pill dash-pill-teal" onclick="switchTab('research')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
+
+  // NEXT UP — directly under metrics
+  const isN=activeBlog==='nms';
+  const queue=posts.filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)).slice(0,3);
+  const nuEl=document.getElementById('nextup-list');
+  if(nuEl){
+    if(!queue.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No keywords queued yet. Add some in Research.</div>'}
+    else{nuEl.innerHTML=queue.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}</div><button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="getBriefForPost('${p.id}')">Get brief →</button></div>`).join('')}
+  }
+
+  // TODAY — posts scheduled for today
   const todayPosts=posts.filter(p=>p.status==='scheduled'&&p.scheduled_date===today);
   const todayEl=document.getElementById('dash-today');
   if(todayEl){
-    if(!todayPosts.length){todayEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0">No posts scheduled for today.</div>'}
+    if(!todayPosts.length){todayEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No posts scheduled for today.</div>'}
     else{todayEl.innerHTML=todayPosts.map(p=>`<div class="post-row" style="border-left:3px solid var(--teal)"><div class="kw-primary">${esc(p.primary_keyword||p.title||'Post')}</div>${p.title&&p.primary_keyword?`<div class="post-title-sub">${esc(p.title)}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="confirmGoLive('${p.id}')">✓ Confirm live + socials</button><button class="btn btn-sm" onclick="openPost('${p.id}','details')">View</button></div></div>`).join('')}
   }
 
-  // PINTEREST ACTION — live posts where pinning/linking not done
+  // SOCIAL INCOMPLETE — live posts with missing social items
+  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.fb_shared||!s.ig_shared||!s.pinterest_shared||!s.pinterest_in_blog)});
+  const siEl=document.getElementById('dash-social-incomplete');
+  if(siEl){
+    if(!si.length){siEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All social complete.</div>'}
+    else{siEl.innerHTML=si.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};const items=[];if(!s.fb_shared)items.push('FB');if(!s.ig_shared)items.push('IG');if(!s.pinterest_shared)items.push('📌');if(!s.pinterest_in_blog)items.push('🔗');return`<div class="post-row" onclick="openPost('${p.id}','social')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);flex-shrink:0">${items.join(' · ')}</div></div></div>`}).join('')}
+  }
+
+  // PINTEREST ACTION
   const pinNeeded=posts.filter(p=>{const s=p.social_tracking?.[0];return p.status==='live'&&s&&(!s.pinterest_shared||!s.pinterest_in_blog)});
   const pinEl=document.getElementById('dash-pinterest-action');
   if(pinEl){
-    if(!pinNeeded.length){pinEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:8px 0">✓ All Pinterest actions complete.</div>'}
-    else{pinEl.innerHTML=pinNeeded.map(p=>{const s=p.social_tracking?.[0]||{};return`<div class="post-row" onclick="openPost('${p.id}','social')" style="border-left:3px solid #e04444"><div style="display:flex;align-items:center;justify-content:space-between"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);margin-top:2px">${!s.pinterest_shared?'📌 Not yet pinned · ':''}${!s.pinterest_in_blog?'🔗 Not linked in blog':''}</div></div></div></div>`}).join('')}
+    if(!pinNeeded.length){pinEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All Pinterest actions complete.</div>'}
+    else{pinEl.innerHTML=pinNeeded.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};return`<div class="post-row" onclick="openPost('${p.id}','social')" style="border-left:3px solid #e04444"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);margin-top:2px">${!s.pinterest_shared?'📌 Not yet pinned ':''}${!s.pinterest_in_blog?'🔗 Not linked in blog':''}</div></div></div>`}).join('')}
   }
 
   // INDEXING
   const idxGroups={no:posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)),requested:posts.filter(p=>p.indexed==='requested'),'yes':posts.filter(p=>p.indexed==='yes')};
   let idxHtml='';
-  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxGroups[k];idxHtml+=`<div class="card" style="padding:.75rem 1rem"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:18px;font-weight:700">${ps.length}</span></div>${ps.slice(0,3).map(p=>`<div style="font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>3?`<div style="font-size:10px;color:var(--text3);margin-top:4px">+${ps.length-3} more</div>`:''}</div>`});
+  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxGroups[k];idxHtml+=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:14px;font-weight:700">${ps.length}</span></div>${ps.slice(0,2).map(p=>`<div style="font-size:11px;color:var(--text2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>2?`<div style="font-size:10px;color:var(--text3)">+${ps.length-2} more</div>`:''}</div>`});
   const idxEl=document.getElementById('dash-indexing');if(idxEl)idxEl.innerHTML=idxHtml;
 
-  // NEXT UP — from Research queue
-  const isN=activeBlog==='nms';
-  const queue=posts.filter(p=>p.status==='idea').sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)).slice(0,3);
-  const nuEl=document.getElementById('nextup-list');
-  if(nuEl){
-    if(!queue.length){nuEl.innerHTML='<div class="empty" style="padding:1rem">No keywords queued. Add some in Research.</div>'}
-    else{nuEl.innerHTML=queue.map((p,i)=>`<div class="next-up-item"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}</div><button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="getBriefForPost('${p.id}')">Get brief →</button></div>`).join('')}
-  }
-
-  // PILLS
+  // COMPLETE PILL
   const completePosts=posts.filter(p=>p.current_step>=6).length;
   const totalPosts=posts.filter(p=>p.status!=='idea').length;
   const completePct=totalPosts>0?Math.round(completePosts/totalPosts*100):0;
@@ -311,7 +335,7 @@ function renderDashboard(){
 
 async function confirmGoLive(id){
   const p=gp(id);if(!p)return;
-  await sb.from('posts').update({status:'live',published_date:new Date().toISOString().split('T')[0]}).eq('id',id);
+  await sb.from('posts').update({status:'live',published_date:localToday()}).eq('id',id);
   const s=p.social_tracking?.[0];
   if(s){await sb.from('social_tracking').update({fb_shared:true,ig_shared:true,pinterest_image_created:true}).eq('id',s.id)}
   await loadPosts();render();
@@ -768,7 +792,7 @@ async function resetChecklist(){
 }
 
 // GSC
-function showAddGsc(){document.getElementById('gsc-form').style.display='block';document.getElementById('gsc-date').value=new Date().toISOString().split('T')[0]}
+function showAddGsc(){document.getElementById('gsc-form').style.display='block';document.getElementById('gsc-date').value=localToday()}
 function hideAddGsc(){document.getElementById('gsc-form').style.display='none'}
 async function renderGscHistory(){
   if(!curPost)return;
@@ -781,7 +805,7 @@ async function renderGscHistory(){
   return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
 }
 async function saveGsc(){
-  const e={post_id:curPost,recorded_date:document.getElementById('gsc-date').value||new Date().toISOString().split('T')[0],position:parseFloat(document.getElementById('gsc-pos').value)||null,impressions:parseInt(document.getElementById('gsc-impr').value)||null,clicks:parseInt(document.getElementById('gsc-clicks').value)||null,notes:document.getElementById('gsc-notes').value.trim()||null};
+  const e={post_id:curPost,recorded_date:document.getElementById('gsc-date').value||localToday(),position:parseFloat(document.getElementById('gsc-pos').value)||null,impressions:parseInt(document.getElementById('gsc-impr').value)||null,clicks:parseInt(document.getElementById('gsc-clicks').value)||null,notes:document.getElementById('gsc-notes').value.trim()||null};
   if(!e.position){alert('Please enter a position.');return}
   await sb.from('gsc_positions').insert(e);
   ['gsc-pos','gsc-impr','gsc-clicks','gsc-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
@@ -792,7 +816,7 @@ async function delGsc(id){await sb.from('gsc_positions').delete().eq('id',id);re
 // GSC IMPORT
 async function handleGscFile(event){
   const file=event.target.files[0];if(!file)return;
-  const importDate=document.getElementById('gsc-import-date').value||new Date().toISOString().split('T')[0];
+  const importDate=document.getElementById('gsc-import-date').value||localToday();
   const resultEl=document.getElementById('gsc-import-result');
   resultEl.innerHTML='<div style="display:flex;align-items:center;gap:6px"><div class="spinner"></div> Reading CSV…</div>';
   document.getElementById('gsc-file-label').textContent='✓ '+file.name;
@@ -912,13 +936,23 @@ async function deleteDest(id){await sb.from('link_destinations').delete().eq('id
 // SETTINGS
 function showSettings(){
   const url=localStorage.getItem('sb-url')||'',ak=localStorage.getItem('claude-api-key'),cadence=localStorage.getItem('pub-cadence')||'1';
+  const tz=localStorage.getItem('tz-offset')||'0';
   document.getElementById('set-sb-url').value=url;
   document.getElementById('set-sb-key').value='';
   document.getElementById('set-api-key').placeholder=ak?'sk-ant-••••••':'sk-ant-...';
   document.getElementById('set-api-msg').textContent=ak?'API key saved.':'No API key saved.';
   document.getElementById('set-cadence').value=cadence;
-  document.getElementById('gsc-import-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('set-tz-offset').value=tz;
+  document.getElementById('set-tz-preview').textContent='Today = '+localToday();
+  document.getElementById('gsc-import-date').value=localToday();
   renderDestList();document.getElementById('settings-modal').classList.add('on');
+}
+function saveTzOffset(){
+  const v=document.getElementById('set-tz-offset').value;
+  localStorage.setItem('tz-offset',v);
+  document.getElementById('set-tz-preview').textContent='Today = '+localToday();
+  toast('Timezone saved');
+  renderDashboard();
 }
 
 // RESET
@@ -1023,7 +1057,7 @@ function updateWeeklyButtons(){
 // SerpRobot CSV import
 function openSerpRobotImport(){
   document.getElementById('sr-import-modal').classList.add('on');
-  document.getElementById('sr-import-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('sr-import-date').value=localToday();
   document.getElementById('sr-import-result').innerHTML='';
   document.getElementById('sr-file-label').textContent='Click to upload SerpRobot CSV';
 }
@@ -1031,7 +1065,7 @@ function openSerpRobotImport(){
 async function handleSerpRobotFile(e){
   const file=e.target.files[0];if(!file)return;
   document.getElementById('sr-file-label').textContent=file.name+' — processing…';
-  const importDate=document.getElementById('sr-import-date').value||new Date().toISOString().split('T')[0];
+  const importDate=document.getElementById('sr-import-date').value||localToday();
   // SerpRobot CSV is UTF-16 tab-separated: Keyword, Rank, Change, Volume
   const buffer=await file.arrayBuffer();
   let text='';
@@ -1077,7 +1111,7 @@ async function handleSerpRobotFile(e){
 async function handleGscFile(e){
   const file=e.target.files[0];if(!file)return;
   document.getElementById('gsc-file-label').textContent=file.name+' — processing…';
-  const importDate=document.getElementById('gsc-import-date').value||new Date().toISOString().split('T')[0];
+  const importDate=document.getElementById('gsc-import-date').value||localToday();
   const text=await file.text();
   const lines=text.split('\n').filter(l=>l.trim());
   if(!lines.length)return;
@@ -1110,7 +1144,7 @@ initApp();
 async function handleGscFileWeekly(e){
   const file=e.target.files[0];if(!file)return;
   document.getElementById('gsc-file-label2').textContent=file.name+' — processing…';
-  const importDate=document.getElementById('gsc-import-date2').value||new Date().toISOString().split('T')[0];
+  const importDate=document.getElementById('gsc-import-date2').value||localToday();
   // Reuse same logic but output to weekly modal result div
   const text=await file.text();
   const lines=text.split('\n').filter(l=>l.trim());
@@ -1288,7 +1322,7 @@ function renderCalendar(){
   for(let day=1;day<=lastDay.getDate();day++){
     const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dayPosts=posts.filter(p=>(p.scheduled_date||p.published_date)===dateStr);
-    const isToday=dateStr===new Date().toISOString().split('T')[0];
+    const isToday=dateStr===localToday();
     html+=`<div style="min-height:60px;background:${isToday?'var(--teal-l)':'var(--bg)'};border:1px solid ${isToday?'var(--teal)':'var(--border)'};border-radius:6px;padding:4px">
       <div style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'};margin-bottom:2px">${day}</div>
       ${dayPosts.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.primary_keyword||p.title||'Post')}</div>`).join('')}
