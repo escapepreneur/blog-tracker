@@ -162,16 +162,17 @@ function saveCadence(){
 }
 
 // DATA
-async function loadAll(){await Promise.all([loadPosts(),loadDests()]);await loadLinks();render();updateWeeklyButtons()}
-async function loadPosts(){const{data}=await sb.from('posts').select('*,social_tracking(*)').order('scheduled_date',{ascending:true,nullsFirst:false});allPosts=data||[]}
-async function loadDests(){const{data}=await sb.from('link_destinations').select('*');allDests=data||[]}
+async function loadAll(){await Promise.all([loadPosts(),loadDests()]);await loadLinks();render();updateWeeklyButtons();}
+async function loadPosts(){const{data}=await sb.from('posts').select('*,social_tracking(*)').order('scheduled_date',{ascending:true,nullsFirst:false});allPosts=data||[];}
+async function loadDests(){const{data}=await sb.from('link_destinations').select('*');allDests=data||[];}
 async function loadLinks(){
   const ids=bp().map(p=>p.id);if(!ids.length){_links=[];return}
   const{data}=await sb.from('internal_links').select('*').eq('blog',activeBlog);_links=data||[];
 }
 async function loadChecklist(pid){
   const{data}=await sb.from('post_checklist').select('*').eq('post_id',pid);
-  _clChecked={};(data||[]).forEach(r=>{if(r.checked)_clChecked[r.item_id]=true});
+  _clChecked={};
+  (data||[]).forEach(r=>{if(r.checked)_clChecked[r.item_id]=true});
 }
 
 // BLOG/TAB
@@ -1040,3 +1041,150 @@ function clearAllKwQueue(){
   if(!confirm(`Clear all ${queue.length} keywords from the queue? This cannot be undone.`))return;
   saveKwQueue([]);renderKwValidation();toast('Queue cleared');
 }
+
+async function sendAllPassing(){
+  const queue=getKwQueue();
+  const passing=queue.filter(k=>k.status==='pass');
+  if(!passing.length){toast('No passing keywords in queue');return}
+  for(const kw of passing){await sendKwToPlanning(kw.id)}
+  toast(`${passing.length} keywords sent to Planning`);
+}
+
+function renderKwApproved(){
+  const el=document.getElementById('kw-approved-list');if(!el)return;
+  const approved=getKwApproved();
+  if(!approved.length){el.innerHTML='<div class="empty">No keywords approved yet.</div>';return}
+  el.innerHTML=approved.map(k=>`<div class="post-row"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:13px;font-weight:600">${esc(titleCase(k.keyword||''))}</div><div class="prk">KS ${k.ks_score||'—'} · ${k.volume?.toLocaleString()||'—'}/mo · Sent ${fd(k.sent)}</div></div>${kwStatusBadge('pass')}</div></div>`).join('');
+}
+
+function clearApprovedKw(){if(!confirm('Clear approved keyword history?'))return;saveKwApproved([]);renderKwApproved();toast('History cleared')}
+
+// UNIFIED MULTI-FILE IMPORTER — handles Keysearch + GKP, merges overlaps
+async function importKwFiles(e){
+  const files=[...e.target.files];
+  if(!files.length)return;
+  document.getElementById('kw-file-label').textContent='Processing…';
+  document.getElementById('kw-import-result').innerHTML='';
+  const parsed={};
+
+  for(const file of files){
+    const buffer=await file.arrayBuffer();
+    let text='';
+    try{text=new TextDecoder('utf-16-le').decode(buffer).replace(/\u0000/g,'');}
+    catch(ex){text=new TextDecoder('utf-8').decode(buffer);}
+    text=text.replace(/^\uFEFF/,'');
+
+    const isGKP=text.includes('Avg. monthly searches');
+    const isKS=text.includes('Score') && !isGKP;
+
+    if(isGKP){
+      const lines=text.split(/\r?\n/).filter(Boolean);
+      const hi=lines.findIndex(l=>l.includes('Avg. monthly searches'));
+      if(hi===-1)continue;
+      const headers=lines[hi].split('\t');
+      const kwIdx=headers.findIndex(h=>h.toLowerCase().trim()==='keyword');
+      const volIdx=headers.findIndex(h=>h.includes('Avg. monthly searches'));
+      const compIdx=headers.findIndex(h=>h.trim()==='Competition');
+      const compNumIdx=headers.findIndex(h=>h.includes('indexed value'));
+      for(let i=hi+1;i<lines.length;i++){
+        const cols=lines[i].split('\t');
+        const kw=(cols[kwIdx]||'').trim().toLowerCase();
+        if(!kw||kw.startsWith('http'))continue;
+        const volRaw=(cols[volIdx]||'').replace(/,/g,'').trim();
+        const vol=volRaw&&volRaw!=='--'?parseInt(volRaw)||null:null;
+        const comp=(cols[compIdx]||'').trim().toLowerCase();
+        const compNum=parseFloat(cols[compNumIdx]||'')||null;
+        let ks=null;
+        if(compNum!=null)ks=Math.round(compNum*0.4);
+        else if(comp==='low')ks=20;
+        else if(comp==='medium')ks=40;
+        else if(comp==='high')ks=65;
+        if(!parsed[kw])parsed[kw]={keyword:cols[kwIdx].trim(),ks_score:null,volume:null};
+        if(vol!=null)parsed[kw].volume=vol;
+        if(ks!=null&&parsed[kw].ks_score==null)parsed[kw].ks_score=ks;
+      }
+    } else if(isKS){
+      const lines=text.split(/\r?\n/).filter(Boolean);
+      const singleHeader=/^keyword\tvolume/i.test(lines[0].replace(/^\uFEFF/,''));
+      if(singleHeader){
+        for(let i=1;i<lines.length;i++){
+          const cols=lines[i].split('\t');
+          const kw=(cols[0]||'').trim();
+          if(!kw||kw.toLowerCase().startsWith('url')||kw.startsWith('http'))continue;
+          const vol=parseInt(cols[1])||null;
+          const ks=parseFloat(cols[4])||null;
+          const kwl=kw.toLowerCase();
+          if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
+          if(ks!=null)parsed[kwl].ks_score=ks;
+          if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+        }
+      } else {
+        const kwHeader=/^keyword\tvolume/i;
+        let i=0;
+        while(i<lines.length){
+          if(kwHeader.test(lines[i])){
+            i++;
+            if(i<lines.length){
+              const cols=lines[i].split('\t');
+              const kw=(cols[0]||'').trim();
+              if(kw&&!kw.toLowerCase().startsWith('url')&&!kw.startsWith('http')){
+                const vol=parseInt(cols[1])||null;
+                const ks=parseFloat(cols[4])||null;
+                const kwl=kw.toLowerCase();
+                if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
+                if(ks!=null)parsed[kwl].ks_score=ks;
+                if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+              }
+            }
+          }
+          i++;
+        }
+      }
+    }
+  }
+
+  const allParsed=Object.values(parsed);
+  if(!allParsed.length){
+    document.getElementById('kw-import-result').innerHTML='<div style="color:var(--red-t);font-size:12px">Could not parse files. Check they are Keysearch or GKP exports.</div>';
+    document.getElementById('kw-file-label').textContent='⬆ Upload CSV files';
+    return;
+  }
+
+  const queue=getKwQueue();
+  const existingMap={};
+  queue.forEach(k=>{existingMap[k.keyword.toLowerCase().trim()]=k;});
+  let added=0,merged=0;
+
+  allParsed.forEach(p=>{
+    const kwl=p.keyword.toLowerCase().trim();
+    if(existingMap[kwl]){
+      const existing=existingMap[kwl];
+      let changed=false;
+      if(p.ks_score!=null&&existing.ks_score==null){existing.ks_score=p.ks_score;changed=true;}
+      if(p.volume!=null&&existing.volume==null){existing.volume=p.volume;changed=true;}
+      if(changed){existing.status=kwStatus(existing.ks_score,existing.volume);merged++;}
+    } else {
+      queue.push({
+        id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+        keyword:p.keyword,
+        ks_score:p.ks_score,
+        volume:p.volume,
+        status:kwStatus(p.ks_score,p.volume),
+        added:localToday()
+      });
+      added++;
+    }
+  });
+
+  saveKwQueue(queue);
+  renderKwValidation();
+  const parts=[];
+  if(added)parts.push(added+' new keywords added');
+  if(merged)parts.push(merged+' existing keywords updated with missing data');
+  document.getElementById('kw-import-result').innerHTML='<div style="color:var(--green);font-weight:600;font-size:12px">✓ '+parts.join(' · ')+'</div>';
+  document.getElementById('kw-file-label').textContent='✓ '+files.map(f=>f.name).join(', ');
+  switchKwTab('validate');
+  toast(parts.join(' · '));
+  e.target.value='';
+}
+// GKP CSV import
