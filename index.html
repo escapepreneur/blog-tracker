@@ -658,10 +658,14 @@ input[type=file]{width:100%}
           <div class="card" style="margin-bottom:12px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
               <div><div style="font-size:14px;font-weight:700">Import Keysearch results</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Upload the CSV export from Keysearch — scores and volumes auto-populate</div></div>
-              <div style="border:2px dashed var(--teal);border-radius:var(--r2);padding:8px 14px;cursor:pointer;text-align:center" onclick="document.getElementById('kw-ks-file').click()">
-                <div style="font-size:12px;color:var(--teal-d);font-weight:600" id="kw-file-label">Upload Keysearch CSV</div>
-              </div>
-              <input type="file" id="kw-ks-file" accept=".csv,.txt" style="display:none" onchange="importKeysearchCSV(event)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div><div style="font-size:14px;font-weight:700">Import results</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Upload Keysearch and/or GKP exports together — auto-detected and merged</div></div>
+            <div style="border:2px dashed var(--teal);border-radius:var(--r2);padding:10px 18px;cursor:pointer;text-align:center" onclick="document.getElementById('kw-import-files').click()">
+              <div style="font-size:12px;color:var(--teal-d);font-weight:600" id="kw-file-label">⬆ Upload CSV files</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">Keysearch + GKP — select both at once</div>
+            </div>
+            <input type="file" id="kw-import-files" accept=".csv,.txt" multiple style="display:none" onchange="importKwFiles(event)">
+          </div>
             </div>
             <div id="kw-import-result"></div>
           </div>
