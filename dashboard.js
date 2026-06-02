@@ -965,7 +965,7 @@ function renderKwValidation(){
     const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
     const isExisting=existingKws.has((k.keyword||'').toLowerCase().trim());
     const sweetSpot=k.volume>=300&&k.volume<=3000&&k.ks_score<=30;
-    return`<div class="post-row" style="${k.status==='pass'?'border-left:3px solid var(--green)':k.status==='maybe'?'border-left:3px solid var(--amber)':k.status==='fail'?'border-left:3px solid var(--red-t)':''}">
+    return`<div class="post-row" style="padding:12px 16px;${k.status==='pass'?'border-left:3px solid var(--green)':k.status==='maybe'?'border-left:3px solid var(--amber)':k.status==='fail'?'border-left:3px solid var(--red-t)':''}">
       <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
@@ -1102,28 +1102,45 @@ async function importKwFiles(e){
         if(vol!=null)parsed[kw].volume=vol;
         if(ks!=null&&parsed[kw].ks_score==null)parsed[kw].ks_score=ks;
       }
-    } else if(isKS){
+    if(isKS){
       const lines=text.split(/\r?\n/).filter(Boolean);
-      const kwHeader=/^keyword\tvolume/i;
-      let i=0;
-      while(i<lines.length){
-        if(kwHeader.test(lines[i])){
-          i++;
-          if(i<lines.length){
-            const cols=lines[i].split('\t');
-            const kw=(cols[0]||'').trim();
-            if(kw&&!kw.toLowerCase().startsWith('url')&&!kw.startsWith('http')){
-              const vol=parseInt(cols[1])||null;
-              const ks=parseFloat(cols[4])||null;
-              const kwl=kw.toLowerCase();
-              if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
-              // KS score takes priority over GKP estimate
-              if(ks!=null)parsed[kwl].ks_score=ks;
-              if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+      // Try single header format first (Keyword\tVolume\tCPC\tPPC\tScore on line 0)
+      const singleHeader=/^keyword\tvolume/i.test(lines[0].replace(/^\uFEFF/,''));
+      if(singleHeader){
+        // All keywords follow immediately after header
+        for(let i=1;i<lines.length;i++){
+          const cols=lines[i].split('\t');
+          const kw=(cols[0]||'').trim();
+          if(!kw||kw.toLowerCase().startsWith('url')||kw.startsWith('http'))continue;
+          const vol=parseInt(cols[1])||null;
+          const ks=parseFloat(cols[4])||null;
+          const kwl=kw.toLowerCase();
+          if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
+          if(ks!=null)parsed[kwl].ks_score=ks;
+          if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+        }
+      } else {
+        // Repeated header format — header repeats before each keyword block
+        const kwHeader=/^keyword\tvolume/i;
+        let i=0;
+        while(i<lines.length){
+          if(kwHeader.test(lines[i])){
+            i++;
+            if(i<lines.length){
+              const cols=lines[i].split('\t');
+              const kw=(cols[0]||'').trim();
+              if(kw&&!kw.toLowerCase().startsWith('url')&&!kw.startsWith('http')){
+                const vol=parseInt(cols[1])||null;
+                const ks=parseFloat(cols[4])||null;
+                const kwl=kw.toLowerCase();
+                if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
+                if(ks!=null)parsed[kwl].ks_score=ks;
+                if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+              }
             }
           }
+          i++;
         }
-        i++;
       }
     }
   }
