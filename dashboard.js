@@ -764,7 +764,17 @@ const DEFAULT_PROBLEMS=[
   'how to scale coaching business','client management for coaches',
   'stop juggling multiple apps','all in one tool for coaches'
 ];
-const DEFAULT_MODIFIERS=['alternatives','alternative','vs','pricing','for coaches','for solopreneurs','review','best','cheapest','how to replace'];
+const DEFAULT_MODIFIERS=['alternatives','alternative','vs','pricing','review','cheapest','best'];
+// These modifiers only apply to platforms, not problems
+const PLATFORM_ONLY_MODIFIERS=['alternatives','alternative','vs','pricing','review','cheapest'];
+// These can apply to both
+const GENERAL_MODIFIERS=['best','for coaches','for solopreneurs','for small business'];
+
+function clearUsedCombinations(){
+  if(!confirm('Clear all used keyword combinations? Next generation will include previously generated keywords.'))return;
+  localStorage.removeItem('kw-used-combos-'+activeBlog);
+  toast('Cleared — next generation starts fresh');
+}
 
 function getSeeds(){
   return{
@@ -811,9 +821,16 @@ function buildCandidatePool(type){
     for(const mod of seeds.modifiers.filter(m=>!topModifiers.includes(m))){for(const plat of seeds.platforms){const kw=`${plat.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'competitor'});tried.add(kw)}}}
   }
   if(type==='problem'||type==='all'){
+    // Problem modifiers — only ones that make sense with problem phrases
+    const problemModifiers=['for coaches','for solopreneurs','for small business','tips','guide','how to fix','software','tools','for online business'];
     for(const prob of seeds.problems){
+      // Add the problem phrase itself first
       if(!tried.has(prob.toLowerCase())&&!used.has(prob.toLowerCase())&&!existing.has(prob.toLowerCase())&&!inQueue.has(prob.toLowerCase())){candidates.push({kw:prob.toLowerCase(),type:'problem'});tried.add(prob.toLowerCase())}
-      for(const mod of seeds.modifiers.slice(0,4)){const kw=`${prob.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem'});tried.add(kw)}}
+      // Combine with problem-appropriate modifiers only
+      for(const mod of problemModifiers){
+        const kw=`${prob.toLowerCase()} ${mod}`;
+        if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem'});tried.add(kw)}
+      }
     }
   }
   return candidates;
@@ -991,6 +1008,22 @@ async function sendKwToPlanning(id){
   saveKwQueue(queue.filter(k=>k.id!==id));
   await loadPosts();renderKwValidation();renderKwApproved();
   toast(`"${titleCase(kw.keyword)}" sent to Planning`);
+}
+
+function clearFailedKw(){
+  const queue=getKwQueue();
+  const remaining=queue.filter(k=>k.status!=='fail');
+  const count=queue.length-remaining.length;
+  if(!count){toast('No failed keywords to clear');return}
+  if(!confirm(`Clear ${count} failed keyword${count>1?'s':''}?`))return;
+  saveKwQueue(remaining);renderKwValidation();toast(`${count} failed keywords cleared`);
+}
+
+function clearAllKwQueue(){
+  const queue=getKwQueue();
+  if(!queue.length){toast('Queue is already empty');return}
+  if(!confirm(`Clear all ${queue.length} keywords from the queue? This cannot be undone.`))return;
+  saveKwQueue([]);renderKwValidation();toast('Queue cleared');
 }
 
 async function sendAllPassing(){
