@@ -892,7 +892,7 @@ async function handleGscFile(e){
   markWeeklyDone('gsc');updateWeeklyButtons();
 }
 
-initApp();
+
 async function handleGscFileWeekly(e){
   const file=e.target.files[0];if(!file)return;
   document.getElementById('gsc-file-label2').textContent=file.name+' — processing…';
