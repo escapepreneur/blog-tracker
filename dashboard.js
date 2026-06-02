@@ -749,7 +749,21 @@ async function rankKeywords(){
 
 // Default seed lists
 const DEFAULT_PLATFORMS=['Kajabi','Teachable','Calendly','ActiveCampaign','ClickFunnels','Leadpages','Mailchimp','Dubsado','HoneyBook','Systeme.io','Kartra','Podia','Thinkific','Keap','HubSpot','Klaviyo'];
-const DEFAULT_PROBLEMS=['too many tools','manual follow up','tech overwhelm','paying for software','automate client onboarding','consolidate business tools','email automation','crm for small business','all in one platform','online coaching business'];
+const DEFAULT_PROBLEMS=[
+  'too many tools','manual follow up','tech overwhelm','paying for software',
+  'automate client onboarding','consolidate business tools','email automation',
+  'crm for small business','all in one platform','online coaching business',
+  'how to simplify business tech stack','reduce software costs small business',
+  'automate your coaching business','save time in online business',
+  'stop doing manual tasks in business','automate follow up with clients',
+  'business systems for solopreneurs','how to run an online business efficiently',
+  'simple business setup for coaches','online business tools checklist',
+  'overwhelmed running my business','online business too complicated',
+  'simplify online business','how to manage a coaching business',
+  'best tools for online coaches','cheap software for small business',
+  'how to scale coaching business','client management for coaches',
+  'stop juggling multiple apps','all in one tool for coaches'
+];
 const DEFAULT_MODIFIERS=['alternatives','alternative','vs','pricing','for coaches','for solopreneurs','review','best','cheapest','how to replace'];
 
 function getSeeds(){
@@ -784,45 +798,53 @@ function getExistingKeywords(){
   return new Set(allPosts.filter(p=>p.blog===activeBlog&&p.primary_keyword).map(p=>p.primary_keyword.toLowerCase().trim()));
 }
 
-function generateCandidates(count){
+function buildCandidatePool(type){
   const seeds=getSeeds();
   const used=getUsedCombinations();
   const existing=getExistingKeywords();
-  // Also check validation queue
   const inQueue=new Set(getKwQueue().map(k=>k.keyword.toLowerCase().trim()));
-
-  // Build candidates — prioritise platform+modifier (commercial intent) first
-  const candidates=[];
-  const tried=new Set();
-
-  // Priority 1: platform + modifier (alternatives, vs, pricing — highest converting)
+  const candidates=[];const tried=new Set();
   const topModifiers=['alternatives','alternative','vs','pricing','review'];
-  for(const mod of topModifiers){
-    for(const plat of seeds.platforms){
-      const kw=`${plat.toLowerCase()} ${mod}`;
-      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'commercial',priority:1});tried.add(kw)}
+
+  if(type==='competitor'||type==='all'){
+    for(const mod of topModifiers){for(const plat of seeds.platforms){const kw=`${plat.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'competitor'});tried.add(kw)}}}
+    for(const mod of seeds.modifiers.filter(m=>!topModifiers.includes(m))){for(const plat of seeds.platforms){const kw=`${plat.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'competitor'});tried.add(kw)}}}
+  }
+  if(type==='problem'||type==='all'){
+    for(const prob of seeds.problems){
+      if(!tried.has(prob.toLowerCase())&&!used.has(prob.toLowerCase())&&!existing.has(prob.toLowerCase())&&!inQueue.has(prob.toLowerCase())){candidates.push({kw:prob.toLowerCase(),type:'problem'});tried.add(prob.toLowerCase())}
+      for(const mod of seeds.modifiers.slice(0,4)){const kw=`${prob.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem'});tried.add(kw)}}
     }
   }
-  // Priority 2: platform + other modifiers
-  for(const mod of seeds.modifiers.filter(m=>!topModifiers.includes(m))){
-    for(const plat of seeds.platforms){
-      const kw=`${plat.toLowerCase()} ${mod}`;
-      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'platform',priority:2});tried.add(kw)}
-    }
-  }
-  // Priority 3: problem + modifier
-  for(const prob of seeds.problems){
-    for(const mod of seeds.modifiers.slice(0,5)){
-      const kw=`${prob.toLowerCase()} ${mod}`;
-      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem',priority:3});tried.add(kw)}
-    }
-    // Also just the problem phrase itself
-    if(!tried.has(prob.toLowerCase())&&!used.has(prob.toLowerCase())&&!existing.has(prob.toLowerCase())&&!inQueue.has(prob.toLowerCase())){
-      candidates.push({kw:prob.toLowerCase(),type:'problem',priority:3});tried.add(prob.toLowerCase())
-    }
+  return candidates;
+}
+
+function generateCandidates(count,type='balanced'){
+  const used=getUsedCombinations();
+  let selected=[];
+
+  if(type==='balanced'){
+    const third=Math.floor(count/3);
+    const competitorPool=buildCandidatePool('competitor');
+    const problemPool=buildCandidatePool('problem');
+    // Shuffle each pool for variety
+    const shuffle=arr=>[...arr].sort(()=>Math.random()-.5);
+    selected=[
+      ...shuffle(competitorPool).slice(0,third+Math.ceil((count-third*2)/2)),
+      ...shuffle(problemPool).slice(0,third+Math.floor((count-third*2)/2)),
+    ].slice(0,count);
+  } else {
+    selected=buildCandidatePool(type).slice(0,count);
   }
 
-  const selected=candidates.slice(0,count);
+  if(!selected.length){
+    document.getElementById('kw-generated-output').style.display='none';
+    toast('No new combinations available — try adding more seeds or clearing used combinations');
+    return;
+  }
+
+  // Mark as used
+  selected.forEach(c=>saveUsedCombination(c.kw));
   if(!selected.length){document.getElementById('kw-generated-output').style.display='none';toast('No new combinations available — try adding more seeds');return}
 
   // Mark as used
