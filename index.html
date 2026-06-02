@@ -605,16 +605,28 @@ input[type=file]{width:100%}
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                   <div><div style="font-size:14px;font-weight:700">Generate candidates</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Fresh keywords only — nothing you've already used</div></div>
                 </div>
-                <div style="margin-bottom:8px">
-                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">Balanced mix</div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+                  <a href="https://ads.google.com/aw/keywordplanner/home?ocid=8148809712&euid=1050235828&__u=1913757972&uscid=8148809712&__c=8445605488&authuser=0&sourceid=emp" target="_blank" class="btn btn-sm" style="text-decoration:none">🔍 Open Google Keyword Planner</a>
+                  <span style="font-size:11px;color:var(--text3)">Discover new keywords → paste your candidates → check volume</span>
+                </div>
+                <div style="margin-bottom:12px;padding:10px 12px;background:var(--teal-l);border:1px solid var(--teal);border-radius:var(--r2)">
+                  <div style="font-size:11px;font-weight:700;color:var(--teal-d);margin-bottom:8px">🔍 For Google Keyword Planner — 10 at a time</div>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <button class="btn btn-p" onclick="generateCandidates(10,'balanced')">Generate 10</button>
+                    <a href="https://ads.google.com/aw/keywordplanner/home?ocid=8148809712&euid=1050235828&__u=1913757972&uscid=8148809712&__c=8445605488&authuser=0&sourceid=emp" target="_blank" class="btn btn-sm" style="text-decoration:none">Open GKP →</a>
+                    <span style="font-size:10px;color:var(--teal-d)">Generate → copy → paste into GKP → repeat</span>
+                  </div>
+                </div>
+                <div style="margin-bottom:10px">
+                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">For Keysearch — larger batches</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
                     <button class="btn btn-p" onclick="generateCandidates(50,'balanced')">⚖ Generate 50 (balanced)</button>
                     <button class="btn" onclick="generateCandidates(25,'balanced')">⚖ 25 balanced</button>
                   </div>
                   <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">By category</div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn" onclick="generateCandidates(25,'competitor')">🔀 Competitor only</button>
-                    <button class="btn" onclick="generateCandidates(25,'problem')">💡 Problem-based only</button>
+                    <button class="btn" onclick="generateCandidates(25,'competitor')">🔀 Competitor only (25)</button>
+                    <button class="btn" onclick="generateCandidates(25,'problem')">💡 Problem-based only (25)</button>
                   </div>
                 </div>
                   <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
@@ -653,7 +665,7 @@ input[type=file]{width:100%}
             </div>
             <div id="kw-import-result"></div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="margin-bottom:10px"><a href="https://ads.google.com/aw/keywordplanner/home?ocid=8148809712&euid=1050235828&__u=1913757972&uscid=8148809712&__c=8445605488&authuser=0&sourceid=emp" target="_blank" class="btn btn-sm" style="text-decoration:none;font-size:11px">🔍 Google Keyword Planner</a><a href="#" onclick="event.preventDefault()" style="font-size:10px;color:var(--text3);margin-left:8px">Validate keywords → export CSV → upload here</a></div>
             <div class="filters" style="margin:0">
               <button class="fchip on" onclick="setKwFilter('all',this)" id="kwf-all">All</button>
               <button class="fchip" onclick="setKwFilter('pass',this)">✓ Pass</button>
