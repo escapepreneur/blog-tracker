@@ -4,36 +4,36 @@ const CL_STEPS=[
   {id:'s1b',num:'01',title:'Before You Start',note:'Complete these before generating the brief.',items:[
     {id:'s1b1',text:'Add the primary keyword to SerpRobot rank tracking (serprobot.com) — check you have slots available, 75 max per bot'},
   ]},
-  {id:'s2',num:'02',title:'Blogging Project → Google Doc',note:'Open a new chat in the Blogging project, paste the brief, and wait. Save the full output to a Google Doc.',items:[
-    {id:'cl1',text:'Open a new chat in the Escapepreneur Blogging project (claude.ai)'},
-    {id:'cl2',text:'Paste the brief — nothing else needed'},
-    {id:'cl3',text:'Wait for Claude to return the full output'},
-    {id:'cl4',text:'Save content to a Google Doc named with the keyword — sharing set to Anyone with the link can view. Save in: The Escapepreneur™ > Blog > Blogs in Progress'},
+  {id:'s2',num:'02',title:'Generate the Full Post',note:'Use the button below to copy the brief and open the Blogging project. Claude will return the complete post package including title, image prompts, meta data, and social captions. Download the output as a DOCX.',items:[
+    {id:'cl1',text:'Click the "Copy brief & open project" button below — this copies your brief and opens the Blogging project in a new tab'},
+    {id:'cl2',text:'Paste the brief into the new chat — nothing else needed'},
+    {id:'cl3',text:'Wait for Claude to return the FULL output: post, meta title, meta description, image prompts, Canva recommendations, social captions'},
+    {id:'cl4',text:'Download the Claude output as a DOCX file (click the download icon on the message)'},
   ]},
-  {id:'s3',num:'03',title:'Create All Assets',note:'Create all images and social graphics. Screenshot Freepik images for Claude to review before downloading. Do NOT resize or convert anything yet.',items:[
-    {id:'im1',text:'FEATURED IMAGE — Open Canva featured image template (canva.com/brand/brand-templates/EAHE2ynVR3A). Search Canva Photos using Claude\'s suggestions. Add title and subtitle. Export as PNG.'},
+  {id:'s3',num:'03',title:'Create All Assets',note:'Create each image and review it with Claude immediately after creation. Do NOT batch them at the end. Do NOT resize or convert anything yet.',items:[
+    {id:'im1',text:'FEATURED IMAGE — Open Canva featured image template (canva.com/brand/brand-templates/EAHE2ynVR3A). Search Canva Photos using Claude\'s suggestions. Add title and subtitle. Export as PNG. Screenshot and paste into the Blogging project chat for Claude to review.'},
     {id:'im2',text:'BODY IMAGE 1 — Freepik, ratio 16:9, size 1K. Generate 2 variations using Claude\'s prompt.'},
-    {id:'im3',text:'Screenshot Image 1 variations and paste into Claude Blogging project chat — ask Claude which to use.'},
-    {id:'im4',text:'BODY IMAGE 2 — Generate 2 variations at 16:9, 1K. Screenshot, ask Claude to choose.'},
-    {id:'im5',text:'BODY IMAGE 3 (if applicable) — Generate 2 variations at 16:9, 1K. Screenshot, ask Claude to choose.'},
+    {id:'im3',text:'Screenshot Image 1 variations immediately and paste into the Blogging project chat — ask Claude which to use. Only then move to Image 2.'},
+    {id:'im4',text:'BODY IMAGE 2 — Generate 2 variations at 16:9, 1K. Screenshot immediately and ask Claude to choose before moving on.'},
+    {id:'im5',text:'BODY IMAGE 3 (if applicable) — Generate 2 variations at 16:9, 1K. Screenshot immediately and ask Claude to choose.'},
     {id:'im6',text:'Download all Claude-approved body images from Freepik — do not resize or convert yet.'},
-    {id:'im7',text:'IG/FB GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhN1Proo). Open Claude\'s recommended template. Drop in image, update all text fields. Export.'},
-    {id:'im8',text:'PINTEREST GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhJ4jZ8Y). Open Claude\'s recommended template. Drop in image, update all text fields. Export.'},
+    {id:'im7',text:'IG/FB GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhN1Proo). Open Claude\'s recommended template number. Drop in image, update all text fields. Export. Screenshot and paste into Blogging project chat for review.'},
+    {id:'im8',text:'PINTEREST GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhJ4jZ8Y). Open Claude\'s recommended template number. Drop in image, update all text fields. Export. Screenshot and paste into Blogging project chat for review.'},
   ]},
-  {id:'s4',num:'04',title:'Claude Review',note:'Share the Google Doc link and upload all images for a holistic review. Only resize and convert once Claude has approved everything.',items:[
-    {id:'rv1',text:'Open a new chat (not the Blogging project). Paste the Google Doc link and say: Please review this post and all images.'},
+  {id:'s4',num:'04',title:'Full Review',note:'Upload the DOCX and all final images to the ESC Hub Blog Reviewer Bot for a complete review before anything goes into ESC Hub.',items:[
+    {id:'rv1',text:'Open a new chat in the ESC Hub Blog Reviewer Bot. Upload the DOCX and say: Please review this post and all images.'},
     {id:'rv2',text:'Upload the featured image PNG'},
     {id:'rv3',text:'Upload all body images'},
     {id:'rv4',text:'Upload the IG/FB graphic'},
     {id:'rv5',text:'Upload the Pinterest graphic'},
-    {id:'rv6',text:'Read the review — fix any content issues in the Google Doc and remake any flagged images'},
+    {id:'rv6',text:'Read the review — fix any content issues in the DOCX and remake any flagged images'},
     {id:'rv7',text:'Resize body images at: birme.net/?target_width=1200&target_height=675'},
     {id:'rv8',text:'Convert ALL images to WebP at: tinyimage.online/convert/png-to-webp/ — MAXIMUM 150KB'},
     {id:'rv9',text:'Rename all files using the SEO filenames from Claude\'s output'},
   ]},
   {id:'s5',num:'05',title:'Set Up & Schedule in ESC Hub',note:'All content and images are approved and converted. Build the post in ESC Hub and schedule it.',items:[
-    {id:'p1',text:'Paste the article from the Google Doc into the ESC Hub blog editor'},
-    {id:'p2',text:'Under the introduction, add a Code Block and enter the code from: docs.google.com/document/d/1w2KiNdQBKAsp7pxksz_c7_t17aOMQI5aWZZMe4n_Ot8/edit'},
+    {id:'p1',text:'Paste the article from the DOCX into the ESC Hub blog editor'},
+    {id:'p2',text:'Add a Code Block in the position Claude specified in the output, and enter the code from: docs.google.com/document/d/1w2KiNdQBKAsp7pxksz_c7_t17aOMQI5aWZZMe4n_Ot8/edit'},
     {id:'p3',text:'Upload all WebP images to the Blogging folder in the ESC Hub media library'},
     {id:'p4',text:'Find each [Insert Image: filename.webp] marker — insert the matching image, add alt text, delete the markers'},
     {id:'p5',text:'At the bottom of the post, insert the Pinterest image — set width to 350 and leave height blank'},
@@ -198,8 +198,8 @@ function switchTab(name,filter){
   if(name==='links')renderLinksPane();
   if(name==='ideas')renderIdeas();
   if(name==='research')renderResearch();
-  if(name==='pipeline')renderPipeline();
-  if(name==='planning'){renderPlanning();}
+  if(name==='keywords')initKeywordsTab();
+  if(name==='pipeline')renderPipeline();  if(name==='planning'){renderPlanning();}
   if(name==='tracking')renderTracking();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -745,6 +745,328 @@ async function rankKeywords(){
 }
 
 // KEYWORD DUMP
+// ── KEYWORD RESEARCH SYSTEM ─────────────────────────────────────
+
+// Default seed lists
+const DEFAULT_PLATFORMS=['Kajabi','Teachable','Calendly','ActiveCampaign','ClickFunnels','Leadpages','Mailchimp','Dubsado','HoneyBook','Systeme.io','Kartra','Podia','Thinkific','Keap','HubSpot','Klaviyo'];
+const DEFAULT_PROBLEMS=['too many tools','manual follow up','tech overwhelm','paying for software','automate client onboarding','consolidate business tools','email automation','crm for small business','all in one platform','online coaching business'];
+const DEFAULT_MODIFIERS=['alternatives','alternative','vs','pricing','for coaches','for solopreneurs','review','best','cheapest','how to replace'];
+
+function getSeeds(){
+  return{
+    platforms:(localStorage.getItem('kw-seeds-platforms')||DEFAULT_PLATFORMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
+    problems:(localStorage.getItem('kw-seeds-problems')||DEFAULT_PROBLEMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
+    modifiers:(localStorage.getItem('kw-seeds-modifiers')||DEFAULT_MODIFIERS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean)
+  };
+}
+
+function saveSeeds(){
+  const p=document.getElementById('kw-seeds-platforms')?.value||'';
+  const pr=document.getElementById('kw-seeds-problems')?.value||'';
+  const m=document.getElementById('kw-seeds-modifiers')?.value||'';
+  localStorage.setItem('kw-seeds-platforms',p);
+  localStorage.setItem('kw-seeds-problems',pr);
+  localStorage.setItem('kw-seeds-modifiers',m);
+  toast('Seed lists saved');
+}
+
+function loadSeeds(){
+  const s=getSeeds();
+  const pe=document.getElementById('kw-seeds-platforms');if(pe)pe.value=s.platforms.join('\n');
+  const pre=document.getElementById('kw-seeds-problems');if(pre)pre.value=s.problems.join('\n');
+  const me=document.getElementById('kw-seeds-modifiers');if(me)me.value=s.modifiers.join('\n');
+}
+
+function getUsedCombinations(){return new Set(JSON.parse(localStorage.getItem('kw-used-combos-'+activeBlog)||'[]'))}
+function saveUsedCombination(combo){const s=getUsedCombinations();s.add(combo);localStorage.setItem('kw-used-combos-'+activeBlog,JSON.stringify([...s].slice(-500)))}
+
+function getExistingKeywords(){
+  return new Set(allPosts.filter(p=>p.blog===activeBlog&&p.primary_keyword).map(p=>p.primary_keyword.toLowerCase().trim()));
+}
+
+function generateCandidates(count){
+  const seeds=getSeeds();
+  const used=getUsedCombinations();
+  const existing=getExistingKeywords();
+  // Also check validation queue
+  const inQueue=new Set(getKwQueue().map(k=>k.keyword.toLowerCase().trim()));
+
+  // Build candidates — prioritise platform+modifier (commercial intent) first
+  const candidates=[];
+  const tried=new Set();
+
+  // Priority 1: platform + modifier (alternatives, vs, pricing — highest converting)
+  const topModifiers=['alternatives','alternative','vs','pricing','review'];
+  for(const mod of topModifiers){
+    for(const plat of seeds.platforms){
+      const kw=`${plat.toLowerCase()} ${mod}`;
+      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'commercial',priority:1});tried.add(kw)}
+    }
+  }
+  // Priority 2: platform + other modifiers
+  for(const mod of seeds.modifiers.filter(m=>!topModifiers.includes(m))){
+    for(const plat of seeds.platforms){
+      const kw=`${plat.toLowerCase()} ${mod}`;
+      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'platform',priority:2});tried.add(kw)}
+    }
+  }
+  // Priority 3: problem + modifier
+  for(const prob of seeds.problems){
+    for(const mod of seeds.modifiers.slice(0,5)){
+      const kw=`${prob.toLowerCase()} ${mod}`;
+      if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem',priority:3});tried.add(kw)}
+    }
+    // Also just the problem phrase itself
+    if(!tried.has(prob.toLowerCase())&&!used.has(prob.toLowerCase())&&!existing.has(prob.toLowerCase())&&!inQueue.has(prob.toLowerCase())){
+      candidates.push({kw:prob.toLowerCase(),type:'problem',priority:3});tried.add(prob.toLowerCase())
+    }
+  }
+
+  const selected=candidates.slice(0,count);
+  if(!selected.length){document.getElementById('kw-generated-output').style.display='none';toast('No new combinations available — try adding more seeds');return}
+
+  // Mark as used
+  selected.forEach(c=>saveUsedCombination(c.kw));
+
+  const kwList=selected.map(c=>c.kw);
+  const el=document.getElementById('kw-generated-text');
+  if(el)el.textContent=kwList.join(', ');
+  document.getElementById('kw-generated-output').style.display='block';
+  // Store for bulk add
+  window._generatedKws=kwList;
+  toast(`${selected.length} keywords generated — copy for Keysearch`);
+}
+
+function copyGeneratedKeywords(){
+  const text=document.getElementById('kw-generated-text')?.textContent||'';
+  if(!text){toast('Generate keywords first');return}
+  navigator.clipboard.writeText(text);toast('Copied — paste into Keysearch');
+}
+
+function addAllToValidation(){
+  const kws=window._generatedKws||[];
+  if(!kws.length){toast('Generate keywords first');return}
+  const queue=getKwQueue();
+  const existing=new Set(queue.map(k=>k.keyword.toLowerCase()));
+  let added=0;
+  kws.forEach(kw=>{
+    if(!existing.has(kw.toLowerCase())){
+      queue.push({id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),keyword:kw,ks_score:null,volume:null,status:'new',added:localToday()});
+      added++;
+    }
+  });
+  saveKwQueue(queue);renderKwValidation();switchKwTab('validate');
+  toast(`${added} keywords added to validation queue`);
+}
+
+// KW QUEUE (localStorage)
+function getKwQueue(){return JSON.parse(localStorage.getItem('kw-queue-'+activeBlog)||'[]')}
+function saveKwQueue(q){localStorage.setItem('kw-queue-'+activeBlog,JSON.stringify(q))}
+function getKwApproved(){return JSON.parse(localStorage.getItem('kw-approved-'+activeBlog)||'[]')}
+function saveKwApproved(a){localStorage.setItem('kw-approved-'+activeBlog,JSON.stringify(a))}
+
+function kwStatus(ks,vol){
+  if(ks==null||vol==null)return'new';
+  if(ks<=30&&vol>=100&&vol<=3000)return'pass';
+  if(ks<=40&&vol>=50)return'maybe';
+  return'fail';
+}
+
+function kwStatusBadge(s){
+  const map={pass:'background:#e8f5ee;color:#1a6b37;border:1px solid #b8dfc6',maybe:'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0',fail:'background:var(--red-l);color:var(--red-t);border:1px solid #f0c8c8',new:'background:var(--bg2);color:var(--text3);border:1px solid var(--border)'};
+  const labels={pass:'✓ Pass',maybe:'~ Maybe',fail:'✕ Fail',new:'Not checked'};
+  return`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;${map[s]||map.new}">${labels[s]||s}</span>`;
+}
+
+let _kwFilter='all';
+function setKwFilter(f,btn){_kwFilter=f;document.querySelectorAll('#kwpane-validate .fchip').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderKwValidation()}
+
+function renderKwValidation(){
+  const queue=getKwQueue();
+  const el=document.getElementById('kw-validate-list');if(!el)return;
+  const existingKws=getExistingKeywords();
+
+  let filtered=queue;
+  if(_kwFilter!=='all')filtered=queue.filter(k=>k.status===_kwFilter||(k.status===undefined&&_kwFilter==='new'));
+
+  // Sort: pass first, then maybe, then new, then fail; within each by score desc
+  const order={pass:0,maybe:1,new:2,fail:3};
+  filtered.sort((a,b)=>{
+    const od=(order[a.status]||2)-(order[b.status]||2);
+    if(od!==0)return od;
+    return(calcScore(b.ks_score,b.volume)||0)-(calcScore(a.ks_score,a.volume)||0);
+  });
+
+  // Update counts
+  const passCount=queue.filter(k=>k.status==='pass').length;
+  const totalCount=queue.length;
+  const approvedEl=document.getElementById('kw-validate-count');if(approvedEl)approvedEl.textContent=totalCount;
+  const appCountEl=document.getElementById('kw-approved-count');if(appCountEl)appCountEl.textContent=getKwApproved().length;
+
+  if(!filtered.length){el.innerHTML=`<div class="empty">${queue.length?'No keywords match this filter.':'No keywords in queue. Generate candidates or upload a Keysearch CSV.'}</div>`;return}
+
+  el.innerHTML=filtered.map(k=>{
+    const score=calcScore(k.ks_score,k.volume);
+    const isN=activeBlog==='nms';
+    const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
+    const isExisting=existingKws.has((k.keyword||'').toLowerCase().trim());
+    const sweetSpot=k.volume>=300&&k.volume<=3000&&k.ks_score<=30;
+    return`<div class="post-row" style="${k.status==='pass'?'border-left:3px solid var(--green)':k.status==='maybe'?'border-left:3px solid var(--amber)':k.status==='fail'?'border-left:3px solid var(--red-t)':''}">
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600">${esc(titleCase(k.keyword||''))}</span>
+            ${sweetSpot?'<span style="font-size:9px;background:var(--teal);color:#fff;border-radius:10px;padding:1px 6px;font-weight:700">⭐ Sweet spot</span>':''}
+            ${isExisting?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber-t);border-radius:10px;padding:1px 6px;border:1px solid #f0d8a0">Already have post</span>':''}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;gap:4px;align-items:center">
+              <span style="font-size:10px;color:var(--text3)">KS</span>
+              <input type="number" value="${k.ks_score!=null?k.ks_score:''}" min="0" max="100" placeholder="—" style="width:50px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:20px;text-align:center;font-family:Poppins,sans-serif" onchange="updateKwScore('${k.id}','ks_score',this.value)">
+            </div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <span style="font-size:10px;color:var(--text3)">Vol</span>
+              <input type="number" value="${k.volume!=null?k.volume:''}" placeholder="—" style="width:70px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:20px;text-align:center;font-family:Poppins,sans-serif" onchange="updateKwScore('${k.id}','volume',this.value)">
+            </div>
+            ${kwStatusBadge(k.status||'new')}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          ${score!=null?`<div class="score-badge" style="${badgeStyle};width:34px;height:34px;font-size:11px">${score}</div>`:''}
+          <div style="display:flex;gap:4px">
+            ${k.status==='pass'?`<button class="btn btn-p btn-xs" onclick="sendKwToPlanning('${k.id}')">→ Planning</button>`:''}
+            <button class="btn btn-danger btn-xs" onclick="removeFromQueue('${k.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateKwScore(id,field,val){
+  const queue=getKwQueue();
+  const idx=queue.findIndex(k=>k.id===id);if(idx===-1)return;
+  queue[idx][field]=val===''?null:parseFloat(val);
+  queue[idx].status=kwStatus(queue[idx].ks_score,queue[idx].volume);
+  saveKwQueue(queue);renderKwValidation();
+}
+
+function removeFromQueue(id){
+  const queue=getKwQueue().filter(k=>k.id!==id);saveKwQueue(queue);renderKwValidation();
+}
+
+async function sendKwToPlanning(id){
+  const queue=getKwQueue();
+  const kw=queue.find(k=>k.id===id);if(!kw)return;
+  const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw.keyword,ks_score:kw.ks_score,search_volume:kw.volume,status:'idea',current_step:0,indexed:'no'}).select().single();
+  if(error){toast('Error: '+error.message);return}
+  await sb.from('social_tracking').insert({post_id:data.id});
+  // Move to approved history
+  const approved=getKwApproved();
+  approved.unshift({...kw,sent:localToday()});
+  saveKwApproved(approved.slice(0,200));
+  // Remove from queue
+  saveKwQueue(queue.filter(k=>k.id!==id));
+  await loadPosts();renderKwValidation();renderKwApproved();
+  toast(`"${titleCase(kw.keyword)}" sent to Planning`);
+}
+
+async function sendAllPassing(){
+  const queue=getKwQueue();
+  const passing=queue.filter(k=>k.status==='pass');
+  if(!passing.length){toast('No passing keywords in queue');return}
+  for(const kw of passing){await sendKwToPlanning(kw.id)}
+  toast(`${passing.length} keywords sent to Planning`);
+}
+
+function renderKwApproved(){
+  const el=document.getElementById('kw-approved-list');if(!el)return;
+  const approved=getKwApproved();
+  if(!approved.length){el.innerHTML='<div class="empty">No keywords approved yet.</div>';return}
+  el.innerHTML=approved.map(k=>`<div class="post-row"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:13px;font-weight:600">${esc(titleCase(k.keyword||''))}</div><div class="prk">KS ${k.ks_score||'—'} · ${k.volume?.toLocaleString()||'—'}/mo · Sent ${fd(k.sent)}</div></div>${kwStatusBadge('pass')}</div></div>`).join('');
+}
+
+function clearApprovedKw(){if(!confirm('Clear approved keyword history?'))return;saveKwApproved([]);renderKwApproved();toast('History cleared')}
+
+// Keysearch CSV import
+async function importKeysearchCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('kw-file-label').textContent=file.name+' — processing…';
+  const buffer=await file.arrayBuffer();
+  let text='';
+  try{const decoder=new TextDecoder('utf-16le');text=decoder.decode(buffer).replace(/^\uFEFF/,'')}
+  catch(ex){text=new TextDecoder('utf-8').decode(buffer)}
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const imported=[];let matched=0,skipped=0;
+  const kwHeader=/^keyword\tvolume/i;
+  let i=0;
+  while(i<lines.length){
+    if(kwHeader.test(lines[i])){
+      i++;
+      // Next non-empty line is the keyword data
+      if(i<lines.length){
+        const cols=lines[i].split('\t');
+        const kw=(cols[0]||'').trim();
+        const vol=parseInt(cols[1])||null;
+        const ks=parseFloat(cols[4])||null;
+        if(kw&&kw.toLowerCase()!=='url'){
+          imported.push({id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),keyword:kw,ks_score:ks,volume:vol,status:kwStatus(ks,vol),added:localToday()});
+          matched++;
+        }
+      }
+    }
+    i++;
+  }
+  if(!matched){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">Could not parse file. Expected Keysearch difficulty CSV format.</div>`;document.getElementById('kw-file-label').textContent='Upload Keysearch CSV';return}
+  // Merge into queue, skip duplicates
+  const queue=getKwQueue();
+  const existingKws=new Set(queue.map(k=>k.keyword.toLowerCase().trim()));
+  const newOnes=imported.filter(k=>!existingKws.has(k.keyword.toLowerCase().trim()));
+  skipped=imported.length-newOnes.length;
+  saveKwQueue([...queue,...newOnes]);
+  renderKwValidation();
+  document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${newOnes.length} keywords imported · ${skipped} duplicates skipped</div>`;
+  document.getElementById('kw-file-label').textContent='✓ '+file.name;
+  switchKwTab('validate');toast(`${newOnes.length} keywords imported`);
+  e.target.value='';
+}
+
+// Quick wins from GSC
+async function findQuickWins(){
+  const el=document.getElementById('kw-quickwins');if(!el)return;
+  el.innerHTML='<div style="font-size:12px;color:var(--text2)">Checking GSC data…</div>';
+  const posts=bp().filter(p=>p.status==='live');
+  if(!posts.length){el.innerHTML='<div style="font-size:12px;color:var(--text3)">No live posts to check.</div>';return}
+  const{data}=await sb.from('gsc_positions').select('*').in('post_id',posts.map(p=>p.id)).order('recorded_date',{ascending:false});
+  if(!data||!data.length){el.innerHTML='<div style="font-size:12px;color:var(--text3)">No GSC data yet. Import from the weekly GSC button on the dashboard.</div>';return}
+  const byPost={};data.forEach(r=>{if(!byPost[r.post_id])byPost[r.post_id]=r});
+  const quickWins=Object.entries(byPost).filter(([pid,r])=>r.position>=11&&r.position<=30).sort((a,b)=>a[1].position-b[1].position);
+  if(!quickWins.length){el.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ No keywords in the 11-30 range — either ranking on page 1 or not yet in top 30.</div>';return}
+  el.innerHTML=quickWins.map(([pid,r])=>{const p=gp(pid);if(!p)return'';return`<div class="post-row" onclick="openPost('${pid}','gsc')" style="border-left:3px solid var(--amber)"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:12px;font-weight:600">${esc(titleCase(p.primary_keyword||p.title||''))}</div><div class="prk">Position ${r.position.toFixed(1)} · ${fd(r.recorded_date)}</div></div><span style="font-size:14px;font-weight:700;color:var(--amber-t)">#${Math.round(r.position)}</span></div></div>`}).filter(Boolean).join('');
+}
+
+// KW tab switching
+let _kwTab='generate';
+function switchKwTab(tab){
+  _kwTab=tab;
+  ['generate','validate','approved','dump'].forEach(t=>{
+    const pane=document.getElementById('kwpane-'+t);if(pane)pane.style.display=t===tab?'block':'none';
+    const btn=document.getElementById('kwtab-'+t);if(btn)btn.classList.toggle('on',t===tab);
+  });
+  if(tab==='validate')renderKwValidation();
+  if(tab==='approved')renderKwApproved();
+  if(tab==='generate')loadSeeds();
+}
+
+function initKeywordsTab(){
+  // Show Thursday banner
+  const day=new Date().getDay();
+  const banner=document.getElementById('thursday-banner');
+  if(banner)banner.style.display=day===4?'flex':'none';
+  loadSeeds();
+  renderKwValidation();
+}
+
 async function rankAndGroupKeywords(){
   const apiKey=localStorage.getItem('claude-api-key');
   const input=document.getElementById('kw-dump-input').value.trim();
@@ -946,7 +1268,7 @@ function renderChecklist(){
   let html='';
   CL_STEPS.forEach(step=>{
     const sd=step.items.filter(i=>_clChecked[i.id]).length,allDone=sd===step.items.length;
-    html+=`<div class="cl-section"><button class="cl-hdr" onclick="toggleClStep('${step.id}')"><div class="cl-num ${allDone?'done':''}">${allDone?'✓':step.num}</div><div class="cl-title">${step.title}</div><div class="cl-prog">${sd}/${step.items.length}</div><span id="cl-arr-${step.id}" style="font-size:13px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span></button><div id="cl-body-${step.id}" class="cl-body" style="display:none">${step.note?`<div class="cl-note">💡 ${esc(step.note)}</div>`:''}${step.items.map(item=>`<div class="cl-item${_clChecked[item.id]?' ck':''}"><div class="cl-cb" onclick="toggleClItem('${item.id}')" title="Mark as done">${_clChecked[item.id]?'✓':''}</div><span class="cl-text">${esc(item.text)}</span></div>`).join('')}</div></div>`;
+    html+=`<div class="cl-section"><button class="cl-hdr" onclick="toggleClStep('${step.id}')"><div class="cl-num ${allDone?'done':''}">${allDone?'✓':step.num}</div><div class="cl-title">${step.title}</div><div class="cl-prog">${sd}/${step.items.length}</div><span id="cl-arr-${step.id}" style="font-size:13px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span></button><div id="cl-body-${step.id}" class="cl-body" style="display:none">${step.note?`<div class="cl-note">💡 ${esc(step.note)}${step.id==='s2'?`<div style="margin-top:8px"><button class="btn btn-p btn-sm" onclick="copyBriefAndOpen()" style="font-size:11px">📋 Copy brief & open Blogging project</button></div>`:''}</div>`:''} ${step.items.map(item=>`<div class="cl-item${_clChecked[item.id]?' ck':''}"><div class="cl-cb" onclick="toggleClItem('${item.id}')" title="Mark as done">${_clChecked[item.id]?'✓':''}</div><span class="cl-text">${esc(item.text)}</span></div>`).join('')}</div></div>`;
   });
   document.getElementById('cl-sections').innerHTML=html;
   // Restore open sections first
@@ -960,22 +1282,46 @@ function renderChecklist(){
     if(activeStep){const body=document.getElementById('cl-body-'+activeStep.id),arr=document.getElementById('cl-arr-'+activeStep.id);if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}}
   }
 }
-function toggleClStep(id){const body=document.getElementById('cl-body-'+id),arr=document.getElementById('cl-arr-'+id);if(!body)return;const open=body.style.display!=='none';body.style.display=open?'none':'block';if(arr)arr.style.transform=open?'rotate(0)':'rotate(180deg)'}
+function toggleClStep(id){
+  CL_STEPS.forEach(s=>{
+    const body=document.getElementById('cl-body-'+s.id);
+    const arr=document.getElementById('cl-arr-'+s.id);
+    if(s.id===id){
+      const open=body?.style.display!=='none';
+      if(body)body.style.display=open?'none':'block';
+      if(arr)arr.style.transform=open?'rotate(0)':'rotate(180deg)';
+    } else {
+      if(body)body.style.display='none';
+      if(arr)arr.style.transform='rotate(0)';
+    }
+  });
+}
 async function toggleClItem(itemId){
   if(!curPost)return;
-  const wasComplete=ALL_ITEM_IDS.every(id=>_clChecked[id]);
+  const wasAllDone=ALL_ITEM_IDS.every(id=>_clChecked[id]);
   const newVal=!_clChecked[itemId];_clChecked[itemId]=newVal;
   await sb.from('post_checklist').upsert({post_id:curPost,item_id:itemId,checked:newVal},{onConflict:'post_id,item_id'});
   const step=calcCurrentStep();
   await sb.from('posts').update({current_step:step}).eq('id',curPost);
-  await loadPosts();renderChecklist();renderPosts();
-  // Check if just became complete
-  const nowComplete=ALL_ITEM_IDS.every(id=>_clChecked[id]);
-  if(!wasComplete&&nowComplete){
-    const post=gp(curPost);
-    celebrate(post?.primary_keyword||post?.title||'Post');
-    checkMilestone();
+  await loadPosts();
+
+  // Check if a step just completed — auto-open next step
+  const prevStepIdx=CL_STEPS.findIndex(s=>s.items.some(i=>i.id===itemId));
+  if(newVal&&prevStepIdx>=0){
+    const thisStep=CL_STEPS[prevStepIdx];
+    const stepDone=thisStep.items.every(i=>_clChecked[i.id]);
+    if(stepDone&&prevStepIdx<CL_STEPS.length-1){
+      // Auto-open next step after re-render
+      setTimeout(()=>{
+        const nextId=CL_STEPS[prevStepIdx+1].id;
+        toggleClStep(nextId);
+      },150);
+    }
   }
+
+  renderChecklist();renderPosts();
+  const nowAllDone=ALL_ITEM_IDS.every(id=>_clChecked[id]);
+  if(!wasAllDone&&nowAllDone){const p=gp(curPost);celebrate(p?.primary_keyword||p?.title||'Post');checkMilestone();}
 }
 function calcCurrentStep(){
   let maxStep=0;
@@ -1370,7 +1716,71 @@ async function handleGscFileWeekly(e){
   markWeeklyDone('gsc');updateWeeklyButtons();
 }
 
-// ── DUPLICATE KEYWORD DETECTOR ──────────────────────────────────
+// COPY BRIEF AND OPEN PROJECT
+function copyBriefAndOpen(){
+  const p=gp(curPost);if(!p)return;
+  const supp=p.supplementary_keywords||'';
+  const brief=`Blog: ${activeBlog==='esc'?'ESC Hub — eschub.com/blog':'No More Somedays — escapepreneur.com/blog'}
+Primary keyword: ${p.primary_keyword||''}
+KS Score: ${p.ks_score!=null?p.ks_score:'—'}
+Monthly search volume: ${p.search_volume!=null?p.search_volume.toLocaleString():'—'}
+${supp?`Secondary keywords: ${supp}`:''}
+${p.unique_take?`Unique take / Karen's angle: ${p.unique_take}`:''}
+${p.serp_notes?`SERP analysis doc: ${p.serp_notes}`:''}
+
+Please generate the complete blog post package including: full article, meta title, meta description, URL slug, category, all Freepik image prompts with SEO filenames and alt text, featured image Canva brief, Canva template recommendation, Pinterest board recommendation, Instagram caption, Facebook caption, and Pinterest description.`;
+  navigator.clipboard.writeText(brief).then(()=>{
+    window.open(BLOGGING_PROJECT_URL,'_blank');
+    toast('Brief copied — paste it into the new chat',3000);
+  }).catch(()=>{
+    window.open(BLOGGING_PROJECT_URL,'_blank');
+    toast('Open the project and paste your brief manually',3000);
+  });
+}
+
+// PINTEREST TEMPLATE TRACKER
+function renderPinterestTracker(){
+  const el=document.getElementById('pinterest-tracker-list');if(!el)return;
+  const posts=bp().filter(p=>p.pinterest_board&&p.status==='live');
+  // Count template usage from canva_template field (stored in serp_notes for now - we'll use a dedicated approach)
+  // Show posts with pinterest board set, grouped by board
+  const boards={};
+  posts.forEach(p=>{if(p.pinterest_board){if(!boards[p.pinterest_board])boards[p.pinterest_board]=[];boards[p.pinterest_board].push(p)}});
+  if(!Object.keys(boards).length){el.innerHTML='<div class="empty">No Pinterest boards recorded yet. Add boards in post details.</div>';return}
+  el.innerHTML=Object.entries(boards).map(([board,bposts])=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${esc(board)} <span style="font-size:10px;color:var(--text3)">(${bposts.length} posts)</span></div>${bposts.map(p=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}</div>`).join('');
+}
+
+// POST LIST — copyable
+function renderPostList(){
+  const el=document.getElementById('post-list-content');if(!el)return;
+  const posts=bp().filter(p=>p.status==='live'||p.status==='scheduled').sort((a,b)=>new Date(b.published_date||b.scheduled_date||0)-new Date(a.published_date||a.scheduled_date||0));
+  if(!posts.length){el.innerHTML='<div class="empty">No live or scheduled posts yet.</div>';return}
+  const text=posts.map(p=>`${titleCase(p.primary_keyword||p.title||'Untitled')} — ${p.url||'no URL'}`).join('\n');
+  el.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-p btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('post-list-text').value);toast('Post list copied')">Copy all</button></div><textarea id="post-list-text" rows="15" style="width:100%;font-size:11px;font-family:monospace;border:1px solid var(--border);border-radius:var(--r2);padding:10px;resize:vertical;color:var(--text2);background:var(--bg2)">${esc(text)}</textarea>`;
+}
+// PINTEREST TEMPLATE LOG (localStorage based)
+function getPinTemplates(){return JSON.parse(localStorage.getItem('pin-templates-'+activeBlog)||'[]')}
+function renderPinTemplates(){
+  const el=document.getElementById('pinterest-template-log');if(!el)return;
+  const t=getPinTemplates();
+  el.textContent=t.length?t.map((e,i)=>`${i+1}. ${e}`).join('\n'):'No templates logged yet.';
+}
+function logPinterestTemplate(){
+  const inp=document.getElementById('pin-template-input');if(!inp||!inp.value.trim())return;
+  const t=getPinTemplates();
+  const entry=`${inp.value.trim()} — ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+  t.unshift(entry);
+  localStorage.setItem('pin-templates-'+activeBlog,JSON.stringify(t.slice(0,50)));
+  inp.value='';renderPinTemplates();toast('Template logged');
+}
+function copyPinTemplates(){
+  const t=getPinTemplates();
+  if(!t.length){toast('No templates logged yet');return}
+  const text='Pinterest/IG/FB templates used (most recent first):\n'+t.map((e,i)=>`${i+1}. ${e}`).join('\n')+'\n\nPlease recommend a template not in this list.';
+  navigator.clipboard.writeText(text);toast('Template list copied');
+}
+function clearPinTemplates(){if(!confirm('Clear all logged templates?'))return;localStorage.removeItem('pin-templates-'+activeBlog);renderPinTemplates();toast('Cleared')}
+
 function checkDuplicateKeyword(kw){
   if(!kw||kw.length<3)return null;
   const kwLower=kw.toLowerCase().trim();
@@ -1593,11 +2003,12 @@ function renderCalendar(){
         return`<div draggable="true"
         ondragstart="calDragStart(event,'${p.id}')"
         ondragend="calDragEnd(event)"
-        onclick="openPost('${p.id}','details')"
-        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px"
-        title="${esc(titleCase(p.primary_keyword||p.title||''))}">
-        <span style="overflow:hidden;text-overflow:ellipsis">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
-        ${sc!=null?`<span style="flex-shrink:0;font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
+        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px">
+        <span style="flex:1;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
+        <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+          ${sc!=null?`<span style="font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
+          <button onclick="event.stopPropagation();clearProposedDate('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;line-height:1;padding:0 1px;font-weight:700" title="Remove from calendar">✕</button>
+        </div>
         </div>`;
       }).join('')}
       <div style="display:flex;justify-content:center;margin-top:2px">
@@ -1612,6 +2023,13 @@ function renderCalendar(){
     d.addEventListener('mouseenter',()=>d.querySelector('.cal-plus').style.opacity='1');
     d.addEventListener('mouseleave',()=>d.querySelector('.cal-plus').style.opacity='0');
   });
+}
+
+async function clearProposedDate(id){
+  await sb.from('posts').update({proposed_date:null}).eq('id',id);
+  const p=allPosts.find(x=>x.id===id);if(p)p.proposed_date=null;
+  await loadPosts();renderCalendar();renderPipeline();renderResearch();renderDashboard();
+  toast('Removed from calendar — back in Planning');
 }
 
 // Calendar drag and drop for proposed entries
