@@ -605,10 +605,17 @@ input[type=file]{width:100%}
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                   <div><div style="font-size:14px;font-weight:700">Generate candidates</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Fresh keywords only — nothing you've already used</div></div>
                 </div>
-                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-                  <button class="btn btn-p" onclick="generateCandidates(50)">Generate 50</button>
-                  <button class="btn" onclick="generateCandidates(25)">Generate 25</button>
-                  <button class="btn" onclick="generateCandidates(100)">Generate 100</button>
+                <div style="margin-bottom:8px">
+                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">Balanced mix</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                    <button class="btn btn-p" onclick="generateCandidates(50,'balanced')">⚖ Generate 50 (balanced)</button>
+                    <button class="btn" onclick="generateCandidates(25,'balanced')">⚖ 25 balanced</button>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">By category</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn" onclick="generateCandidates(25,'competitor')">🔀 Competitor only</button>
+                    <button class="btn" onclick="generateCandidates(25,'problem')">💡 Problem-based only</button>
+                  </div>
                 </div>
                 <div id="kw-generated-output" style="display:none">
                   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:8px">
