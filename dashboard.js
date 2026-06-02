@@ -750,25 +750,31 @@ async function rankKeywords(){
 // Default seed lists
 const DEFAULT_PLATFORMS=['Kajabi','Teachable','Calendly','ActiveCampaign','ClickFunnels','Leadpages','Mailchimp','Dubsado','HoneyBook','Systeme.io','Kartra','Podia','Thinkific','Keap','HubSpot','Klaviyo'];
 const DEFAULT_PROBLEMS=[
-  'too many tools','manual follow up','tech overwhelm','paying for software',
-  'automate client onboarding','consolidate business tools','email automation',
-  'crm for small business','all in one platform','online coaching business',
-  'how to simplify business tech stack','reduce software costs small business',
-  'automate your coaching business','save time in online business',
-  'stop doing manual tasks in business','automate follow up with clients',
-  'business systems for solopreneurs','how to run an online business efficiently',
-  'simple business setup for coaches','online business tools checklist',
-  'overwhelmed running my business','online business too complicated',
-  'simplify online business','how to manage a coaching business',
-  'best tools for online coaches','cheap software for small business',
-  'how to scale coaching business','client management for coaches',
-  'stop juggling multiple apps','all in one tool for coaches'
+  'too many business tools',
+  'tech overwhelm small business',
+  'automate client onboarding',
+  'consolidate business software',
+  'reduce software costs',
+  'email automation for coaches',
+  'crm for coaches',
+  'all in one platform for coaches',
+  'automate follow up emails',
+  'business systems for solopreneurs',
+  'simplify online business tools',
+  'client management software coaches',
+  'online business too complicated',
+  'how to manage a coaching business',
+  'best tools for online coaches',
+  'how to scale coaching business',
+  'stop paying for too many apps',
+  'cheap all in one business software',
+  'business automation for coaches',
+  'marketing automation small business'
 ];
-const DEFAULT_MODIFIERS=['alternatives','alternative','vs','pricing','review','cheapest','best'];
-// These modifiers only apply to platforms, not problems
-const PLATFORM_ONLY_MODIFIERS=['alternatives','alternative','vs','pricing','review','cheapest'];
-// These can apply to both
-const GENERAL_MODIFIERS=['best','for coaches','for solopreneurs','for small business'];
+// Platform modifiers — proven search patterns only
+const PLATFORM_MODIFIERS_TOP=['alternatives','alternative','vs','pricing','review'];
+const PLATFORM_MODIFIERS_OTHER=['for coaches','for solopreneurs','cheapest alternative'];
+// Problem phrases stand alone — no modifiers stacked on them
 
 function clearUsedCombinations(){
   if(!confirm('Clear all used keyword combinations? Next generation will include previously generated keywords.'))return;
@@ -780,17 +786,15 @@ function getSeeds(){
   return{
     platforms:(localStorage.getItem('kw-seeds-platforms')||DEFAULT_PLATFORMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
     problems:(localStorage.getItem('kw-seeds-problems')||DEFAULT_PROBLEMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
-    modifiers:(localStorage.getItem('kw-seeds-modifiers')||DEFAULT_MODIFIERS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean)
+    modifiers:PLATFORM_MODIFIERS_TOP.concat(PLATFORM_MODIFIERS_OTHER)
   };
 }
 
 function saveSeeds(){
   const p=document.getElementById('kw-seeds-platforms')?.value||'';
   const pr=document.getElementById('kw-seeds-problems')?.value||'';
-  const m=document.getElementById('kw-seeds-modifiers')?.value||'';
   localStorage.setItem('kw-seeds-platforms',p);
   localStorage.setItem('kw-seeds-problems',pr);
-  localStorage.setItem('kw-seeds-modifiers',m);
   toast('Seed lists saved');
 }
 
@@ -798,7 +802,6 @@ function loadSeeds(){
   const s=getSeeds();
   const pe=document.getElementById('kw-seeds-platforms');if(pe)pe.value=s.platforms.join('\n');
   const pre=document.getElementById('kw-seeds-problems');if(pre)pre.value=s.problems.join('\n');
-  const me=document.getElementById('kw-seeds-modifiers');if(me)me.value=s.modifiers.join('\n');
 }
 
 function getUsedCombinations(){return new Set(JSON.parse(localStorage.getItem('kw-used-combos-'+activeBlog)||'[]'))}
@@ -814,25 +817,32 @@ function buildCandidatePool(type){
   const existing=getExistingKeywords();
   const inQueue=new Set(getKwQueue().map(k=>k.keyword.toLowerCase().trim()));
   const candidates=[];const tried=new Set();
-  const topModifiers=['alternatives','alternative','vs','pricing','review'];
+
+  const ok=(kw)=>!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw);
+  const add=(kw,t)=>{if(ok(kw)){candidates.push({kw,type:t});tried.add(kw)}};
 
   if(type==='competitor'||type==='all'){
-    for(const mod of topModifiers){for(const plat of seeds.platforms){const kw=`${plat.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'competitor'});tried.add(kw)}}}
-    for(const mod of seeds.modifiers.filter(m=>!topModifiers.includes(m))){for(const plat of seeds.platforms){const kw=`${plat.toLowerCase()} ${mod}`;if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'competitor'});tried.add(kw)}}}
-  }
-  if(type==='problem'||type==='all'){
-    // Problem modifiers — only ones that make sense with problem phrases
-    const problemModifiers=['for coaches','for solopreneurs','for small business','tips','guide','how to fix','software','tools','for online business'];
-    for(const prob of seeds.problems){
-      // Add the problem phrase itself first
-      if(!tried.has(prob.toLowerCase())&&!used.has(prob.toLowerCase())&&!existing.has(prob.toLowerCase())&&!inQueue.has(prob.toLowerCase())){candidates.push({kw:prob.toLowerCase(),type:'problem'});tried.add(prob.toLowerCase())}
-      // Combine with problem-appropriate modifiers only
-      for(const mod of problemModifiers){
-        const kw=`${prob.toLowerCase()} ${mod}`;
-        if(!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw)){candidates.push({kw,type:'problem'});tried.add(kw)}
+    // Top converting: platform + alternatives/vs/pricing/review
+    for(const mod of PLATFORM_MODIFIERS_TOP){
+      for(const plat of seeds.platforms){
+        add(`${plat.toLowerCase()} ${mod}`,'competitor');
+      }
+    }
+    // Secondary: platform + for coaches / for solopreneurs
+    for(const mod of PLATFORM_MODIFIERS_OTHER){
+      for(const plat of seeds.platforms){
+        add(`${plat.toLowerCase()} ${mod}`,'competitor');
       }
     }
   }
+
+  if(type==='problem'||type==='all'){
+    // Problem phrases stand alone — already complete search queries
+    for(const prob of seeds.problems){
+      add(prob.toLowerCase(),'problem');
+    }
+  }
+
   return candidates;
 }
 
@@ -883,7 +893,12 @@ function copyGeneratedKeywords(){
 }
 
 function addAllToValidation(){
-  const kws=window._generatedKws||[];
+  // Try stored variable first, fall back to reading from DOM
+  let kws=window._generatedKws||[];
+  if(!kws.length){
+    const text=document.getElementById('kw-generated-text')?.textContent||'';
+    if(text.trim())kws=text.split(',').map(k=>k.trim()).filter(Boolean);
+  }
   if(!kws.length){toast('Generate keywords first');return}
   const queue=getKwQueue();
   const existing=new Set(queue.map(k=>k.keyword.toLowerCase()));
