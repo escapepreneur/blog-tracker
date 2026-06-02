@@ -2499,4 +2499,4 @@ async function copySnapshot(){
   const text=document.getElementById('snapshot-text').textContent;
   await copyToClipboard(text);
   toast('Snapshot copied to clipboard');
-}
+}}
