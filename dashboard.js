@@ -1043,6 +1043,168 @@ function renderKwApproved(){
 
 function clearApprovedKw(){if(!confirm('Clear approved keyword history?'))return;saveKwApproved([]);renderKwApproved();toast('History cleared')}
 
+// UNIFIED MULTI-FILE IMPORTER — handles Keysearch + GKP, merges overlaps
+async function importKwFiles(e){
+  const files=[...e.target.files];if(!files.length)return;
+  document.getElementById('kw-file-label').textContent='Processing…';
+  document.getElementById('kw-import-result').innerHTML='';
+
+  // Parse all files into a map: keyword → {ks_score, volume, source}
+  const parsed={}; // key = keyword lowercase
+
+  for(const file of files){
+    const buffer=await file.arrayBuffer();
+    let text='';
+    try{text=new TextDecoder('utf-16-le').decode(buffer).replace(/\u0000/g,'')}
+    catch(ex){text=new TextDecoder('utf-8').decode(buffer)}
+    text=text.replace(/^\uFEFF/,'');
+
+    // Detect format
+    const isGKP=text.includes('Avg. monthly searches');
+    const isKS=text.includes('Score') && !isGKP;
+
+    if(isGKP){
+      const lines=text.split(/\r?\n/).filter(Boolean);
+      const hi=lines.findIndex(l=>l.includes('Avg. monthly searches'));
+      if(hi===-1)continue;
+      const headers=lines[hi].split('\t');
+      const kwIdx=headers.findIndex(h=>h.toLowerCase().trim()==='keyword');
+      const volIdx=headers.findIndex(h=>h.includes('Avg. monthly searches'));
+      const compIdx=headers.findIndex(h=>h.trim()==='Competition');
+      const compNumIdx=headers.findIndex(h=>h.includes('indexed value'));
+      for(let i=hi+1;i<lines.length;i++){
+        const cols=lines[i].split('\t');
+        const kw=(cols[kwIdx]||'').trim().toLowerCase();
+        if(!kw||kw.startsWith('http'))continue;
+        const volRaw=(cols[volIdx]||'').replace(/,/g,'').trim();
+        const vol=volRaw&&volRaw!=='--'?parseInt(volRaw)||null:null;
+        const comp=(cols[compIdx]||'').trim().toLowerCase();
+        const compNum=parseFloat(cols[compNumIdx]||'')||null;
+        let ks=null;
+        if(compNum!=null)ks=Math.round(compNum*0.4);
+        else if(comp==='low')ks=20;else if(comp==='medium')ks=40;else if(comp==='high')ks=65;
+        if(!parsed[kw])parsed[kw]={keyword:cols[kwIdx].trim(),ks_score:null,volume:null};
+        if(vol!=null)parsed[kw].volume=vol;
+        if(ks!=null&&parsed[kw].ks_score==null)parsed[kw].ks_score=ks;
+      }
+    } else if(isKS){
+      const lines=text.split(/\r?\n/).filter(Boolean);
+      const kwHeader=/^keyword\tvolume/i;
+      let i=0;
+      while(i<lines.length){
+        if(kwHeader.test(lines[i])){
+          i++;
+          if(i<lines.length){
+            const cols=lines[i].split('\t');
+            const kw=(cols[0]||'').trim();
+            if(kw&&!kw.toLowerCase().startsWith('url')&&!kw.startsWith('http')){
+              const vol=parseInt(cols[1])||null;
+              const ks=parseFloat(cols[4])||null;
+              const kwl=kw.toLowerCase();
+              if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
+              // KS score takes priority over GKP estimate
+              if(ks!=null)parsed[kwl].ks_score=ks;
+              if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
+            }
+          }
+        }
+        i++;
+      }
+    }
+  }
+
+  const allParsed=Object.values(parsed);
+  if(!allParsed.length){
+    document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">Could not parse files. Check they are Keysearch or GKP exports.</div>`;
+    document.getElementById('kw-file-label').textContent='⬆ Upload CSV files';return;
+  }
+
+  // Merge into queue
+  const queue=getKwQueue();
+  const existingMap={};queue.forEach(k=>{existingMap[k.keyword.toLowerCase().trim()]=k});
+  let added=0,merged=0;
+
+  allParsed.forEach(p=>{
+    const kwl=p.keyword.toLowerCase().trim();
+    if(existingMap[kwl]){
+      // Merge — fill in missing data
+      const existing=existingMap[kwl];
+      let changed=false;
+      if(p.ks_score!=null&&existing.ks_score==null){existing.ks_score=p.ks_score;changed=true}
+      if(p.volume!=null&&existing.volume==null){existing.volume=p.volume;changed=true}
+      if(changed){existing.status=kwStatus(existing.ks_score,existing.volume);merged++}
+    } else {
+      queue.push({
+        id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+        keyword:p.keyword,ks_score:p.ks_score,volume:p.volume,
+        status:kwStatus(p.ks_score,p.volume),
+        added:localToday()
+      });
+      added++;
+    }
+  });
+
+  saveKwQueue(queue);renderKwValidation();
+  const parts=[];
+  if(added)parts.push(`${added} new keywords added`);
+  if(merged)parts.push(`${merged} existing keywords updated with missing data`);
+  document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${parts.join(' · ')}</div>`;
+  document.getElementById('kw-file-label').textContent=`✓ ${files.map(f=>f.name).join(', ')}`;
+  switchKwTab('validate');toast(parts.join(' · '));
+  e.target.value='';
+}
+
+// GKP CSV import
+async function importGKPCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('kw-file-label').textContent=file.name+' — processing…';
+  const buffer=await file.arrayBuffer();
+  const text=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
+  const lines=text.split(/\r?\n/).filter(Boolean);
+  // Find header row
+  const headerIdx=lines.findIndex(l=>l.includes('Avg. monthly searches'));
+  if(headerIdx===-1){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">Could not find GKP header row. Make sure you exported from Google Keyword Planner.</div>`;return}
+  const headers=lines[headerIdx].split('\t');
+  const kwIdx=headers.findIndex(h=>h.toLowerCase().includes('keyword'));
+  const volIdx=headers.findIndex(h=>h.includes('Avg. monthly searches'));
+  const compIdx=headers.findIndex(h=>h==='Competition');
+  const compNumIdx=headers.findIndex(h=>h.includes('indexed value'));
+  const imported=[];
+  for(let i=headerIdx+1;i<lines.length;i++){
+    const cols=lines[i].split('\t');
+    if(cols.length<3)continue;
+    const kw=(cols[kwIdx]||'').trim();
+    if(!kw||kw.startsWith('http'))continue;
+    const volRaw=(cols[volIdx]||'').replace(/,/g,'').trim();
+    const vol=volRaw&&volRaw!=='--'?parseInt(volRaw)||null:null;
+    // Map competition to approximate KS score
+    const comp=(cols[compIdx]||'').trim().toLowerCase();
+    const compNum=parseFloat(cols[compNumIdx]||'')||null;
+    let ks=null;
+    if(compNum!=null)ks=Math.round(compNum*0.4); // scale 0-100 → 0-40
+    else if(comp==='low')ks=20;
+    else if(comp==='medium')ks=35;
+    else if(comp==='high')ks=60;
+    imported.push({
+      id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+      keyword:kw,ks_score:ks,volume:vol,
+      status:kwStatus(ks,vol),
+      added:localToday(),source:'gkp'
+    });
+  }
+  if(!imported.length){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">No keywords found. Check the file format.</div>`;return}
+  const queue=getKwQueue();
+  const existingKws=new Set(queue.map(k=>k.keyword.toLowerCase().trim()));
+  const newOnes=imported.filter(k=>!existingKws.has(k.keyword.toLowerCase().trim()));
+  const skipped=imported.length-newOnes.length;
+  saveKwQueue([...queue,...newOnes]);
+  renderKwValidation();
+  document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${newOnes.length} keywords imported from Google Keyword Planner · ${skipped} duplicates skipped</div>`;
+  document.getElementById('kw-file-label').textContent='✓ '+file.name;
+  switchKwTab('validate');toast(`${newOnes.length} keywords imported from GKP`);
+  e.target.value='';
+}
+
 // Keysearch CSV import
 async function importKeysearchCSV(e){
   const file=e.target.files[0];if(!file)return;
