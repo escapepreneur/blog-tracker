@@ -29,7 +29,11 @@ export const handler = async (event) => {
     if (!draft) return json(400, { error: 'no draft to schedule yet' });
     if (draft.check_report && draft.check_report.verdict === 'fail') return json(400, { error: 'draft has must-fix issues' });
 
-    const r = await createBlogPost({ brand: post.blog, post, draft, pit: PIT, status: 'DRAFT' });
+    const r = await createBlogPost({
+      brand: post.blog, post, draft, pit: PIT, status: 'DRAFT',
+      imageUrl: draft.assets && draft.assets.featured_image_url,
+      imageAltText: (draft.assets && draft.assets.title) || post.primary_keyword,
+    });
 
     const patch = { ghl_post_id: r.id, url: r.url, status: 'scheduled', current_step: Math.max(post.current_step || 0, 5) };
     if (date) patch.scheduled_date = date;

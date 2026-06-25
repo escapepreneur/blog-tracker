@@ -11,6 +11,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.s
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const AKEY = process.env.ANTHROPIC_API_KEY;
 const PEXELS = process.env.PEXELS_API_KEY;
+const GH_TOKEN = process.env.GITHUB_DISPATCH_TOKEN; // optional: triggers the featured-image render worker
 
 const json = (code, obj) => ({ statusCode: code, headers: { 'content-type': 'application/json' }, body: JSON.stringify(obj) });
 
@@ -66,6 +67,13 @@ export const handler = async (event) => {
       await rest(`posts?id=eq.${postId}`, {
         method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
       });
+    }
+    if (GH_TOKEN) { // fire-and-forget: ask GitHub Actions to render the featured image
+      fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' },
+        body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: postId } }),
+      }).catch(() => {});
     }
     return json(200, { ok: true, verdict: report.verdict, report, model, usage });
   } catch (e) {

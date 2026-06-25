@@ -60,3 +60,16 @@ export async function publishBlogPost({ ghlPostId, pit }) {
   if (!res.ok) throw new Error(`GHL publish ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return true;
 }
+
+// Upload an image buffer to the GHL media library -> { fileId, url }.
+export async function uploadMedia({ buffer, filename = 'featured.jpg', contentType = 'image/jpeg', pit }) {
+  const fd = new FormData();
+  fd.append('file', new Blob([buffer], { type: contentType }), filename);
+  fd.append('hosted', 'false');
+  const res = await fetch(`${GHL}/medias/upload-file`, {
+    method: 'POST', headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' }, body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`GHL media ${res.status}: ${JSON.stringify(data).slice(0, 200)}`);
+  return { fileId: data.fileId || data._id, url: data.url };
+}

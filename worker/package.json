@@ -1,0 +1,9 @@
+{
+  "name": "blog-tracker-worker",
+  "private": true,
+  "type": "module",
+  "description": "GitHub Actions worker: render featured images (Chromium) and upload to GHL.",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

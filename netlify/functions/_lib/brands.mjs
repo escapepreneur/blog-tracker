@@ -140,6 +140,7 @@ LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sou
 ${b.special}
 ${b.forbiddenSell.length ? 'Never use these salesy phrases: ' + b.forbiddenSell.join(', ') + '.' : ''}
 
+FEATURED IMAGE: provide featured_title (a short, punchy 3-6 word headline for the featured graphic - scroll-stopping, may differ from the H1), featured_tagline (a short 4-7 word script line), and featured_image_search (a stock-photo search term for a relevant, visually strong background).
 Category: choose the single best fit from this exact list: ${b.categories.map(c => c.label).join(', ')}.
 Slug: lowercase, hyphenated, stop words removed, based on the primary keyword.`;
 }
