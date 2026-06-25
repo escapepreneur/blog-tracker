@@ -2089,6 +2089,15 @@ async function scheduleNow(){
     toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
+async function resetSent(){
+  const p=gp(curPost);if(!p)return;
+  if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted — it does NOT change anything in GHL.'))return;
+  try{
+    await sb.from('posts').update({ghl_post_id:null,status:'drafted',scheduled_date:null,url:null,published_date:null,confirmed_live:false}).eq('id',curPost);
+    await loadPosts();if(curPost===p.id)renderDraftTab();if(typeof renderPosts==='function')renderPosts();
+    toast('Reset — you can publish or schedule again',3000);
+  }catch(e){toast('Reset failed: '+e.message,4000)}
+}
 async function publishNow(){
   const p=gp(curPost);if(!p)return;
   const brand=(BM[p.blog]||{}).name||'the blog';
@@ -2157,15 +2166,15 @@ function _draftViewHtml(d){
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
-  ${_draftRow('Title (H1)',esc(a.title||'—'),'title')}
-  ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`,'meta_title')}
-  ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`,'meta_description')}
-  ${_draftRow('Slug',esc(d.slug||''),'slug')}
+  ${_draftRow('Title (H1)',esc(a.title||'—'))}
+  ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
+  ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
+  ${_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'—'))}
   <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
-  <details style="margin-bottom:10px">
-    <summary style="cursor:pointer;display:flex;align-items:center;gap:8px"><label class="fl" style="margin:0;cursor:pointer">Article</label><span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px;margin-left:auto" onclick="event.preventDefault();event.stopPropagation();copyDraftField('body_html')">Copy HTML</button></summary>
-    <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;background:#fff;font-size:13px;line-height:1.7;margin-top:6px">${d.body_html||''}</div>
+  <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
+    <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>
+    <div style="max-height:440px;overflow-y:auto;border-top:1px solid var(--border);padding:14px 16px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
   </details>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
@@ -2179,7 +2188,7 @@ function _draftViewHtml(d){
   </details>
   <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
     ${post.ghl_post_id
-      ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>`
+      ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>${post.url?`<div style="margin-top:4px"><a href="${esc(post.url)}" target="_blank" style="font-size:11px;color:var(--text2)">${esc(post.url)}</a></div>`:''}<button class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:8px" onclick="resetSent()">Reset — re-publish / deleted in GHL</button>`
       : r.verdict==='fail'
         ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above before publishing.</div>`
         : `<div style="display:flex;gap:8px;flex-wrap:wrap">
