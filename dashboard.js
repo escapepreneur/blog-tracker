@@ -2063,6 +2063,23 @@ async function scheduleNow(){
     toast('Scheduled + sent to ESC Hub ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
+function aiEditAsk(){const i=document.getElementById('ai-instr');if(!i||!i.value.trim()){toast('Type an instruction for Claude');return}aiEditRun(i.value.trim());}
+function aiEditFix(){const r=(_curDraft&&_curDraft.check_report)||{};const items=[...(r.hard||[]),...(r.warn||[])];if(!items.length){toast('Nothing flagged');return}aiEditRun('Resolve these flagged issues, changing only what is needed: '+items.join('; '));}
+async function aiEditRun(instruction){
+  const pid=curPost;
+  const before=await loadDraft(pid);const prevTs=before?before.generated_at:null;
+  const el=document.getElementById('pm-draft-body');
+  if(el)el.innerHTML='<div style="text-align:center;padding:2.5rem 1rem"><div style="font-size:14px;font-weight:600;color:var(--text)">Claude is revising the draft…</div><div style="font-size:12px;color:var(--text2);margin-top:8px">About 30-60 seconds. The checks re-run automatically.</div></div>';
+  let status;
+  try{const res=await fetch('/.netlify/functions/ai-edit-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,instruction})});status=res.status;}catch(e){status='err';}
+  if(status!==202&&status!==200){if(curPost===pid)renderDraftTab();toast('Could not start AI edit ('+status+')',4000);return;}
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const d=await loadDraft(pid);
+    if(d&&d.generated_at!==prevTs){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Draft updated by Claude ✓',3000);}
+    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out — try again',4000);}
+  },6000);
+}
 function _draftRow(label,value,copyKey){
   return `<div style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">${label}</label>${copyKey?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('${copyKey}')">Copy</button>`:''}</div>
@@ -2081,6 +2098,13 @@ function _draftViewHtml(d){
   const bimg=(a.body_images||[]);
   const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
   return `
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:12px">
+    <div style="display:flex;gap:6px">
+      <input id="ai-instr" placeholder="Ask Claude to revise - e.g. trim the keyword, cut the salesy line" style="flex:1;font-size:12px;border:1px solid var(--border);border-radius:var(--r2);padding:6px 8px;background:#fff;color:var(--text)" onkeydown="if(event.key==='Enter')aiEditAsk()">
+      <button class="btn btn-p btn-sm" onclick="aiEditAsk()">Ask Claude</button>
+    </div>
+    ${((r.hard&&r.hard.length)||(r.warn&&r.warn.length))?`<button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px" onclick="aiEditFix()">Fix flagged issues with Claude</button>`:''}
+  </div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
