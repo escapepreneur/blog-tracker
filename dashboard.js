@@ -2045,7 +2045,9 @@ function chooseBodyImage(i,j){
   if(!_curDraft||!_curDraft.assets||!_curDraft.assets.body_images)return;
   const a=_curDraft.assets,slot=a.body_images[i];if(!slot)return;
   const c=(slot.candidates||[])[j];slot.chosen=c?c.url:null;
-  sb.from('post_drafts').update({assets:a}).eq('post_id',curPost).then(()=>{renderDraftTab();toast('Image selected')});
+  // update borders in place (no full re-render -> no scroll jump)
+  (slot.candidates||[]).forEach((cc,k)=>{const el=document.getElementById('bimg-'+i+'-'+k);if(el)el.style.border='3px solid '+(k===j?'#29abab':'transparent')});
+  sb.from('post_drafts').update({assets:a}).eq('post_id',curPost).then(()=>toast('Image selected')).catch(()=>toast('Save failed'));
 }
 async function scheduleNow(){
   const p=gp(curPost);if(!p)return;
@@ -2077,7 +2079,7 @@ function _draftViewHtml(d){
   const tdate=post.proposed_date||post.scheduled_date;
   const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
   const bimg=(a.body_images||[]);
-  const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
+  const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}

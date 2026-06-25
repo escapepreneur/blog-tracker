@@ -55,6 +55,7 @@ export const handler = async (event) => {
         body_image_searches: draft.body_image_searches, facebook_caption: draft.facebook_caption,
         instagram_caption: draft.instagram_caption, pinterest_description: draft.pinterest_description,
         faq: draft.faq, title: draft.title, body_images: bodyImages,
+        featured_title: draft.featured_title, featured_tagline: draft.featured_tagline, featured_image_search: draft.featured_image_search,
       },
       check_report: report, model, generated_at: new Date().toISOString(),
     };

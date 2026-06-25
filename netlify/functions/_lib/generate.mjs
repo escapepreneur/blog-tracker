@@ -31,7 +31,7 @@ const TOOL = {
       pinterest_description: { type: 'string' },
       faq: { type: 'array', description: 'The FAQ items used at the end of the article (for AI citation + future schema markup).', items: { type: 'object', properties: { question: { type: 'string' }, answer: { type: 'string' } }, required: ['question','answer'] } },
     },
-    required: ['title','body_html','meta_title','meta_description','slug','category','internal_links'],
+    required: ['title','body_html','meta_title','meta_description','slug','category','internal_links','featured_title','featured_tagline','featured_image_search'],
   },
 };
 
