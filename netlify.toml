@@ -1,0 +1,9 @@
+# Static site at repo root + serverless functions under netlify/functions.
+# The functions directory is bundled (not served as static files), so the
+# generation prompt/brand rules in _lib stay private.
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
