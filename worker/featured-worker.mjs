@@ -25,10 +25,8 @@ async function getPending() {
 }
 
 async function processOne(row) {
-  // The featured design is ESC Hub branded (ESC logo + layout). Skip other brands
-  // until their featured brand pack is built, so we never stamp ESC branding on them.
   const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog`)).json();
-  if (post && post.blog !== 'esc') { console.log('  skip (no featured design yet for brand):', row.post_id, post.blog); return; }
+  const brand = (post && post.blog) || 'esc'; // selects the per-brand logo (esc / nms)
   const a = row.assets || {};
   const term = a.featured_image_search;
   const idx = a.featured_bg_index || 0;
@@ -36,7 +34,7 @@ async function processOne(row) {
   if (!cands.length) { console.log('  no Pexels results for:', term); return; }
   const pick = cands[idx % cands.length];
   const bg = Buffer.from(await (await fetch(pick.url)).arrayBuffer()).toString('base64');
-  const jpeg = await renderFeatured({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg });
+  const jpeg = await renderFeatured({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg, brand });
   const up = await uploadMedia({ buffer: jpeg, filename: `featured-${row.post_id}.jpg`, pit: PIT });
   const assets = { ...a, featured_image_url: up.url, featured_bg_index: idx };
   await rest(`post_drafts?post_id=eq.${row.post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) });

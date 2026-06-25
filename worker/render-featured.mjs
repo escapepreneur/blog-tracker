@@ -10,9 +10,14 @@ const DIR = dirname(fileURLToPath(import.meta.url));
 const b64 = (p) => readFileSync(join(DIR, p)).toString('base64');
 const ESC_BOLD = b64('assets/esc-bold.woff2');
 const MARTHIN = b64('assets/marthin.woff2');
-const LOGO = b64('assets/logo.png');
+// Per-brand corner logo (everything else in the design is shared). esc = "esc HUB"
+// mark; nms = the white "escapepreneur™" wordmark (wide, so it sits a bit larger).
+const LOGOS = { esc: b64('assets/logo.png'), nms: b64('assets/logo-nms.png') };
+const LOGO_W = { esc: 150, nms: 200 };
 
-function buildHtml({ title, tagline, bgBase64 }) {
+function buildHtml({ title, tagline, bgBase64, brand = 'esc' }) {
+  const LOGO = LOGOS[brand] || LOGOS.esc;
+  const logoW = LOGO_W[brand] || LOGO_W.esc;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:'EscBold';src:url(data:font/woff2;base64,${ESC_BOLD}) format('woff2');}
 @font-face{font-family:'Marthin';src:url(data:font/woff2;base64,${MARTHIN}) format('woff2');}
@@ -24,7 +29,7 @@ function buildHtml({ title, tagline, bgBase64 }) {
 .title{font-family:'EscBold';line-height:1.04;letter-spacing:-1px}
 .white{color:#fff}.teal{color:#29abab}
 .tagline{font-family:'Marthin';color:#fff;line-height:1;margin-top:14px}
-.logo{position:absolute;right:50px;bottom:40px;width:150px;height:auto}
+.logo{position:absolute;right:50px;bottom:40px;width:${logoW}px;height:auto}
 #m{position:absolute;visibility:hidden;white-space:nowrap;font-family:'EscBold';letter-spacing:-1px}
 </style></head><body>
 <div class="canvas">
@@ -60,11 +65,11 @@ function split(text){const ws=text.split(' ');if(ws.length<2)return[text,''];let
 </script></body></html>`;
 }
 
-export async function renderFeatured({ title, tagline, bgBase64 }) {
+export async function renderFeatured({ title, tagline, bgBase64, brand = 'esc' }) {
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 560 } });
-    await page.setContent(buildHtml({ title, tagline, bgBase64 }), { waitUntil: 'load' });
+    await page.setContent(buildHtml({ title, tagline, bgBase64, brand }), { waitUntil: 'load' });
     await page.waitForFunction('window.__done === true', { timeout: 8000 });
     return await page.locator('.canvas').screenshot({ type: 'jpeg', quality: 90 });
   } finally {
