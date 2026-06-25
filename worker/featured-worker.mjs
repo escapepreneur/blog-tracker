@@ -25,6 +25,10 @@ async function getPending() {
 }
 
 async function processOne(row) {
+  // The featured design is ESC Hub branded (ESC logo + layout). Skip other brands
+  // until their featured brand pack is built, so we never stamp ESC branding on them.
+  const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog`)).json();
+  if (post && post.blog !== 'esc') { console.log('  skip (no featured design yet for brand):', row.post_id, post.blog); return; }
   const a = row.assets || {};
   const term = a.featured_image_search;
   const idx = a.featured_bg_index || 0;

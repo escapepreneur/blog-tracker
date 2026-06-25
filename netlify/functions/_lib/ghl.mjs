@@ -1,6 +1,7 @@
 // GHL blog publishing. Reuses the proven write path from the Software Updates build.
 // API host services.leadconnectorhq.com, Version 2021-07-28, Bearer PIT.
 import { BRANDS } from './brands.mjs';
+import { embedBodyImages } from './embedimages.mjs';
 
 const GHL = 'https://services.leadconnectorhq.com';
 const LOC = process.env.GHL_LOCATION_ID || 'EoD3KT6IiKx0oIXjInOt';
@@ -30,7 +31,7 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
     title,
     locationId: LOC,
     blogId: b.blogId,
-    rawHTML: draft.body_html,
+    rawHTML: embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images),
     status,
     categories: [pickCategoryId(brand, draft.category, post)].filter(Boolean),
     author: b.authorId,

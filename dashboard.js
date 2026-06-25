@@ -2051,16 +2051,18 @@ function chooseBodyImage(i,j){
 }
 async function scheduleNow(){
   const p=gp(curPost);if(!p)return;
+  const brand=(BM[p.blog]||{}).name||'the blog';
   const date=p.proposed_date||p.scheduled_date;
   if(!date){toast('Set a proposed date in the Details tab first');return}
-  if(!confirm('Schedule "'+(p.primary_keyword||p.title||'this post')+'" to ESC Hub for '+date+'?'))return;
+  if(date<localToday()){toast('That date ('+fd(date)+') is in the past — update the date in the Details tab before scheduling.',5000);return}
+  if(!confirm('Schedule "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' for '+fd(date)+'?\n\nIt is created now and goes live automatically on that date.'))return;
   toast('Scheduling…',3000);
   try{
     const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,date})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Schedule failed: '+(d.error||('HTTP '+res.status)),4000);return}
     await loadPosts();if(curPost===p.id)renderDraftTab();if(typeof renderPosts==='function')renderPosts();
-    toast('Scheduled + sent to ESC Hub ✓',3000);
+    toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
 function aiEditAsk(){const i=document.getElementById('ai-instr');if(!i||!i.value.trim()){toast('Type an instruction for Claude');return}aiEditRun(i.value.trim());}
@@ -2093,7 +2095,9 @@ function _reportBlock(title,items,color){
 function _draftViewHtml(d){
   const r=d.check_report||{},a=d.assets||{};
   const post=gp(curPost)||{};
+  const brandNm=(BM[post.blog]||{}).name||'the blog';
   const tdate=post.proposed_date||post.scheduled_date;
+  const datePast=tdate&&tdate<localToday();
   const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
   const bimg=(a.body_images||[]);
   const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
@@ -2137,10 +2141,12 @@ function _draftViewHtml(d){
   </details>
   <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
     ${post.ghl_post_id
-      ? `<div style="font-size:12px;color:var(--green);font-weight:600">✓ Sent to ESC Hub${post.scheduled_date?(' · scheduled '+fd(post.scheduled_date)):''}</div>`
+      ? `<div style="font-size:12px;color:var(--green);font-weight:600">✓ Sent to ${esc(brandNm)}${post.scheduled_date?(' · scheduled '+fd(post.scheduled_date)):''}</div>`
       : r.verdict==='fail'
         ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above before scheduling.</div>`
-        : `<button class="btn btn-p" onclick="scheduleNow()">Schedule to ESC Hub →</button><div style="font-size:11px;color:var(--text3);margin-top:6px">${tdate?('Creates the post in ESC Hub, scheduled for '+fd(tdate)+'.'):'Set a proposed date in the Details tab first.'}</div>`}
+        : datePast
+          ? `<div style="font-size:12px;color:var(--red-t);font-weight:600">⚠ The date (${fd(tdate)}) is in the past. Update it in the Details tab, then schedule.</div>`
+          : `<button class="btn btn-p" onclick="scheduleNow()">Schedule to ${esc(brandNm)} →</button><div style="font-size:11px;color:var(--text3);margin-top:6px">${tdate?('Creates the post in '+esc(brandNm)+' now; it goes live automatically on '+fd(tdate)+'.'):'Set a proposed date in the Details tab first.'}</div>`}
   </div>`;
 }
 async function generateDraftNow(){

@@ -17,6 +17,10 @@ export const handler = async (event) => {
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
   const { post_id, date } = body;
   if (!post_id) return json(400, { error: 'post_id required' });
+  // A scheduled post goes live on its date, so reject a date already in the past.
+  if (date && date < new Date().toISOString().slice(0, 10)) {
+    return json(400, { error: `Scheduled date ${date} is in the past — pick today or a future date.` });
+  }
 
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
   const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
