@@ -18,7 +18,7 @@ const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
 
 async function getScheduled() {
-  const url = `${SUPABASE_URL}/rest/v1/posts?status=eq.scheduled&select=id,blog,title,primary_keyword,status,scheduled_date,published_date,url`;
+  const url = `${SUPABASE_URL}/rest/v1/posts?status=eq.scheduled&select=id,blog,title,primary_keyword,status,scheduled_date,published_date,url,ghl_post_id`;
   const r = await fetch(url, { headers: h });
   if (!r.ok) throw new Error(`fetch scheduled failed: ${r.status} ${await r.text()}`);
   return r.json();
@@ -45,6 +45,7 @@ async function flip(post, goLiveDate) {
   let flipped = 0, waiting = 0, unverified = 0;
   for (const p of posts) {
     const label = `[${p.blog}] ${p.title || p.primary_keyword || p.id}`;
+    if (p.ghl_post_id) { console.log(`  SKIP  (GHL-managed; auto-publish step pending)  ${label}`); waiting++; continue; }
     const goLive = p.scheduled_date || p.published_date; // effective go-live date
     if (!goLive)          { console.log(`  WAIT  (no date)            ${label}`); waiting++; continue; }
     if (goLive > today)   { console.log(`  WAIT  (${goLive} > today)  ${label}`); waiting++; continue; }

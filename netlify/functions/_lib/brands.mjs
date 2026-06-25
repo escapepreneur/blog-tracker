@@ -79,7 +79,14 @@ export const BRANDS = {
     special: `ANTI-PUFF TEST (for any post that names a competitor platform, e.g. "X alternatives", "X review", "X vs Y"): the named platform section must (1) establish who it was built for (not our reader), (2) acknowledge genuine strengths in one or two specific sentences with no warmth, (3) go deep on the limitations that matter to our reader. It must NEVER read as a recommendation of that platform or include language a competitor could quote approvingly. Pricing covered honestly (show true cost if higher than headline).`,
     forbiddenSell: ['the best','the clear winner','the obvious choice','and on top of that','everything you need','game-changing','revolutionary'],
     wordMin: 1500, wordMax: 2500,
-    categories: null, // TODO: Karen to confirm the 4 ESC Hub blog categories
+    blogId: '35V2JGaHwBWLFjBg2Ghx',
+    authorId: '697a59884c5bde72bf158574', // Karen King - ESC Hub
+    categories: [
+      { label: 'Tips & Strategy', id: '69c284f563658f6fcb3263a9' },
+      { label: 'Email & Automation', id: '69c284dad7c89240453142d6' },
+      { label: 'Tools & Software', id: '69c284a6d89f8f1e759acac0' },
+      { label: 'Business Systems', id: '69c2848cd7c8922e12313c65' },
+    ],
   },
   nms: {
     key: 'nms',
@@ -97,7 +104,15 @@ export const BRANDS = {
     special: `BEGINNER TEST: a reader 5+ years in must never feel talked down to or told things she already knows. Do not explain why online business is a good idea, do not use "escape the 9 to 5" as the hook, do not define basic concepts without adding depth, no motivational-poster tone.`,
     forbiddenSell: [],
     wordMin: 1500, wordMax: 2500,
-    categories: null,
+    blogId: 'CSDAEY9Bzy5ThqKsZeu3',
+    authorId: '692c91527e27ef53884eca86', // Karen King - The Escapepreneur
+    categories: [
+      { label: 'Get Started', id: '69f81fad88031d1cd683f245' },
+      { label: 'Design the Dream', id: '69f8202a88031d1a2f83fdab' },
+      { label: 'Mindset & Motivation', id: '69f82040c9fb0825d3ce7408' },
+      { label: 'Business Strategy', id: '69f82054bef25d72f798c136' },
+      { label: 'Freedom Lifestyle', id: '69f82061bef25de0f498c1f2' },
+    ],
   },
 };
 
@@ -125,5 +140,6 @@ LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sou
 ${b.special}
 ${b.forbiddenSell.length ? 'Never use these salesy phrases: ' + b.forbiddenSell.join(', ') + '.' : ''}
 
+Category: choose the single best fit from this exact list: ${b.categories.map(c => c.label).join(', ')}.
 Slug: lowercase, hyphenated, stop words removed, based on the primary keyword.`;
 }
