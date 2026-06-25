@@ -51,11 +51,13 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
 }
 
 // Flip an existing GHL post to PUBLISHED (used by the scheduled go-live cron).
-export async function publishBlogPost({ ghlPostId, pit }) {
+export async function publishBlogPost({ ghlPostId, pit, imageUrl, imageAltText }) {
+  const body = { status: 'PUBLISHED' };
+  if (imageUrl) { body.imageUrl = imageUrl; body.imageAltText = imageAltText || ''; }
   const res = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'PUBLISHED' }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`GHL publish ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return true;
