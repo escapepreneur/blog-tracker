@@ -1,0 +1,28 @@
+name: Status auto-sync
+
+# Flips scheduled posts to "live" once their go-live date arrives, so the
+# tracker can't drift out of sync with what's actually published.
+
+on:
+  schedule:
+    - cron: '0 13 * * *'   # daily ~09:00 America/New_York (13:00 UTC)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'live = perform flips, dry = report only'
+        type: choice
+        default: live
+        options: [live, dry]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run status sync (${{ inputs.mode || 'live' }})
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/status-sync.mjs --${{ inputs.mode || 'live' }}
