@@ -69,12 +69,14 @@ export const handler = async (event) => {
         method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
       });
     }
-    if (GH_TOKEN) { // fire-and-forget: ask GitHub Actions to render the featured image
-      fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' },
-        body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: postId } }),
-      }).catch(() => {});
+    if (GH_TOKEN) { // ask GitHub Actions to render the featured image (await so it sends before the fn returns)
+      try {
+        await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' },
+          body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: postId } }),
+        });
+      } catch (e) { /* non-fatal: featured image can be rendered via the workflow manually */ }
     }
     return json(200, { ok: true, verdict: report.verdict, report, model, usage });
   } catch (e) {
