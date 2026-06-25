@@ -5,10 +5,12 @@
 import { generateDraft } from './_lib/generate.mjs';
 import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
+import { searchPexels } from './_lib/pexels.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const AKEY = process.env.ANTHROPIC_API_KEY;
+const PEXELS = process.env.PEXELS_API_KEY;
 
 const json = (code, obj) => ({ statusCode: code, headers: { 'content-type': 'application/json' }, body: JSON.stringify(obj) });
 
@@ -36,6 +38,13 @@ export const handler = async (event) => {
     const { usage, model } = gen;
     const report = runChecks({ brand, post, draft });
 
+    let bodyImages = [];
+    if (PEXELS && Array.isArray(draft.body_image_searches)) {
+      for (const term of draft.body_image_searches.slice(0, 4)) {
+        bodyImages.push({ term, candidates: await searchPexels(term, PEXELS, 3), chosen: null });
+      }
+    }
+
     const row = {
       post_id: postId, body_html: draft.body_html, meta_title: draft.meta_title,
       meta_description: draft.meta_description, slug: draft.slug, category: draft.category,
@@ -44,7 +53,7 @@ export const handler = async (event) => {
         canva_title: draft.canva_title, canva_subtitle: draft.canva_subtitle,
         body_image_searches: draft.body_image_searches, facebook_caption: draft.facebook_caption,
         instagram_caption: draft.instagram_caption, pinterest_description: draft.pinterest_description,
-        faq: draft.faq, title: draft.title,
+        faq: draft.faq, title: draft.title, body_images: bodyImages,
       },
       check_report: report, model, generated_at: new Date().toISOString(),
     };

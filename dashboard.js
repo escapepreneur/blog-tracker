@@ -2041,6 +2041,12 @@ function copyDraftField(k){
   const v=k==='title'?(_curDraft.assets||{}).title:_curDraft[k];
   navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
 }
+function chooseBodyImage(i,j){
+  if(!_curDraft||!_curDraft.assets||!_curDraft.assets.body_images)return;
+  const a=_curDraft.assets,slot=a.body_images[i];if(!slot)return;
+  const c=(slot.candidates||[])[j];slot.chosen=c?c.url:null;
+  sb.from('post_drafts').update({assets:a}).eq('post_id',curPost).then(()=>{renderDraftTab();toast('Image selected')});
+}
 function _draftRow(label,value,copyKey){
   return `<div style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">${label}</label>${copyKey?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('${copyKey}')">Copy</button>`:''}</div>
@@ -2054,6 +2060,8 @@ function _reportBlock(title,items,color){
 function _draftViewHtml(d){
   const r=d.check_report||{},a=d.assets||{};
   const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
+  const bimg=(a.body_images||[]);
+  const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}
@@ -2077,11 +2085,12 @@ function _draftViewHtml(d){
   </div>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
-      <b>Canva featured:</b> ${esc(a.canva_title||'')} / ${esc(a.canva_subtitle||'')}<br>
-      <b>Body image searches:</b> ${(a.body_image_searches||[]).map(esc).join('; ')||'—'}<br>
-      <b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
+      <div style="margin-bottom:6px"><b>Featured image (Canva):</b> ${esc(a.canva_title||'')} / ${esc(a.canva_subtitle||'')}</div>
+      <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
+      ${imgPick}
+      <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
       <b>Instagram:</b> ${esc(a.instagram_caption||'—')}<br>
-      <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}
+      <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}</div>
     </div>
   </details>
   <div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;margin-top:6px">Reviewed and happy? Set the status to <b>Scheduled</b> and the date in the Details tab. (Automatic publishing to the blog is coming next.)</div>`;
