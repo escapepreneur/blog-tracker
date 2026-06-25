@@ -54,7 +54,7 @@ async function verifyLive(url) {
       if (LIVE) {
         try {
           const img = await getFeatured(p.id);
-          await publishBlogPost({ ghlPostId: p.ghl_post_id, pit: PIT, imageUrl: img, imageAltText: p.title || p.primary_keyword });
+          await publishBlogPost({ ghlPostId: p.ghl_post_id, pit: PIT, brand: p.blog, imageUrl: img, imageAltText: p.title || p.primary_keyword });
           await setLive(p, goLive);
           published++;
         } catch (e) { console.error(`  FAIL publish ${label}: ${e.message}`); failed++; }
