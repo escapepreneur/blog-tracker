@@ -240,13 +240,14 @@ function updateTabs(){
 }
 function switchPTab(name){
   activePTab=name;
-  ['details','progress','social','gsc','links'].forEach(n=>{
+  ['details','draft','progress','social','gsc','links'].forEach(n=>{
     document.getElementById('pm-'+n).classList.toggle('on',n===name);
     document.getElementById('ptab-'+n).classList.toggle('on',n===name);
   });
   if(name==='gsc')renderGscHistory();
   if(name==='links')renderModalLinks();
   if(name==='progress')renderChecklist();
+  if(name==='draft')renderDraftTab();
 }
 function setFilter(f,btn){sfilt=f;document.querySelectorAll('.fchip').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderPosts()}
 
@@ -1997,6 +1998,120 @@ Please generate the complete blog post package including: full article, meta tit
     window.open(BLOGGING_PROJECT_URL,'_blank');
     toast('Open the project and paste your brief manually',3000);
   });
+}
+
+// ── IN-APP DRAFT GENERATION + REVIEW ────────────────────────────
+const GEN_FN='/.netlify/functions/generate-background';
+let _genPolling={},_curDraft=null;
+
+async function loadDraft(postId){
+  try{const{data}=await sb.from('post_drafts').select('*').eq('post_id',postId).maybeSingle();return data||null;}
+  catch(e){return null;}
+}
+async function renderDraftTab(){
+  const el=document.getElementById('pm-draft-body');if(!el)return;
+  const pid=curPost;
+  if(_genPolling[pid]){el.innerHTML=_draftWorkingHtml();return;}
+  el.innerHTML='<div class="empty" style="padding:1.5rem">Loading draft…</div>';
+  const d=await loadDraft(pid);
+  if(pid!==curPost)return;
+  _curDraft=d;
+  el.innerHTML=d?_draftViewHtml(d):_draftEmptyHtml();
+}
+function _draftEmptyHtml(){
+  return `<div style="text-align:center;padding:2rem 1rem">
+    <div style="font-size:13px;color:var(--text2);margin:0 auto 14px;line-height:1.7;max-width:440px">No draft yet. Generate a full, brand-checked draft from this post's brief - article, meta, slug, internal links, image briefs and captions - written in your voice and ready to review.</div>
+    <button class="btn btn-p" onclick="generateDraftNow()">Generate draft</button>
+    <div style="font-size:11px;color:var(--text3);margin-top:10px">Takes about 90 seconds. You can keep working while it runs.</div>
+  </div>`;
+}
+function _draftWorkingHtml(){
+  return `<div style="text-align:center;padding:2.5rem 1rem">
+    <div style="font-size:14px;color:var(--text);font-weight:600;margin-bottom:8px">Generating and checking the draft…</div>
+    <div style="font-size:12px;color:var(--text2)">About 90 seconds. You can close this and come back - it will be here when it is done.</div>
+  </div>`;
+}
+function _verdictBadge(v){
+  const m={fail:['Needs fixes','var(--red-l)','var(--red-t)','#f0c8c8'],review:['Review','var(--amber-l)','var(--amber-t)','#f0d8a0'],pass:['Clean','var(--green-l)','var(--green)','#b8dfc6']};
+  const[label,bg,fg,bd]=m[v]||m.review;
+  return `<span style="display:inline-block;padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;background:${bg};color:${fg};border:1px solid ${bd}">${label}</span>`;
+}
+function copyDraftField(k){
+  if(!_curDraft)return;
+  const v=k==='title'?(_curDraft.assets||{}).title:_curDraft[k];
+  navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
+}
+function _draftRow(label,value,copyKey){
+  return `<div style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">${label}</label>${copyKey?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('${copyKey}')">Copy</button>`:''}</div>
+    <div style="font-size:13px;color:var(--text);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:7px 10px;word-break:break-word">${value}</div>
+  </div>`;
+}
+function _reportBlock(title,items,color){
+  if(!items||!items.length)return'';
+  return `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.04em">${title}</div><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`;
+}
+function _draftViewHtml(d){
+  const r=d.check_report||{},a=d.assets||{};
+  const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
+  return `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+    ${_verdictBadge(r.verdict)}
+    <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="generateDraftNow()">Regenerate</button>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:14px">
+    ${_reportBlock('Must fix before publishing',r.hard,'var(--red-t)')}
+    ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
+    <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
+  </div>
+  ${_draftRow('Title (H1)',esc(a.title||'—'),'title')}
+  ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`,'meta_title')}
+  ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`,'meta_description')}
+  ${_draftRow('Slug',esc(d.slug||''),'slug')}
+  ${_draftRow('Category',esc(d.category||'—'))}
+  <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
+  <div style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">Article</label><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('body_html')">Copy HTML</button></div>
+    <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
+  </div>
+  <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
+      <b>Canva featured:</b> ${esc(a.canva_title||'')} / ${esc(a.canva_subtitle||'')}<br>
+      <b>Body image searches:</b> ${(a.body_image_searches||[]).map(esc).join('; ')||'—'}<br>
+      <b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
+      <b>Instagram:</b> ${esc(a.instagram_caption||'—')}<br>
+      <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}
+    </div>
+  </details>
+  <div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;margin-top:6px">Reviewed and happy? Set the status to <b>Scheduled</b> and the date in the Details tab. (Automatic publishing to the blog is coming next.)</div>`;
+}
+async function generateDraftNow(){
+  const pid=curPost;
+  const before=await loadDraft(pid);const prevTs=before?before.generated_at:null;
+  _genPolling[pid]=true;renderDraftTab();
+  let status;
+  try{const res=await fetch(GEN_FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid})});status=res.status;}
+  catch(e){status='err';}
+  if(status!==202&&status!==200){
+    delete _genPolling[pid];
+    if(curPost===pid){const el=document.getElementById('pm-draft-body');if(el)el.innerHTML=`<div class="empty" style="padding:1.5rem;color:var(--red-t)">Could not start generation (status ${status}). Try again in a moment.</div><div style="text-align:center"><button class="btn btn-sm" onclick="renderDraftTab()">Back</button></div>`;}
+    return;
+  }
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const d=await loadDraft(pid);
+    if(d&&d.generated_at!==prevTs){
+      clearInterval(iv);delete _genPolling[pid];
+      await loadPosts();
+      if(curPost===pid)renderDraftTab();
+      if(typeof renderPosts==='function')renderPosts();
+      toast('Draft ready');
+    }else if(Date.now()-start>210000){
+      clearInterval(iv);delete _genPolling[pid];
+      if(curPost===pid){const el=document.getElementById('pm-draft-body');if(el)el.innerHTML=`<div class="empty" style="padding:1.5rem">Still working, or it hit a snag. <button class="btn btn-sm" onclick="renderDraftTab()">Check again</button></div>`;}
+    }
+  },7000);
 }
 
 // PINTEREST TEMPLATE TRACKER

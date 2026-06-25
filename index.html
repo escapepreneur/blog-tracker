@@ -751,6 +751,7 @@ input[type=file]{width:100%}
   </div>
   <div class="mtabs">
     <button class="mtab on" id="ptab-details" onclick="switchPTab('details')">Details</button>
+    <button class="mtab" id="ptab-draft" onclick="switchPTab('draft')">Draft</button>
     <button class="mtab" id="ptab-progress" onclick="switchPTab('progress')">Progress</button>
     <button class="mtab" id="ptab-social" onclick="switchPTab('social')">Social</button>
     <button class="mtab" id="ptab-gsc" onclick="switchPTab('gsc')">Rankings</button>
@@ -817,6 +818,8 @@ input[type=file]{width:100%}
       <button class="btn btn-sm" onclick="document.getElementById('pm-del-row').classList.remove('on')">Cancel</button>
     </div>
   </div>
+  <!-- DRAFT -->
+  <div id="pm-draft" class="pane"><div id="pm-draft-body"></div></div>
   <!-- PROGRESS -->
   <div id="pm-progress" class="pane">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">

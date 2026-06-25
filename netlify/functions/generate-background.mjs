@@ -44,7 +44,7 @@ export const handler = async (event) => {
         canva_title: draft.canva_title, canva_subtitle: draft.canva_subtitle,
         body_image_searches: draft.body_image_searches, facebook_caption: draft.facebook_caption,
         instagram_caption: draft.instagram_caption, pinterest_description: draft.pinterest_description,
-        faq: draft.faq,
+        faq: draft.faq, title: draft.title,
       },
       check_report: report, model, generated_at: new Date().toISOString(),
     };
@@ -52,9 +52,10 @@ export const handler = async (event) => {
       method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row),
     });
     if (['idea', 'drafted'].includes(post.status)) {
+      const patch = { status: 'drafted', current_step: Math.max(post.current_step || 0, 2) };
+      if (!post.title) patch.title = draft.title; // fill the H1 title if the tracker has none
       await rest(`posts?id=eq.${postId}`, {
-        method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' },
-        body: JSON.stringify({ status: 'drafted', current_step: Math.max(post.current_step || 0, 2) }),
+        method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
       });
     }
     return json(200, { ok: true, verdict: report.verdict, report, model, usage });
