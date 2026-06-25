@@ -15,9 +15,18 @@ const MARTHIN = b64('assets/marthin.woff2');
 const LOGOS = { esc: b64('assets/logo.png'), nms: b64('assets/logo-nms.png') };
 const LOGO_W = { esc: 150, nms: 200 };
 
+// Headline-case a short featured title: keep the first word as written, lowercase
+// minor words (at, to, of, the...). "Career Change At 40" -> "Career Change at 40".
+const MINOR = new Set(['a','an','and','as','at','but','by','for','from','in','into','of','on','or','over','the','to','vs','with']);
+function tidyTitle(t) {
+  const ws = String(t || '').trim().split(/\s+/);
+  return ws.map((w, i) => (i === 0 ? w : (MINOR.has(w.toLowerCase()) ? w.toLowerCase() : w))).join(' ');
+}
+
 function buildHtml({ title, tagline, bgBase64, brand = 'esc' }) {
   const LOGO = LOGOS[brand] || LOGOS.esc;
   const logoW = LOGO_W[brand] || LOGO_W.esc;
+  title = tidyTitle(title);
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:'EscBold';src:url(data:font/woff2;base64,${ESC_BOLD}) format('woff2');}
 @font-face{font-family:'Marthin';src:url(data:font/woff2;base64,${MARTHIN}) format('woff2');}
@@ -41,7 +50,7 @@ function buildHtml({ title, tagline, bgBase64, brand = 'esc' }) {
 <script>
 const TITLE=${JSON.stringify(title || '')}, TAGLINE=${JSON.stringify(tagline || '')};
 const m=document.getElementById('m');
-const MAXW=860, MAXFONT=88;
+const MAXW=860, MAXFONT=88, ONELINE=800; // ONELINE leaves a margin so a borderline title goes two-line instead of wrapping mid-phrase
 function w(t,fs){m.style.fontSize=fs+'px';m.textContent=t;return m.offsetWidth}
 function split(text){const ws=text.split(' ');if(ws.length<2)return[text,''];let best=null;
   for(let i=1;i<ws.length;i++){const a=ws.slice(0,i).join(' '),b=ws.slice(i).join(' ');
@@ -50,12 +59,13 @@ function split(text){const ws=text.split(' ');if(ws.length<2)return[text,''];let
   const[a,b]=split(TITLE);
   const titleEl=document.getElementById('title');
   let fs;
-  if(w(TITLE,MAXFONT)<=MAXW){           // fits on ONE line -> one line, white + teal inline
+  if(w(TITLE,MAXFONT)<=ONELINE){        // comfortably one line -> one line, white + teal inline
     fs=MAXFONT;
+    titleEl.style.whiteSpace='nowrap';
     titleEl.innerHTML='<span class="white">'+a+'</span> <span class="teal">'+b+'</span>';
   }else{                                // TWO lines, fit each line to width
     fs=MAXFONT;while(Math.max(w(a,fs),w(b,fs))>MAXW&&fs>44)fs-=2;
-    titleEl.innerHTML='<span class="white" style="display:block">'+a+'</span><span class="teal" style="display:block">'+b+'</span>';
+    titleEl.innerHTML='<span class="white" style="display:block;white-space:nowrap">'+a+'</span><span class="teal" style="display:block;white-space:nowrap">'+b+'</span>';
   }
   titleEl.style.fontSize=fs+'px';
   const tl=document.getElementById('tag');let ts=Math.round(fs*0.66);tl.textContent=TAGLINE;tl.style.fontSize=ts+'px';
