@@ -1,7 +1,7 @@
-// POST { post_id, date } -> creates the post in ESC Hub as a DRAFT (body is final
-// at create time), records ghl_post_id + scheduled_date + status='scheduled'.
-// The daily cron publishes it live on the date (next build). Blocks if the draft
-// has hard-fail check issues, or if it was already sent.
+// POST { post_id, date, publish? } -> creates the post in GHL (body is final at
+// create time). publish:true -> create as PUBLISHED (live now) + tracker status='live'.
+// Otherwise create as DRAFT + status='scheduled'; the daily cron publishes it live on
+// the date. Blocks if the draft has hard-fail check issues, or if it was already sent.
 import { createBlogPost } from './_lib/ghl.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -15,10 +15,12 @@ export const handler = async (event) => {
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
-  const { post_id, date } = body;
+  const { post_id, date, publish } = body;
   if (!post_id) return json(400, { error: 'post_id required' });
-  // A scheduled post goes live on its date, so reject a date already in the past.
-  if (date && date < new Date().toISOString().slice(0, 10)) {
+  const today = new Date().toISOString().slice(0, 10);
+  // A scheduled post goes live on its date, so reject a past date — but "publish now"
+  // goes live today regardless of any date, so the guard only applies to scheduling.
+  if (!publish && date && date < today) {
     return json(400, { error: `Scheduled date ${date} is in the past — pick today or a future date.` });
   }
 
@@ -34,16 +36,20 @@ export const handler = async (event) => {
     if (draft.check_report && draft.check_report.verdict === 'fail') return json(400, { error: 'draft has must-fix issues' });
 
     const r = await createBlogPost({
-      brand: post.blog, post, draft, pit: PIT, status: 'DRAFT',
+      brand: post.blog, post, draft, pit: PIT, status: publish ? 'PUBLISHED' : 'DRAFT',
       imageUrl: draft.assets && draft.assets.featured_image_url,
       imageAltText: (draft.assets && draft.assets.title) || post.primary_keyword,
     });
 
-    const patch = { ghl_post_id: r.id, url: r.url, status: 'scheduled', current_step: Math.max(post.current_step || 0, 5) };
-    if (date) patch.scheduled_date = date;
+    const patch = { ghl_post_id: r.id, url: r.url, current_step: Math.max(post.current_step || 0, 5) };
+    if (publish) {
+      patch.status = 'live'; patch.published_date = today; patch.confirmed_live = true; patch.scheduled_date = date || today;
+    } else {
+      patch.status = 'scheduled'; if (date) patch.scheduled_date = date;
+    }
     await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
 
-    return json(200, { ok: true, ghl_post_id: r.id, url: r.url, date: date || null });
+    return json(200, { ok: true, ghl_post_id: r.id, url: r.url, published: !!publish, date: date || (publish ? today : null) });
   } catch (e) {
     return json(500, { error: String(e && e.message || e) });
   }
