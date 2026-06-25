@@ -48,6 +48,14 @@ const SHARED_SEO = `SEO:
 - Word count 1,500 to 2,500 words.
 - Insert the literal marker <!-- TOC --> on its own line AFTER the introduction and BEFORE the first <h2>. Never at the very top.`;
 
+const SHARED_GEO = `GET CITED BY AI (write so AI assistants and AI search engines will quote this page):
+- Right after the opening hook, or in the first H2, give a clear, self-contained answer or definition of the core question in one or two plain sentences that still make sense if quoted out of context.
+- Use natural, question-style H2/H3 headings where they fit ("What is X?", "How do you Y?", "Is X worth it?") so each section answers a real question someone would ask.
+- Cover the obvious follow-up questions on the topic (use the secondary keywords as subtopics).
+- Support at least one key claim with a specific, verifiable statistic and cite a reputable source as a real external link with rel="nofollow". Never invent numbers or sources.
+- Define key terms plainly and keep terminology consistent.
+- End with an FAQ section before the final CTA: an <h2>Frequently Asked Questions</h2> followed by 3 to 5 questions as <h3> with concise 1-3 sentence answers. Also return those same items in the faq field.`;
+
 const SHARED_STRUCTURE = `STRUCTURE & FORMAT:
 - Output the article as clean HTML: <p>, <h2>, <h3>, <a href>, <ul>/<li>. No <style>, no class attributes, no inline font styling (the blog theme controls fonts).
 - Open on the reader's problem/situation, not a definition, not background, not "In this article we will...".
@@ -108,6 +116,8 @@ ${SHARED_VOICE}
 ${SHARED_STRUCTURE}
 
 ${SHARED_SEO}
+
+${SHARED_GEO}
 
 CTA: End with exactly ONE call to action, the last thing in the post, worded EXACTLY: "${b.cta}". No competing CTAs, no secondary offers, no other brand links. 2-3 sentences should lead naturally into it.
 LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sources.${b.forbiddenLinkDomains.length ? ' NEVER link to: ' + b.forbiddenLinkDomains.join(', ') + '.' : ''}

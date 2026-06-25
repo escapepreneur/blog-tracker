@@ -3,6 +3,7 @@
 // Server-side only: ANTHROPIC_API_KEY and SUPABASE_SERVICE_ROLE_KEY stay in
 // Netlify env vars and never reach the browser.
 import { generateDraft } from './_lib/generate.mjs';
+import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -30,7 +31,9 @@ export const handler = async (event) => {
     const live = await (await rest(`posts?blog=eq.${brand}&status=eq.live&url=not.is.null&select=title,primary_keyword,url`)).json();
     const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url }));
 
-    const { draft, usage, model } = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
+    const gen = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
+    const { draft, fixed } = await autoFix({ draft: gen.draft, anthropicKey: AKEY });
+    const { usage, model } = gen;
     const report = runChecks({ brand, post, draft });
 
     const row = {
@@ -41,6 +44,7 @@ export const handler = async (event) => {
         canva_title: draft.canva_title, canva_subtitle: draft.canva_subtitle,
         body_image_searches: draft.body_image_searches, facebook_caption: draft.facebook_caption,
         instagram_caption: draft.instagram_caption, pinterest_description: draft.pinterest_description,
+        faq: draft.faq,
       },
       check_report: report, model, generated_at: new Date().toISOString(),
     };

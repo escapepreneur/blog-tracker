@@ -57,7 +57,8 @@ export function runChecks({ brand, post, draft }) {
   else PASS('Correct CTA present once.');
 
   // 4. Voice / person (hard for ESC first-person, warn for NMS)
-  const firstPersonHits = occurrences(text, 'I') + occurrences(text, 'my') + occurrences(text, 'me');
+  const narrativeText = text.replace(/["“”][^"“”]*["“”]/g, ' '); // ignore quoted/illustrative spans
+  const firstPersonHits = occurrences(narrativeText, 'I') + occurrences(narrativeText, 'my') + occurrences(narrativeText, 'me');
   if (b.person === 'second') {
     if (firstPersonHits > 2) HARD(`Reads first-person (I/me/my ×${firstPersonHits}) — ESC Hub posts must be second person (you/your).`);
     else PASS('Second-person voice.');
@@ -122,6 +123,19 @@ export function runChecks({ brand, post, draft }) {
   if (wc < b.wordMin) WARN(`Word count ${wc} — below ${b.wordMin}.`);
   else if (wc > b.wordMax) WARN(`Word count ${wc} — above ${b.wordMax}.`);
   else PASS(`Word count ${wc}.`);
+
+  // 13. AI-citation (GEO) signals
+  const h3s = [...html.matchAll(/<h3[^>]*>(.*?)<\/h3>/gis)].map(m => stripTags(m[1]));
+  if (/frequently asked questions/i.test(text) || /<h2[^>]*>\s*faq/i.test(html)) PASS('FAQ section present.');
+  else WARN('No FAQ section — add one for AI citation.');
+  const external = links.filter(l => /^https?:\/\//i.test(l.href)
+    && !l.href.includes(sameBlogHost)
+    && !(b.allowedLinkDomains || []).some(d => l.href.includes(d))
+    && !(b.forbiddenLinkDomains || []).some(d => l.href.includes(d)));
+  if (external.length) PASS(`${external.length} external citation link(s).`);
+  else WARN('No external citation/source link — cite a reputable source for AI trust.');
+  if ([...h2s, ...h3s].some(hd => hd.trim().endsWith('?'))) PASS('Question-style heading(s) present.');
+  else WARN('No question-style headings — AI search favours them.');
 
   r.verdict = r.hard.length ? 'fail' : (r.warn.length ? 'review' : 'pass');
   r.wordCount = wc;

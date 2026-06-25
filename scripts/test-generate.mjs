@@ -2,6 +2,7 @@
 // without deploying anything. Prints the draft and the check report.
 //   ANTHROPIC_API_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/test-generate.mjs <post_id> [--save]
 import { generateDraft } from '../netlify/functions/_lib/generate.mjs';
+import { autoFix } from '../netlify/functions/_lib/brandguard.mjs';
 import { runChecks } from '../netlify/functions/_lib/checker.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -23,8 +24,12 @@ const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.u
 
 console.log(`\n=== GENERATING: [${brand}] "${post.primary_keyword}" (${liveLinks.length} internal-link candidates) ===\n`);
 const t0 = Date.now();
-const { draft, usage, model } = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
-console.log(`model=${model}  tokens in/out=${usage?.input_tokens}/${usage?.output_tokens}  ${(Date.now()-t0)/1000}s\n`);
+const gen = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
+const fix = await autoFix({ draft: gen.draft, anthropicKey: AKEY });
+const draft = fix.draft; const { usage, model } = gen;
+console.log(`model=${model}  tokens in/out=${usage?.input_tokens}/${usage?.output_tokens}  ${(Date.now()-t0)/1000}s`);
+if (fix.fixed?.length) console.log('AUTO-FIXED banned terms:', fix.fixed.join(', '));
+console.log('');
 
 console.log('TITLE (H1):', draft.title);
 console.log('META TITLE:', `(${(draft.meta_title||'').length}) ${draft.meta_title}`);
@@ -34,6 +39,7 @@ console.log('CATEGORY  :', draft.category);
 console.log('INTERNAL  :', JSON.stringify(draft.internal_links, null, 0));
 console.log('CANVA     :', draft.canva_title, '/', draft.canva_subtitle);
 console.log('IMG SEARCH:', JSON.stringify(draft.body_image_searches));
+console.log('FAQ       :', (draft.faq || []).length, 'items');
 console.log('\n----- BODY HTML -----\n');
 console.log(draft.body_html);
 
