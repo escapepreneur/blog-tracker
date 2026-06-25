@@ -2041,6 +2041,14 @@ function copyDraftField(k){
   const v=k==='title'?(_curDraft.assets||{}).title:_curDraft[k];
   navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
 }
+function _bodyImageSlot(slot,i){
+  const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches — edit the term and Regenerate</span>';
+  return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+    <input id="bterm-${i}" value="${esc(slot.term||'')}" onkeydown="if(event.key==='Enter')regenSlotImages(${i})" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)" title="Edit the search term, then Regenerate">
+    <button id="bregen-${i}" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="regenSlotImages(${i})">Regenerate</button>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${thumbs}</div>`;
+}
 function chooseBodyImage(i,j){
   if(!_curDraft||!_curDraft.assets||!_curDraft.assets.body_images)return;
   const a=_curDraft.assets,slot=a.body_images[i];if(!slot)return;
@@ -2048,6 +2056,22 @@ function chooseBodyImage(i,j){
   // update borders in place (no full re-render -> no scroll jump)
   (slot.candidates||[]).forEach((cc,k)=>{const el=document.getElementById('bimg-'+i+'-'+k);if(el)el.style.border='3px solid '+(k===j?'#29abab':'transparent')});
   sb.from('post_drafts').update({assets:a}).eq('post_id',curPost).then(()=>toast('Image selected')).catch(()=>toast('Save failed'));
+}
+async function regenSlotImages(i){
+  if(!_curDraft||!_curDraft.assets||!_curDraft.assets.body_images)return;
+  const slot=_curDraft.assets.body_images[i];if(!slot)return;
+  const term=((document.getElementById('bterm-'+i)||{}).value||'').trim();
+  const btn=document.getElementById('bregen-'+i);if(btn){btn.disabled=true;btn.textContent='Finding…';}
+  try{
+    const res=await fetch('/.netlify/functions/regen-image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,index:i,term})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok||!d.ok){toast('Regenerate failed: '+(d.error||('HTTP '+res.status)),4000);return}
+    slot.candidates=d.candidates||[];slot.term=d.term||slot.term;slot.page=d.page;
+    if(slot.chosen&&!slot.candidates.some(c=>c.url===slot.chosen))slot.chosen=null;
+    const el=document.getElementById('bslot-'+i);if(el)el.innerHTML=_bodyImageSlot(slot,i);
+    toast(slot.candidates.length?'New photos loaded':'No more results — try a different term',2500);
+  }catch(e){toast('Regenerate error: '+e.message,4000)}
+  finally{const b=document.getElementById('bregen-'+i);if(b){b.disabled=false;b.textContent='Regenerate';}}
 }
 async function scheduleNow(){
   const p=gp(curPost);if(!p)return;
@@ -2100,7 +2124,7 @@ function _draftViewHtml(d){
   const datePast=tdate&&tdate<localToday();
   const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
   const bimg=(a.body_images||[]);
-  const imgPick=bimg.length?bimg.map((slot,i)=>`<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(slot.term)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches</span>'}</div></div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
+  const imgPick=bimg.length?bimg.map((slot,i)=>`<div id="bslot-${i}" style="margin-bottom:12px">${_bodyImageSlot(slot,i)}</div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
   return `
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:12px">
     <div style="display:flex;gap:6px">
@@ -2125,10 +2149,10 @@ function _draftViewHtml(d){
   ${_draftRow('Slug',esc(d.slug||''),'slug')}
   ${_draftRow('Category',esc(d.category||'—'))}
   <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
-  <div style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">Article</label><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('body_html')">Copy HTML</button></div>
-    <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
-  </div>
+  <details style="margin-bottom:10px">
+    <summary style="cursor:pointer;display:flex;align-items:center;gap:8px"><label class="fl" style="margin:0;cursor:pointer">Article</label><span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px;margin-left:auto" onclick="event.preventDefault();event.stopPropagation();copyDraftField('body_html')">Copy HTML</button></summary>
+    <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;background:#fff;font-size:13px;line-height:1.7;margin-top:6px">${d.body_html||''}</div>
+  </details>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
       <div style="margin-bottom:6px"><b>Featured image (Canva):</b> ${esc(a.canva_title||'')} / ${esc(a.canva_subtitle||'')}</div>
