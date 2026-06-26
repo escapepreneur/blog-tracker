@@ -73,6 +73,11 @@ export const BRANDS = {
     personRule: 'Write in the SECOND person throughout (you / your). Never first-person Karen narrative (no I/me/my), never third person.',
     cta: 'Start your free 14-day ESC Hub trial at eschub.com',
     ctaUrl: 'eschub.com',
+    // Lead magnets for the in-body contextual link (the footer carries the standard CTAs).
+    leadMagnets: [
+      { key: 'trial', label: 'ESC Hub', url: 'https://eschub.com', when: 'Default. Getting started, all-in-one platform, consolidating/replacing tools, building systems, general ESC Hub fit.' },
+      { key: 'savings', label: 'the Savings Simulator', url: 'https://thesavingssimulator.com', when: 'When the post is about the COST of tools/software, pricing, paying for multiple subscriptions, tool sprawl, budgeting, or money wasted on disconnected software.' },
+    ],
     allowedLinkDomains: ['eschub.com', 'thesavingssimulator.com'],
     forbiddenLinkDomains: ['escapepreneur.com', 'jointheescapeclub.com'],
     reader: 'A coach or solopreneur already in business, tech-stressed, juggling too many disconnected tools and wasting time/money. Not a beginner. They need a solution that fits how they work.',
@@ -99,6 +104,11 @@ export const BRANDS = {
     personRule: 'Write in the FIRST person as Karen King throughout (I / me / my). Her personal story, travel and founder journey are welcome where they add genuine relevance, not as decoration.',
     cta: 'Download The Freedom Blueprint at escapepreneur.com/freedom-blueprint',
     ctaUrl: 'escapepreneur.com/freedom-blueprint',
+    // Lead magnets for the in-body contextual link (the footer carries the book/standard CTA).
+    leadMagnets: [
+      { key: 'blueprint', label: 'The Freedom Blueprint', url: 'https://escapepreneur.com/freedom-blueprint', when: 'Earlier-stage readers: getting started, designing the freedom business/life, planning the first version, foundational mindset.' },
+      { key: 'reality-check', label: 'The Reality Check', url: 'https://escapepreneur.com/reality-check', when: 'More established but STUCK readers (often 5-10 years in): diagnosing where they are stuck, what is not working, course-correcting an existing business.' },
+    ],
     allowedLinkDomains: ['escapepreneur.com', 'jointheescapeclub.com', 'eschub.com'],
     forbiddenLinkDomains: [],
     reader: 'A woman who has already decided she wants a freedom-based business and life, possibly 5-10 years in, not making the money or freedom she wanted, feeling stuck and unclear on what is next. She is NOT a beginner and is already sold on the idea of freedom.',
@@ -136,7 +146,9 @@ ${SHARED_SEO}
 
 ${SHARED_GEO}
 
-CTA: End with exactly ONE call to action, the last thing in the post, worded EXACTLY: "${b.cta}". No competing CTAs, no secondary offers, no other brand links. 2-3 sentences should lead naturally into it.
+RESOURCE LINK: The blog's page footer already shows the standard calls to action, so do NOT end the post with a separate CTA, hard sell, or "ready to..." sign-off. Instead weave in exactly ONE natural, contextual link to the single most relevant resource below, placed where it genuinely fits the content (ideally in the second half, after you've delivered real value). It must read like a helpful recommendation in context, not an ad. Pick the best fit and return its key as cta_choice:
+${(b.leadMagnets || []).map(m => `- key "${m.key}" -> ${m.label} (${m.url}): ${m.when}`).join('\n')}
+Use descriptive anchor text (never "click here"). This resource link is SEPARATE from the 3 internal links to other ${b.name} posts.
 LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sources.${b.forbiddenLinkDomains.length ? ' NEVER link to: ' + b.forbiddenLinkDomains.join(', ') + '.' : ''}
 
 ${b.special}

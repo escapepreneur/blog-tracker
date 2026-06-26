@@ -30,10 +30,19 @@ const TOOL = {
       instagram_caption: { type: 'string' },
       pinterest_description: { type: 'string' },
       faq: { type: 'array', description: 'The FAQ items used at the end of the article (for AI citation + future schema markup).', items: { type: 'object', properties: { question: { type: 'string' }, answer: { type: 'string' } }, required: ['question','answer'] } },
+      cta_choice: { type: 'string', description: 'The key of the single lead-magnet resource you linked in the body (must match one of the provided options).' },
     },
-    required: ['title','body_html','meta_title','meta_description','slug','category','internal_links','featured_title','featured_tagline','featured_image_search'],
+    required: ['title','body_html','meta_title','meta_description','slug','category','internal_links','featured_title','featured_tagline','featured_image_search','cta_choice'],
   },
 };
+
+// Brand-specific copy of the tool with cta_choice constrained to that brand's lead magnets.
+function toolFor(brand) {
+  const keys = (BRANDS[brand].leadMagnets || []).map(m => m.key);
+  const t = JSON.parse(JSON.stringify(TOOL));
+  if (keys.length) t.input_schema.properties.cta_choice.enum = keys;
+  return t;
+}
 
 function buildBrief(post, brand, liveLinks) {
   const b = BRANDS[brand];
@@ -59,7 +68,7 @@ export async function generateDraft({ post, brand, liveLinks, anthropicKey, mode
     model,
     max_tokens: 8000,
     system: systemPrompt(brand),
-    tools: [TOOL],
+    tools: [toolFor(brand)],
     tool_choice: { type: 'tool', name: 'emit_blog_package' },
     messages: [{ role: 'user', content: buildBrief(post, brand, liveLinks) }],
   };

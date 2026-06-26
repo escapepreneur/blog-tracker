@@ -30,7 +30,7 @@ ${draft.body_html || ''}
 
 EDITOR INSTRUCTION: ${instruction}
 
-Apply the instruction, changing only what is needed. Keep the internal links, the exact CTA, the <!-- TOC --> marker, the headings/structure and the voice intact. Return the full revised title, body_html, meta_title and meta_description via the emit_revision tool.`;
+Apply the instruction, changing only what is needed. Keep the internal links, the contextual lead-magnet resource link, the <!-- TOC --> marker, the headings/structure and the voice intact (do not add a hard-sell CTA at the end - the page footer handles that). Return the full revised title, body_html, meta_title and meta_description via the emit_revision tool.`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

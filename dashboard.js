@@ -2202,6 +2202,7 @@ function _draftViewHtml(d){
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
   ${_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'—'))}
+  ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'— (footer CTAs only)')}
   <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
   <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
     <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>

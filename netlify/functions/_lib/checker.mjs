@@ -50,11 +50,12 @@ export function runChecks({ brand, post, draft }) {
   else PASS('No banned words.');
   for (const s of SPARINGLY) { const n = phraseHits(text, s); if (n > 1) WARN(`"${s}" used ${n}× (max once).`); }
 
-  // 3. CTA — exactly one, exact wording (hard)
-  const ctaHits = phraseHits(text, b.cta);
-  if (ctaHits === 0) HARD(`CTA missing. Must end with exactly: "${b.cta}".`);
-  else if (ctaHits > 1) WARN(`CTA appears ${ctaHits}× — should be once, at the very end.`);
-  else PASS('Correct CTA present once.');
+  // 3. Lead-magnet resource link — one contextual link in the body (footer carries the rest)
+  const lmUrls = (b.leadMagnets || []).map(m => m.url.replace(/^https?:\/\//, ''));
+  const lmLinks = getLinks(html).filter(l => lmUrls.some(u => l.href.includes(u)));
+  if (lmLinks.length === 0) WARN(`No contextual link to a lead magnet (${(b.leadMagnets || []).map(m => m.label).join(' or ')}).`);
+  else if (lmLinks.length > 2) WARN(`${lmLinks.length} lead-magnet links — keep it to one contextual mention.`);
+  else PASS(`Lead-magnet link present (${lmLinks.length}).`);
 
   // 4. Voice / person (hard for ESC first-person, warn for NMS)
   const narrativeText = text.replace(/["“”][^"“”]*["“”]/g, ' '); // ignore quoted/illustrative spans
