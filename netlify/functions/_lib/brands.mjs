@@ -92,7 +92,7 @@ export const BRANDS = {
     key: 'nms',
     name: 'No More Somedays',
     blogIndex: 'escapepreneur.com/blog',
-    postUrl: 'escapepreneur.com/blog/[slug]',
+    postUrl: 'escapepreneur.com/post/[slug]',  // posts live at /post/[slug] (the /blog index lists them)
     person: 'first',           // I / me / my (Karen)
     personRule: 'Write in the FIRST person as Karen King throughout (I / me / my). Her personal story, travel and founder journey are welcome where they add genuine relevance, not as decoration.',
     cta: 'Download The Freedom Blueprint at escapepreneur.com/freedom-blueprint',
