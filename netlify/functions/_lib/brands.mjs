@@ -146,7 +146,10 @@ ${SHARED_SEO}
 
 ${SHARED_GEO}
 
-RESOURCE LINK: The blog's page footer already shows the standard calls to action, so do NOT end the post with a separate CTA, hard sell, or "ready to..." sign-off. Instead weave in exactly ONE natural, contextual link to the single most relevant resource below, placed where it genuinely fits the content (ideally in the second half, after you've delivered real value). It must read like a helpful recommendation in context, not an ad. Pick the best fit and return its key as cta_choice:
+CLOSING (the point of the post): lead the reader toward ${b.name} and a clear next step - do NOT end on a flat summary or a neutral "it depends". Close with a genuine conclusion of about a paragraph that connects what they just read to how ${b.name} helps, then give ONE clear next step as a contextual in-text link to the single best-fit resource below. ${b.person === 'second'
+  ? 'Let ESC Hub land as the natural answer the post has been building toward - honest and specific about how it helps, never puffy, never telegraphed from the top, never language a competitor could quote.'
+  : 'Point toward possibility and the obvious next move (the resource below, and The Escape Club where it genuinely fits) without re-selling the dream or talking down to her.'}
+The blog FOOTER already shows the standard call-to-action BUTTONS, so write this as natural prose with an in-text link - do NOT add your own button, banner, "ready to..." block, or a stack of multiple offers. Pick the best-fit resource and return its key as cta_choice:
 ${(b.leadMagnets || []).map(m => `- key "${m.key}" -> ${m.label} (${m.url}): ${m.when}`).join('\n')}
 Use descriptive anchor text (never "click here"). This resource link is SEPARATE from the 3 internal links to other ${b.name} posts.
 LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sources.${b.forbiddenLinkDomains.length ? ' NEVER link to: ' + b.forbiddenLinkDomains.join(', ') + '.' : ''}
