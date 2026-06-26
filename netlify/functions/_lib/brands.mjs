@@ -54,7 +54,7 @@ const SHARED_GEO = `GET CITED BY AI (write so AI assistants and AI search engine
 - Cover the obvious follow-up questions on the topic (use the secondary keywords as subtopics).
 - Support at least one key claim with a specific, verifiable statistic and cite a reputable source as a real external link with rel="nofollow". Never invent numbers or sources.
 - Define key terms plainly and keep terminology consistent.
-- End with an FAQ section before the final CTA: an <h2>Frequently Asked Questions</h2> followed by 3 to 5 questions as <h3> with concise 1-3 sentence answers. Also return those same items in the faq field.`;
+- Include an FAQ section near the end - <h2>Frequently Asked Questions</h2> followed by 3 to 5 questions as <h3> with concise 1-3 sentence answers - placed BEFORE the closing paragraph (the FAQ is never the last thing). Also return those same items in the faq field.`;
 
 const SHARED_STRUCTURE = `STRUCTURE & FORMAT:
 - Output the article as clean HTML: <p>, <h2>, <h3>, <a href>, <ul>/<li>. No <style>, no class attributes, no inline font styling (the blog theme controls fonts).
@@ -146,12 +146,12 @@ ${SHARED_SEO}
 
 ${SHARED_GEO}
 
-CLOSING (the point of the post): lead the reader toward ${b.name} and a clear next step - do NOT end on a flat summary or a neutral "it depends". Close with a genuine conclusion of about a paragraph that connects what they just read to how ${b.name} helps, then give ONE clear next step as a contextual in-text link to the single best-fit resource below. ${b.person === 'second'
+CLOSING (this is the LAST thing in the post, placed AFTER the FAQ section - and it is the whole point of the post): finish with a short closing paragraph that leads the reader toward ${b.name} and a clear next step. Do NOT end on the FAQ, a flat summary, or a neutral "it depends". This closing MUST contain exactly ONE real in-text link - an <a href="..."> using the exact URL of the single best-fit resource below - as the reader's next step. ${b.person === 'second'
   ? 'Let ESC Hub land as the natural answer the post has been building toward - honest and specific about how it helps, never puffy, never telegraphed from the top, never language a competitor could quote.'
   : 'Point toward possibility and the obvious next move (the resource below, and The Escape Club where it genuinely fits) without re-selling the dream or talking down to her.'}
-The blog FOOTER already shows the standard call-to-action BUTTONS, so write this as natural prose with an in-text link - do NOT add your own button, banner, "ready to..." block, or a stack of multiple offers. Pick the best-fit resource and return its key as cta_choice:
+The page FOOTER already shows the standard call-to-action BUTTONS, so write this closing as natural prose with that in-text link - do NOT add your own button, banner, or "ready to..." block. Pick the best-fit resource, put its <a href> link in this closing paragraph, and return its key as cta_choice:
 ${(b.leadMagnets || []).map(m => `- key "${m.key}" -> ${m.label} (${m.url}): ${m.when}`).join('\n')}
-Use descriptive anchor text (never "click here"). This resource link is SEPARATE from the 3 internal links to other ${b.name} posts.
+Use descriptive anchor text (never "click here"). This is SEPARATE from the 3 internal links to other ${b.name} posts.
 LINKS: Only link to ${b.allowedLinkDomains.join(', ')} or reputable external sources.${b.forbiddenLinkDomains.length ? ' NEVER link to: ' + b.forbiddenLinkDomains.join(', ') + '.' : ''}
 
 ${b.special}
