@@ -12,7 +12,10 @@ export function styleCta(html, brand) {
   if (!b || !b.cta) return html;
   const url = 'https://' + String(b.ctaUrl || '').replace(/^https?:\/\//, '');
   const action = (b.cta.split(/\s+at\s+/i)[0] || b.cta).trim();
-  const button = `<p style="text-align:center;margin:38px 0 8px"><a href="${url}" style="display:inline-block;background:#29abab;color:#ffffff;font-weight:700;font-size:17px;text-decoration:none;padding:15px 34px;border-radius:10px">${action} &rarr;</a></p>`;
+  // !important on color/background: the GHL blog theme forces its own link colour,
+  // which would otherwise override our inline white and make the text invisible on
+  // the teal button. Inline !important beats the theme's stylesheet.
+  const button = `<p style="text-align:center;margin:38px 0 8px"><a href="${url}" style="display:inline-block;background:#29abab !important;color:#ffffff !important;font-weight:700;font-size:17px;text-decoration:none !important;padding:15px 34px;border-radius:10px">${action} &rarr;</a></p>`;
 
   // locate the last <p>…</p> (the CTA paragraph)
   const re = /<p\b[^>]*>[\s\S]*?<\/p>/gi;
