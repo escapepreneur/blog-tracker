@@ -2089,6 +2089,25 @@ async function scheduleNow(){
     toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
+async function rerenderFeatured(swap){
+  if(!_curDraft||!_curDraft.assets)return;
+  const pid=curPost;
+  const old=(_curDraft.assets.featured_image_url)||'';
+  const ft=((document.getElementById('feat-title')||{}).value||'').trim();
+  const tg=((document.getElementById('feat-tag')||{}).value||'').trim();
+  const btn=document.getElementById('feat-rerender');if(btn){btn.disabled=true;btn.textContent='Rendering…';}
+  let status;
+  try{const res=await fetch('/.netlify/functions/rerender-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,featured_title:ft,featured_tagline:tg,swap:!!swap})});status=res.status;const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok){toast('Re-render failed: '+(d.error||('HTTP '+status)),4500);if(curPost===pid)renderDraftTab();return;}}
+  catch(e){toast('Re-render error: '+e.message,4000);if(curPost===pid)renderDraftTab();return;}
+  toast('Rendering the featured image…',3000);
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const d=await loadDraft(pid);
+    const url=d&&d.assets&&d.assets.featured_image_url;
+    if(url&&url!==old){clearInterval(iv);if(curPost===pid){_curDraft=d;renderDraftTab();}toast('Featured image updated ✓',3000);}
+    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Still rendering — hit Check again shortly',4000);}
+  },6000);
+}
 async function resetSent(){
   const p=gp(curPost);if(!p)return;
   if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted — it does NOT change anything in GHL.'))return;
@@ -2166,11 +2185,16 @@ function _draftViewHtml(d){
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
-  ${a.featured_image_url
-    ? `<div style="margin-bottom:12px"><label class="fl">Featured image</label><img src="${esc(a.featured_image_url)}" alt="featured" style="display:block;width:100%;border-radius:var(--r2);border:1px solid var(--border);margin-top:4px"></div>`
-    : (a.featured_image_search
-        ? `<div style="margin-bottom:12px"><label class="fl">Featured image</label><div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Rendering automatically — takes a few minutes after generating.</span><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="renderDraftTab()">Check again</button></div></div>`
-        : '')}
+  ${a.featured_image_search?`<div id="feat-area" style="margin-bottom:14px">
+    <label class="fl">Featured image</label>
+    ${a.featured_image_url
+      ? `<img src="${esc(a.featured_image_url)}" alt="featured" style="display:block;width:100%;border-radius:var(--r2);border:1px solid var(--border);margin:4px 0 8px">`
+      : `<div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin:4px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Rendering…</span><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="renderDraftTab()">Check again</button></div>`}
+    <input id="feat-title" value="${esc(a.featured_title||'')}" placeholder="Image title" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;background:#fff;color:var(--text);margin-bottom:6px">
+    <input id="feat-tag" value="${esc(a.featured_tagline||'')}" placeholder="Image tagline" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;background:#fff;color:var(--text);margin-bottom:6px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="feat-rerender" class="btn btn-p btn-sm" style="font-size:11px" onclick="rerenderFeatured(false)">Re-render image</button><button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="rerenderFeatured(true)">Swap background</button></div>
+    <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
+  </div>`:''}
   ${_draftRow('Title (H1)',esc(a.title||'—'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
@@ -2183,7 +2207,6 @@ function _draftViewHtml(d){
   </details>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
-      <div style="margin-bottom:6px"><b>Featured image text:</b> ${esc(a.featured_title||a.canva_title||'')} / ${esc(a.featured_tagline||a.canva_subtitle||'')}</div>
       <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
       ${imgPick}
       <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
