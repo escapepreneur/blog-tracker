@@ -68,6 +68,7 @@ export const BRANDS = {
     name: 'ESC Hub',
     blogIndex: 'eschub.com/blog',
     postUrl: 'eschub.com/post/[slug]',
+    gscProperty: 'sc-domain:eschub.com',
     person: 'second',          // you / your
     personRule: 'Write in the SECOND person throughout (you / your). Never first-person Karen narrative (no I/me/my), never third person.',
     cta: 'Start your free 14-day ESC Hub trial at eschub.com',
@@ -93,6 +94,7 @@ export const BRANDS = {
     name: 'No More Somedays',
     blogIndex: 'escapepreneur.com/blog',
     postUrl: 'escapepreneur.com/post/[slug]',  // posts live at /post/[slug] (the /blog index lists them)
+    gscProperty: 'sc-domain:escapepreneur.com',
     person: 'first',           // I / me / my (Karen)
     personRule: 'Write in the FIRST person as Karen King throughout (I / me / my). Her personal story, travel and founder journey are welcome where they add genuine relevance, not as decoration.',
     cta: 'Download The Freedom Blueprint at escapepreneur.com/freedom-blueprint',

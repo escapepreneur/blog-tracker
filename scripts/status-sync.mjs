@@ -4,8 +4,12 @@
 //    post (PUT status=PUBLISHED + featured image) and flip the tracker to live.
 //  - Legacy posts (no ghl_post_id): flip to live on date, verifying the URL when present.
 // Default is a DRY RUN; pass --live to actually publish/write.
-//   env: SUPABASE_SERVICE_ROLE_KEY, GHL_API_TOKEN
+//  - Indexing: on go-live, ask Google to crawl the URL (Indexing API); each run also
+//    flips Indexed no/requested -> yes once Search Console confirms. Needs GOOGLE_SA_KEY.
+//   env: SUPABASE_SERVICE_ROLE_KEY, GHL_API_TOKEN, GOOGLE_SA_KEY (optional)
 import { publishBlogPost } from '../netlify/functions/_lib/ghl.mjs';
+import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
+import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -57,6 +61,7 @@ async function verifyLive(url) {
           await publishBlogPost({ ghlPostId: p.ghl_post_id, pit: PIT, brand: p.blog, imageUrl: img, imageAltText: p.title || p.primary_keyword });
           await setLive(p, goLive);
           published++;
+          if (p.url) { try { await requestIndexing(p.url); await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'requested' }) }); } catch (e) { /* indexing best-effort */ } }
         } catch (e) { console.error(`  FAIL publish ${label}: ${e.message}`); failed++; }
       } else published++;
       continue;
@@ -71,5 +76,20 @@ async function verifyLive(url) {
     if (LIVE) await setLive(p, goLive);
     flipped++;
   }
+  // Indexing-status tracking: flip live posts to indexed=yes once Search Console confirms.
+  let indexedFlipped = 0;
+  if (LIVE && getServiceAccount()) {
+    const livePosts = await (await rest(`posts?status=eq.live&indexed=neq.yes&url=not.is.null&select=id,blog,url,primary_keyword`)).json();
+    for (const p of (Array.isArray(livePosts) ? livePosts : [])) {
+      const prop = BRANDS[p.blog] && BRANDS[p.blog].gscProperty;
+      if (!prop) continue;
+      try {
+        const st = await inspectIndexed(prop, p.url);
+        if (st === 'yes') { await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'yes' }) }); indexedFlipped++; }
+      } catch (e) { /* per-post best-effort */ }
+    }
+    console.log(`[status-sync] indexing: ${indexedFlipped} post(s) flipped to indexed=yes`);
+  }
+
   console.log(`[status-sync] done. published=${published} flipped=${flipped} waiting=${waiting} failed=${failed}`);
 })().catch(e => { console.error('[status-sync] FAILED:', e.message); process.exit(1); });

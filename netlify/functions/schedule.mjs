@@ -3,6 +3,7 @@
 // Otherwise create as DRAFT + status='scheduled'; the daily cron publishes it live on
 // the date. Blocks if the draft has hard-fail check issues, or if it was already sent.
 import { createBlogPost } from './_lib/ghl.mjs';
+import { requestIndexing } from './_lib/google.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -44,10 +45,14 @@ export const handler = async (event) => {
     const patch = { ghl_post_id: r.id, url: r.url, current_step: Math.max(post.current_step || 0, 5) };
     if (publish) {
       patch.status = 'live'; patch.published_date = today; patch.confirmed_live = true; patch.scheduled_date = date || today;
+      patch.indexed = 'requested';
     } else {
       patch.status = 'scheduled'; if (date) patch.scheduled_date = date;
     }
     await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+
+    // On go-live, ask Google to crawl it (best-effort; no-op if GOOGLE_SA_KEY unset).
+    if (publish && r.url) { try { await requestIndexing(r.url); } catch (e) { /* indexing is best-effort */ } }
 
     return json(200, { ok: true, ghl_post_id: r.id, url: r.url, published: !!publish, date: date || (publish ? today : null) });
   } catch (e) {
