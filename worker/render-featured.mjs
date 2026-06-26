@@ -59,11 +59,14 @@ function split(text){const ws=text.split(' ');if(ws.length<2)return[text,''];let
   const[a,b]=split(TITLE);
   const titleEl=document.getElementById('title');
   let fs;
-  if(w(TITLE,MAXFONT)<=ONELINE){        // comfortably one line -> one line, white + teal inline
+  if(w(TITLE,MAXFONT)<=ONELINE){        // comfortably one line -> CENTER it so the side padding is even
     fs=MAXFONT;
+    const content=titleEl.parentNode;   // .content
+    content.style.left='120px';content.style.right='120px';
+    content.style.alignItems='center';content.style.textAlign='center';
     titleEl.style.whiteSpace='nowrap';
     titleEl.innerHTML='<span class="white">'+a+'</span> <span class="teal">'+b+'</span>';
-  }else{                                // TWO lines, fit each line to width
+  }else{                                // TWO lines, left-aligned, fit each line to width
     fs=MAXFONT;while(Math.max(w(a,fs),w(b,fs))>MAXW&&fs>44)fs-=2;
     titleEl.innerHTML='<span class="white" style="display:block;white-space:nowrap">'+a+'</span><span class="teal" style="display:block;white-space:nowrap">'+b+'</span>';
   }
