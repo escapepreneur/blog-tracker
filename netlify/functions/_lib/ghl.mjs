@@ -65,6 +65,20 @@ export async function publishBlogPost({ ghlPostId, pit, brand, imageUrl, imageAl
   return true;
 }
 
+// Update just the featured image on an existing GHL post (keeps its current status,
+// so a live post stays live and a draft stays a draft). PUT only touches the fields
+// sent; body/title/slug are left as-is.
+export async function updatePostImage({ ghlPostId, pit, brand, status = 'PUBLISHED', imageUrl, imageAltText }) {
+  const body = { status, locationId: LOC, blogId: BRANDS[brand] && BRANDS[brand].blogId, imageUrl, imageAltText: imageAltText || '' };
+  const res = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`GHL update image ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return true;
+}
+
 // Upload an image buffer to the GHL media library -> { fileId, url }.
 export async function uploadMedia({ buffer, filename = 'featured.jpg', contentType = 'image/jpeg', pit }) {
   const fd = new FormData();

@@ -2,7 +2,7 @@
 // Run in GitHub Actions. env: SUPABASE_SERVICE_ROLE_KEY, PEXELS_API_KEY, GHL_API_TOKEN.
 // Optional argv[2] = a single post_id (from repository_dispatch); otherwise processes all pending.
 import { searchPexels } from '../netlify/functions/_lib/pexels.mjs';
-import { uploadMedia } from '../netlify/functions/_lib/ghl.mjs';
+import { uploadMedia, updatePostImage } from '../netlify/functions/_lib/ghl.mjs';
 import { renderFeatured } from './render-featured.mjs';
 
 const SUPA = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -25,7 +25,7 @@ async function getPending() {
 }
 
 async function processOne(row) {
-  const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog`)).json();
+  const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog,status,ghl_post_id,title,primary_keyword`)).json();
   const brand = (post && post.blog) || 'esc'; // selects the per-brand logo (esc / nms)
   const a = row.assets || {};
   const term = a.featured_image_search;
@@ -39,6 +39,16 @@ async function processOne(row) {
   const assets = { ...a, featured_image_url: up.url, featured_bg_index: idx };
   await rest(`post_drafts?post_id=eq.${row.post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) });
   console.log('  featured ✓', row.post_id, '->', up.url);
+
+  // If this post is already in GHL, push the new image onto it (keeping its status)
+  // so re-render/swap updates a live or scheduled post without a full republish.
+  if (post && post.ghl_post_id) {
+    const ghlStatus = post.status === 'live' ? 'PUBLISHED' : 'DRAFT';
+    try {
+      await updatePostImage({ ghlPostId: post.ghl_post_id, pit: PIT, brand, status: ghlStatus, imageUrl: up.url, imageAltText: a.featured_title || post.title || post.primary_keyword });
+      console.log('  updated GHL post image', post.ghl_post_id, `(${ghlStatus})`);
+    } catch (e) { console.error('  GHL image update failed', post.ghl_post_id, e.message); }
+  }
 }
 
 const pending = await getPending();
