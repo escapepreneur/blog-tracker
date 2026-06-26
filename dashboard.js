@@ -2166,6 +2166,11 @@ function _draftViewHtml(d){
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
+  ${a.featured_image_url
+    ? `<div style="margin-bottom:12px"><label class="fl">Featured image</label><img src="${esc(a.featured_image_url)}" alt="featured" style="display:block;width:100%;border-radius:var(--r2);border:1px solid var(--border);margin-top:4px"></div>`
+    : (a.featured_image_search
+        ? `<div style="margin-bottom:12px"><label class="fl">Featured image</label><div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Rendering automatically — takes a few minutes after generating.</span><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="renderDraftTab()">Check again</button></div></div>`
+        : '')}
   ${_draftRow('Title (H1)',esc(a.title||'—'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
@@ -2178,7 +2183,7 @@ function _draftViewHtml(d){
   </details>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
-      <div style="margin-bottom:6px"><b>Featured image (Canva):</b> ${esc(a.canva_title||'')} / ${esc(a.canva_subtitle||'')}</div>
+      <div style="margin-bottom:6px"><b>Featured image text:</b> ${esc(a.featured_title||a.canva_title||'')} / ${esc(a.featured_tagline||a.canva_subtitle||'')}</div>
       <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
       ${imgPick}
       <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
