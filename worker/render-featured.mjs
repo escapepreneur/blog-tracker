@@ -13,7 +13,7 @@ const MARTHIN = b64('assets/marthin.woff2');
 // Per-brand corner logo (everything else in the design is shared). esc = "esc HUB"
 // mark; nms = the white "escapepreneur™" wordmark (wide, so it sits a bit larger).
 const LOGOS = { esc: b64('assets/logo.png'), nms: b64('assets/logo-nms.png') };
-const LOGO_W = { esc: 150, nms: 200 };
+const LOGO_W = { esc: 150, nms: 280 };
 
 // Headline-case a short featured title: keep the first word as written, lowercase
 // minor words (at, to, of, the...). "Career Change At 40" -> "Career Change at 40".
