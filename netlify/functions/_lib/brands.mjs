@@ -62,6 +62,27 @@ const SHARED_STRUCTURE = `STRUCTURE & FORMAT:
 - Build a clear logical case and end with a clear point of view (not "it depends").
 - Weave in exactly 3 contextual in-body links to OTHER posts on this same blog, using descriptive anchor text (never "click here"). Pick from the provided list of existing posts.`;
 
+// No More Somedays only: real story material so posts sound unmistakably like Karen.
+// Sourced from Karen's verified story (Notion DWFS project). The four sensitive threads
+// (her nephew, the marriage separation, perimenopause, the Bolivia class-trip incident)
+// are deliberately excluded and must never appear.
+const KAREN_STORY = `KAREN'S REAL STORY - use it to make this post unmistakably hers. The point of No More Somedays is to INSPIRE: to show what becomes possible when you choose freedom over society's defaults, and to let the reader get to know Karen. Where it genuinely fits the topic, weave in ONE real, specific beat from her life below, in her own voice, as lived experience - not a bolted-on anecdote, never forced, and NEVER invented or stretched beyond what is written here. The throughline is the CHOICE of freedom, the try-anything attitude, and breaking away from the norm.
+Real beats you may draw on:
+- Grew up in an Air Force family, 30 houses by age 21 - restlessness and newness are in her bones. Diagnosed with ADHD in 2023: she thrives on novelty and suffocates in routine. Her line: "I did the right things in the wrong order."
+- Exchange student in Bolivia at 17 with four sentences of Spanish; came home a year later fluent and far more sure of herself. She said yes before she was ready.
+- Top home-security salesperson in Australia at 21 on $120k a year - not by being pushy (she hates sleazy sales tactics) but by genuinely helping people solve a problem. It never occurred to her that anyone would say no.
+- Danced on stage at Disneyland and on Broadway at 16 - and she is not a dancer. She just put her hand up.
+- Cakes by Karen: an accidental Facebook page started when her daughter was 8 weeks old - 100 followers and 9 orders in 48 hours - grew to a commercial kitchen, around 50,000 followers and multiple six figures. She loved it, until it became a prison: 70-80 hour weeks, almost working for free as copycats undercut her.
+- The turning point: her 3-year-old's Mother's Day painting - "My mum's favourite thing to do on the weekend is sleep." A smack in the face.
+- The question on the plane (reading The 4-Hour Work Week flying out of Bolivia): "if money were no object, what would you do?" She could only write two words - travel, help people - and realised she had lost herself. Then she discovered location independence.
+- She got her husband Cam to agree to sell up and travel the world by promising never to nag him to eat salad again - then upped it to carry-on luggage only.
+- Sorted a whole life into Sell / Keep / Donate / Trash; a lifetime of possessions sold for $10k; left Australia in January 2016 "deliberately homeless."
+- Location-independent ever since: 60+ countries, world-schooling the kids, 80+ house sits saving over $250,000. Lived in Panama, Turkey (a $250-a-month apartment in Fethiye), Bulgaria (skiing in Bansko), now moving to Mexico. Daughter Sienna was world-schooled and ran a boutique hotel's front of house at 10; son Brody is now an adult back in Australia. Ella, the Panamanian street dog who picks a cardboard box over a plush bed, is about to land in her fifth country.
+- The 13,000-family online community Facebook deleted overnight - which is why she never builds only on rented land.
+- The brand: years of people asking "how do you actually do this?" became the business. The word Escapepreneur arrived on an early-morning walk in Edinburgh. She says she "accidentally built the antidote to my own brain."
+- Honest throughline: ambitious, curious, tried everything, and struggled financially for years (the ADHD cost of never sticking to one thing) - the freedom came once she finally focused. She is still building, still in the middle.
+FACTS & VOICE: write in first person as Karen; Australian spelling; the cake business did "multiple six figures" (never "half a million"); Escapepreneur arrived on an Edinburgh walk (never "on a call"). NEVER mention or allude to: her nephew or his death, her marriage separation, perimenopause, or the Bolivia class-trip incident - these are off-limits for the blog.`;
+
 export const BRANDS = {
   esc: {
     key: 'esc',
@@ -137,7 +158,7 @@ WHO IT IS FOR: ${b.reader}
 POSITIONING: ${b.positioning}
 
 ${b.personRule}
-
+${brand === 'nms' ? '\n' + KAREN_STORY + '\n' : ''}
 ${SHARED_VOICE}
 
 ${SHARED_STRUCTURE}
