@@ -2085,7 +2085,7 @@ async function scheduleNow(){
     const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,date})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Schedule failed: '+(d.error||('HTTP '+res.status)),4000);return}
-    await loadPosts();if(curPost===p.id)renderDraftTab();if(typeof renderPosts==='function')renderPosts();
+    await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
     toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
@@ -2115,7 +2115,7 @@ async function resetSent(){
   if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted — it does NOT change anything in GHL.'))return;
   try{
     await sb.from('posts').update({ghl_post_id:null,status:'drafted',scheduled_date:null,url:null,published_date:null,confirmed_live:false}).eq('id',curPost);
-    await loadPosts();if(curPost===p.id)renderDraftTab();if(typeof renderPosts==='function')renderPosts();
+    await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
     toast('Reset — you can publish or schedule again',3000);
   }catch(e){toast('Reset failed: '+e.message,4000)}
 }
@@ -2128,7 +2128,7 @@ async function publishNow(){
     const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,publish:true})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Publish failed: '+(d.error||('HTTP '+res.status)),4000);return}
-    await loadPosts();if(curPost===p.id)renderDraftTab();if(typeof renderPosts==='function')renderPosts();
+    await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
     toast('Published live to '+brand+' ✓',3500);
   }catch(e){toast('Publish error: '+e.message,4000)}
 }
