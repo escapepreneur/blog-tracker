@@ -639,7 +639,8 @@ function renderIdeas(){
 
 // LINKS PANE
 async function renderLinksPane(){
-  await loadLinks();
+  // render from the in-memory _links cache (refreshed by loadAll + on every link mutation);
+  // no need for a Supabase round-trip on every dashboard render.
   const posts=bp();
   const needs=posts.filter(p=>p.status==='live'&&_links.filter(l=>l.from_post_id===p.id).length<3);
   document.getElementById('links-needs').innerHTML=!needs.length?`<div style="text-align:center;padding:2rem 1rem"><div style="font-size:40px;margin-bottom:.5rem">🎉</div><div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:.25rem">All posts fully linked!</div><div style="font-size:13px;color:var(--text3)">Every live post has 3 or more internal links.</div></div>`:needs.map(p=>{const n=_links.filter(l=>l.from_post_id===p.id).length,lv=fl(n);return`<div class="post-row" onclick="openPost('${p.id}','links')" style="border-left:3px solid var(--${lv==='red'?'red':lv==='amber'?'amber':'green'})"><div style="display:flex;align-items:center;justify-content:space-between"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div></div><span class="flag f-${lv}">${n}/3</span></div></div>`}).join('');
@@ -1416,7 +1417,7 @@ async function addClusterAsPost(ci){
 
 // POST MODAL
 async function openPost(id,tab){
-  curPost=id;await loadLinks();await loadChecklist(id);
+  curPost=id;await loadChecklist(id); // _links is already cached; the Links tab loads its own data when opened
   const post=gp(id);if(!post)return;
   const kw=post.primary_keyword||'',title=post.title||'';
   document.getElementById('pm-title').textContent=kw||title||'Post';
