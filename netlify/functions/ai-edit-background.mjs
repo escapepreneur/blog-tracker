@@ -4,6 +4,7 @@
 import { reviseDraft } from './_lib/aiedit.mjs';
 import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
+import { syncInternalLinks } from './_lib/links.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -45,6 +46,7 @@ export const handler = async (event) => {
         assets, check_report: report, generated_at: new Date().toISOString(),
       }),
     });
+    try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId: post_id, brand: post.blog, bodyHtml: clean.body_html }); } catch (e) { /* best-effort */ }
     return json(200, { ok: true, verdict: report.verdict });
   } catch (e) {
     return json(500, { error: String(e && e.message || e) });
