@@ -24,7 +24,7 @@ export async function syncInternalLinks({ supabaseUrl, headers, postId, brand, b
     if (!h) continue;
     const post = posts.find(p => p.url && p.id !== postId && norm(p.url) === h);
     if (post) { if (!haveP.has(post.id)) { haveP.add(post.id); rows.push({ blog: brand, from_post_id: postId, to_post_id: post.id }); } continue; }
-    const dest = dests.find(d => d.url && (norm(d.url) === h || h.startsWith(norm(d.url) + '/')));
+    const dest = dests.find(d => d.url && norm(d.url) === h);
     if (dest && !haveD.has(dest.id)) { haveD.add(dest.id); rows.push({ blog: brand, from_post_id: postId, to_dest_id: dest.id }); }
   }
   if (rows.length) {
