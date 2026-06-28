@@ -2008,6 +2008,31 @@ async function loadDraft(postId){
   try{const{data}=await sb.from('post_drafts').select('*').eq('post_id',postId).maybeSingle();return data||null;}
   catch(e){return null;}
 }
+// Possible-duplicate check: does this post's keyword/title closely match an existing
+// LIVE post on the same blog? Returns the matching live post, or null.
+function findDuplicate(post){
+  if(!post||!post.primary_keyword)return null;
+  const stop=new Set(['the','a','an','to','of','for','and','or','in','on','with','your','you','how','what','why','is','are','vs','best','guide','tips','my','2026','2025','2024']);
+  const norm=s=>(String(s||'').toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>w.length>2&&!stop.has(w));
+  const it=new Set(norm(post.primary_keyword+' '+(post.title||'')));
+  if(!it.size)return null;
+  let best=null;
+  for(const p of allPosts){
+    if(p.blog!==post.blog||p.status!=='live'||p.id===post.id)continue;
+    const pt=new Set(norm((p.primary_keyword||'')+' '+(p.title||'')));
+    if(!pt.size)continue;
+    let overlap=0;it.forEach(t=>{if(pt.has(t))overlap++});
+    const score=overlap/it.size;
+    if(overlap>=2&&score>=0.6&&(!best||score>best.score))best={post:p,score};
+  }
+  return best?best.post:null;
+}
+function _dupBanner(){
+  const dup=findDuplicate(gp(curPost));
+  if(!dup)return'';
+  const label=dup.title||dup.primary_keyword;
+  return `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;color:#9a3412">⚠ <b>Possible duplicate.</b> This looks a lot like an existing live post: ${dup.url?`<a href="${esc(dup.url)}" target="_blank" style="color:#9a3412;font-weight:700">${esc(label)}</a>`:`<b>${esc(label)}</b>`}. Worth checking before you generate or publish.</div>`;
+}
 async function renderDraftTab(){
   const el=document.getElementById('pm-draft-body');if(!el)return;
   const pid=curPost;
@@ -2016,7 +2041,7 @@ async function renderDraftTab(){
   const d=await loadDraft(pid);
   if(pid!==curPost)return;
   _curDraft=d;
-  el.innerHTML=d?_draftViewHtml(d):_draftEmptyHtml();
+  el.innerHTML=_dupBanner()+(d?_draftViewHtml(d):_draftEmptyHtml());
 }
 function _draftEmptyHtml(){
   return `<div style="text-align:center;padding:2rem 1rem">
@@ -2233,6 +2258,8 @@ function _draftViewHtml(d){
 }
 async function generateDraftNow(){
   const pid=curPost;
+  const dp=findDuplicate(gp(pid));
+  if(dp&&!confirm('Heads up - this looks a lot like an existing live post:\n\n"'+(dp.title||dp.primary_keyword)+'"\n'+(dp.url||'')+'\n\nThat topic may already be covered. Generate a new draft anyway?'))return;
   const before=await loadDraft(pid);const prevTs=before?before.generated_at:null;
   _genPolling[pid]=true;renderDraftTab();
   let status;
