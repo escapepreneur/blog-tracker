@@ -47,8 +47,30 @@ function toolFor(brand) {
 function buildBrief(post, brand, liveLinks) {
   const b = BRANDS[brand];
   const supp = post.supplementary_keywords || '';
-  const list = (liveLinks || []).slice(0, 40)
+  const all = liveLinks || [];
+  const list = all.slice(0, 40)
     .map(p => `- ${p.title} -> ${p.url}`).join('\n') || '(none available)';
+
+  // Cluster-aware linking: if this post belongs to a topic cluster, the LIVE pillar and
+  // sibling posts in the same cluster are mandatory/preferred internal links.
+  let clusterBlock = '';
+  const cluster = post.cluster && String(post.cluster).trim();
+  if (cluster) {
+    const same = all.filter(p => p.cluster && p.cluster.trim().toLowerCase() === cluster.toLowerCase());
+    const pillar = same.find(p => p.is_pillar);
+    const siblings = same.filter(p => !p.is_pillar);
+    const lines = [];
+    if (pillar) lines.push(`- PILLAR (link to this): ${pillar.title} -> ${pillar.url}`);
+    siblings.forEach(p => lines.push(`- sibling: ${p.title} -> ${p.url}`));
+    clusterBlock = `
+
+TOPIC CLUSTER: this post is part of the "${cluster}" cluster${post.is_pillar ? ' and IS the pillar post' : ''}.
+${lines.length ? `Live posts in this cluster:\n${lines.join('\n')}` : 'No other posts in this cluster are live yet.'}
+Internal-linking rule for clusters: ${post.is_pillar
+  ? 'as the pillar, link DOWN to as many of the live sibling posts above as fit naturally (these can exceed the usual 3).'
+  : (pillar ? 'you MUST include a link to the PILLAR post above (descriptive anchor), then link to relevant siblings before any other posts.' : 'link to relevant sibling posts above before any other posts.')}`;
+  }
+
   return `Blog: ${b.name} (${b.blogIndex})
 Primary keyword: ${post.primary_keyword || ''}
 KS Score: ${post.ks_score ?? '—'}
@@ -58,7 +80,7 @@ ${post.unique_take ? `Unique take / Karen's angle: ${post.unique_take}` : ''}
 ${post.serp_notes ? `SERP notes: ${post.serp_notes}` : ''}
 
 Existing ${b.name} posts you may link to (choose 3 relevant ones for in-body internal links, with descriptive anchor text):
-${list}
+${list}${clusterBlock}
 
 Write the complete post now and return it via the emit_blog_package tool.`;
 }

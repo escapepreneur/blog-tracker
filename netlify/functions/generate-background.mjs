@@ -32,8 +32,8 @@ export const handler = async (event) => {
     if (!post) return json(404, { error: 'post not found' });
     const brand = post.blog;
 
-    const live = await (await rest(`posts?blog=eq.${brand}&status=eq.live&url=not.is.null&select=title,primary_keyword,url`)).json();
-    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url }));
+    const live = await (await rest(`posts?blog=eq.${brand}&status=eq.live&url=not.is.null&select=title,primary_keyword,url,cluster,is_pillar`)).json();
+    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar }));
 
     const gen = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
     const { draft, fixed } = await autoFix({ draft: gen.draft, anthropicKey: AKEY });
