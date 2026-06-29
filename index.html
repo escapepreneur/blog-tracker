@@ -308,7 +308,6 @@ input[type=file]{width:100%}
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
-      <button class="nav-i" onclick="switchTab('planning')"><span style="width:18px;text-align:center">📋</span>Planning</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
@@ -372,33 +371,6 @@ input[type=file]{width:100%}
     <!-- PIPELINE -->
 
     <!-- PLANNING (Karen) -->
-    <div id="pane-planning" class="pane">
-      <div class="ph">
-        <div><div class="pt">Planning</div><div class="ps">Review pending posts and manage your research queue</div></div>
-        <button id="add-planning-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
-      </div>
-      <div class="pb">
-        <!-- PENDING REVIEW -->
-        <div style="margin-bottom:20px">
-          <div class="sh" style="margin-bottom:10px">Pending your review</div>
-          <div id="planning-review-list"></div>
-        </div>
-        <!-- RESEARCH QUEUE -->
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="sh" style="margin:0">Research queue — unplanned keywords</div>
-            <div style="position:relative;display:inline-flex;align-items:center">
-              <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:220px;padding-right:28px;font-size:12px">
-              <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
-            </div>
-          </div>
-          <div id="research-sort-chips" class="filters" style="margin-bottom:10px"></div>
-          <div id="research-list"></div>
-        </div>
-      </div>
-    </div>
-
-
     <!-- TRACKING -->
     <!-- POSTS -->
     <div id="pane-posts" class="pane">
@@ -454,16 +426,6 @@ input[type=file]{width:100%}
       </div>
     </div>
     <!-- IDEAS -->
-    <div id="pane-ideas" class="pane">
-      <div class="ph">
-        <div><div class="pt">Ideas</div><div class="ps">Ranked by priority score — highest first</div></div>
-        <button id="add-idea-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
-      </div>
-      <div class="pb">
-        <div style="margin-bottom:12px"><input type="text" id="ideas-search" class="srch" placeholder="Search keywords…" oninput="renderIdeas()" style="max-width:300px;width:100%"></div>
-        <div id="ideas-list"></div>
-      </div>
-    </div>
     <!-- CALENDAR -->
     <div id="pane-calendar" class="pane">
       <div class="ph"><div><div class="pt">Calendar</div><div class="ps">Scheduled and published posts by date</div></div></div>
@@ -577,6 +539,22 @@ input[type=file]{width:100%}
         </div>
         <div id="kw-research-status"></div>
         <div id="kw-research-results"></div>
+
+        <!-- IDEA BACKLOG (your queued keywords, not yet scheduled) -->
+        <div style="margin-top:22px;border-top:1px solid var(--border);padding-top:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Your idea backlog</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Keywords you've queued but not yet scheduled — pick the next one to write.</div></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="position:relative;display:inline-flex;align-items:center">
+                <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:200px;padding-right:28px;font-size:12px">
+                <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
+              </div>
+              <button id="add-research-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
+            </div>
+          </div>
+          <div id="research-sort-chips" class="filters" style="margin-bottom:10px"></div>
+          <div id="research-list"></div>
+        </div>
 
       </div>
   </main>

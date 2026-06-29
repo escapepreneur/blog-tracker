@@ -127,15 +127,13 @@ function switchBlog(blog){
 function refreshActivePane(){
   switch(activeTab){
     case 'links':renderLinksPane();break;
-    case 'ideas':renderIdeas();break;
-    case 'research':renderResearch();break;
     case 'insights':renderOpportunities();renderClusterView();break;
-    case 'planning':renderPlanning();break;
-    case 'keywords':{ // results + seed suggestions are brand-specific — clear the previous brand's run
+    case 'keywords':{ // research results + seed suggestions are brand-specific — clear the previous brand's run; refresh the idea backlog
       _kwClusters=[];_seedSuggestions=[];
       const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
       const s=document.getElementById('kw-research-status');if(s)s.innerHTML='';
       const sg=document.getElementById('kw-seed-suggestions');if(sg)sg.innerHTML='';
+      renderResearch();
       break;}
     case 'calendar':renderCalendar();renderPipeline();break;
   }
@@ -154,11 +152,8 @@ function switchTab(name,filter){
     renderPosts();
   }
   if(name==='links')renderLinksPane();
-  if(name==='ideas')renderIdeas();
-  if(name==='research')renderResearch();
-  if(name==='keywords')initKeywordsTab();
+  if(name==='keywords'){initKeywordsTab();renderResearch();}
   if(name==='insights'){renderOpportunities();renderClusterView();}
-  if(name==='planning'){renderPlanning();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -180,7 +175,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','planning','calendar','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','links','calendar','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -254,7 +249,7 @@ function renderSchedPill(){
 }
 
 // RENDER
-function render(){renderDashboard();renderPosts();renderLinksPane();renderIdeas();renderSchedPill()}
+function render(){renderDashboard();renderPosts();renderLinksPane();renderSchedPill()}
 
 // DASHBOARD
 
@@ -283,14 +278,16 @@ function renderDashboard(){
   const notIdx=posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)).length;
   const idxReq=posts.filter(p=>p.indexed==='requested').length;
   const ideas=posts.filter(p=>p.status==='idea').length;
+  const review=posts.filter(p=>p.status==='pending-review').length;
 
   // HORIZONTAL METRIC PILLS
   const dmEl=document.getElementById('dash-metrics');if(dmEl)dmEl.innerHTML=`
     <button class="dash-pill dash-pill-green" onclick="switchTab('posts','live')"><span class="dp-num">${live}</span><span class="dp-lbl">Live</span></button>
     <button class="dash-pill dash-pill-blue" onclick="switchTab('posts','scheduled')"><span class="dp-num">${sched}</span><span class="dp-lbl">Scheduled</span></button>
     <button class="dash-pill dash-pill-purple" onclick="switchTab('posts','drafted')"><span class="dp-num">${drafted}</span><span class="dp-lbl">Drafted</span></button>
+    ${review?`<button class="dash-pill dash-pill-amber" onclick="switchTab('posts','pending-review')"><span class="dp-num">${review}</span><span class="dp-lbl">Pending review</span></button>`:''}
     <button class="dash-pill dash-pill-amber" onclick="switchTab('posts','not-indexed')"><span class="dp-num">${notIdx+idxReq}</span><span class="dp-lbl">Indexing needed</span></button>
-    <button class="dash-pill dash-pill-teal" onclick="switchTab('planning')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
+    <button class="dash-pill dash-pill-teal" onclick="switchTab('keywords')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
 
   // NEXT UP — pipeline order (proposed date, not yet scheduled/live)
   const isN=activeBlog==='nms';
@@ -409,7 +406,7 @@ function renderResearch(){
     +`<button class="btn btn-danger btn-xs" id="research-bulk-delete-btn" style="display:none;margin-left:8px" onclick="bulkDeleteResearch()">Delete selected</button>`;
   }
 
-  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':all.length?'No unplanned keywords. All have proposed dates — see Pipeline.':'No keywords yet. Use + Log keyword to add some.'}</div>`;return}
+  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':all.length?'No unplanned keywords — all have a proposed date (see the Calendar).':'No keywords yet. Use + Log keyword to add some.'}</div>`;return}
 
   el.innerHTML=filtered.map((p,i)=>{
     const score=calcScore(p.ks_score,p.search_volume);
@@ -528,30 +525,6 @@ function renderPosts(){
 }
 
 // IDEAS
-function renderIdeas(){
-  const isN=activeBlog==='nms';
-  const ideaPosts=bp().filter(p=>!['scheduled','live'].includes(p.status));
-  const el=document.getElementById('ideas-list');if(!el)return;
-  const search=(document.getElementById('ideas-search')?.value||'').toLowerCase();
-  const sorted=[...ideaPosts].map(p=>({...p,_score:calcScore(p.ks_score,p.search_volume)||0})).sort((a,b)=>b._score-a._score);
-  const filtered=search?sorted.filter(p=>(p.primary_keyword||'').toLowerCase().includes(search)||(p.supplementary_keywords||'').toLowerCase().includes(search)||(p.title||'').toLowerCase().includes(search)):sorted;
-  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match that search.':'No ideas yet. Use + Log keyword to queue posts for writing.'}</div>`;return}
-  const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
-  el.innerHTML=filtered.map(p=>`<div class="post-row">
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <div class="score-badge" style="${p._score?badgeStyle:'background:var(--bg2);color:var(--text3);border-color:var(--border)'};margin-top:2px">${p._score||'?'}</div>
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','details')">
-        <div class="kw-primary">${esc(p.primary_keyword||'Untitled')}</div>
-        ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,80))}${p.supplementary_keywords.length>80?'…':''}</div>`:''}
-        ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-        <button class="btn ${isN?'btn-pp':'btn-p'} btn-sm" onclick="getBriefForPost('${p.id}')">Get brief →</button>
-        <button class="btn btn-ghost btn-xs" onclick="openPost('${p.id}','details')">Edit</button>
-      </div>
-    </div>
-  </div>`).join('');
-}
 
 // LINKS PANE
 async function renderLinksPane(){
@@ -2080,30 +2053,6 @@ function renderPipeline(){
     </div>`;
 }
 
-function renderPlanning(){
-  const isN=activeBlog==='nms';
-  // PENDING REVIEW
-  const reviewPosts=bp().filter(p=>p.status==='pending-review');
-  const rvEl=document.getElementById('planning-review-list');
-  if(rvEl){
-    if(!reviewPosts.length){rvEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ Nothing waiting for review.</div>'}
-    else{rvEl.innerHTML=reviewPosts.map(p=>`
-      <div class="post-row" style="border-left:3px solid var(--amber)">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <div style="flex:1;min-width:0">
-            <div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
-            ${p.serp_notes?`<div class="prk" style="margin-top:3px;font-style:italic">${esc(p.serp_notes.replace('NOTES:','').slice(0,80))}</div>`:''}
-          </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
-            <button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>
-            <button class="btn btn-xs" onclick="event.stopPropagation();openPost('${p.id}','details')">View</button>
-          </div>
-        </div>
-      </div>`).join('')}
-  }
-  // RESEARCH QUEUE
-  renderResearch();
-}
 
 function renderCalendar(){
   const el=document.getElementById('cal-grid');if(!el)return;
