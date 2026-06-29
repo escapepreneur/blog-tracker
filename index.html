@@ -408,8 +408,6 @@ input[type=file]{width:100%}
       </div>
     </div>
 
-    <!-- RESEARCH (kept for backwards compat, hidden) -->
-    <div id="pane-research" class="pane" style="display:none"></div>
 
     <!-- TRACKING -->
     <div id="pane-tracking" class="pane">
@@ -752,7 +750,6 @@ input[type=file]{width:100%}
   <div class="mtabs">
     <button class="mtab on" id="ptab-details" onclick="switchPTab('details')">Details</button>
     <button class="mtab" id="ptab-draft" onclick="switchPTab('draft')">Draft</button>
-    <button class="mtab" id="ptab-progress" onclick="switchPTab('progress')">Progress</button>
     <button class="mtab" id="ptab-social" onclick="switchPTab('social')">Social</button>
     <button class="mtab" id="ptab-gsc" onclick="switchPTab('gsc')">Rankings</button>
     <button class="mtab" id="ptab-links" onclick="switchPTab('links')">Links</button>
@@ -820,14 +817,6 @@ input[type=file]{width:100%}
   </div>
   <!-- DRAFT -->
   <div id="pm-draft" class="pane"><div id="pm-draft-body"></div></div>
-  <!-- PROGRESS -->
-  <div id="pm-progress" class="pane">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div><div style="font-size:13px;font-weight:600" id="prog-summary">0 of 0 steps complete</div><div class="prog-bar-wrap" style="width:200px"><div class="prog-bar-fill" id="prog-fill" style="width:0%"></div></div></div>
-      <button class="btn btn-xs btn-ghost" onclick="resetChecklist()">Reset</button>
-    </div>
-    <div id="cl-sections"></div>
-  </div>
   <!-- SOCIAL -->
   <div id="pm-social" class="pane">
     <div class="cgl">Pinterest</div>

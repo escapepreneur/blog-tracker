@@ -240,13 +240,12 @@ function updateTabs(){
 }
 function switchPTab(name){
   activePTab=name;
-  ['details','draft','progress','social','gsc','links'].forEach(n=>{
+  ['details','draft','social','gsc','links'].forEach(n=>{
     document.getElementById('pm-'+n).classList.toggle('on',n===name);
     document.getElementById('ptab-'+n).classList.toggle('on',n===name);
   });
   if(name==='gsc')renderGscHistory();
   if(name==='links')renderModalLinks();
-  if(name==='progress')renderChecklist();
   if(name==='draft')renderDraftTab();
 }
 function setFilter(f,btn){sfilt=f;document.querySelectorAll('.fchip').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderPosts()}
@@ -1417,7 +1416,7 @@ async function addClusterAsPost(ci){
 
 // POST MODAL
 async function openPost(id,tab){
-  curPost=id;await loadChecklist(id); // _links is already cached; the Links tab loads its own data when opened
+  curPost=id; // Progress checklist removed; _links cached + Links tab loads lazily
   const post=gp(id);if(!post)return;
   const kw=post.primary_keyword||'',title=post.title||'';
   document.getElementById('pm-title').textContent=kw||title||'Post';
