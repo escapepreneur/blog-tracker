@@ -1,68 +1,5 @@
 const BLOGGING_PROJECT_URL='https://claude.ai/project/019cd821-e61f-73e4-bc71-51bda336a345';
 const GSC_URLS={esc:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aeschub.com&item_url=',nms:'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aescapepreneur.com&item_url='};
-const CL_STEPS=[
-  {id:'s1b',num:'01',title:'Before You Start',note:'Complete these before generating the brief.',items:[
-    {id:'s1b1',text:'Add the primary keyword to SerpRobot rank tracking (serprobot.com) — check you have slots available, 75 max per bot'},
-  ]},
-  {id:'s2',num:'02',title:'Generate the Full Post',note:'Use the button below to copy the brief and open the Blogging project. Claude will return the complete post package including title, image prompts, meta data, and social captions. Download the output as a DOCX.',items:[
-    {id:'cl1',text:'Click the "Copy brief & open project" button below — this copies your brief and opens the Blogging project in a new tab'},
-    {id:'cl2',text:'Paste the brief into the new chat — nothing else needed'},
-    {id:'cl3',text:'Wait for Claude to return the FULL output: post, meta title, meta description, image prompts, Canva recommendations, social captions'},
-    {id:'cl4',text:'Download the Claude output as a DOCX file (click the download icon on the message)'},
-  ]},
-  {id:'s3',num:'03',title:'Create All Assets',note:'Create each image and review it with Claude immediately after creation. Do NOT batch them at the end. Do NOT resize or convert anything yet.',items:[
-    {id:'im1',text:'FEATURED IMAGE — Open Canva featured image template (canva.com/brand/brand-templates/EAHE2ynVR3A). Search Canva Photos using Claude\'s suggestions. Add title and subtitle. Export as PNG. Screenshot and paste into the Blogging project chat for Claude to review.'},
-    {id:'im2',text:'BODY IMAGE 1 — Freepik, ratio 16:9, size 1K. Generate 2 variations using Claude\'s prompt.'},
-    {id:'im3',text:'Screenshot Image 1 variations immediately and paste into the Blogging project chat — ask Claude which to use. Only then move to Image 2.'},
-    {id:'im4',text:'BODY IMAGE 2 — Generate 2 variations at 16:9, 1K. Screenshot immediately and ask Claude to choose before moving on.'},
-    {id:'im5',text:'BODY IMAGE 3 (if applicable) — Generate 2 variations at 16:9, 1K. Screenshot immediately and ask Claude to choose.'},
-    {id:'im6',text:'Download all Claude-approved body images from Freepik — do not resize or convert yet.'},
-    {id:'im7',text:'IG/FB GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhN1Proo). Open Claude\'s recommended template number. Drop in image, update all text fields. Export. Screenshot and paste into Blogging project chat for review.'},
-    {id:'im8',text:'PINTEREST GRAPHIC — Open Brand Templates (canva.com/brand/brand-templates/EAHHhJ4jZ8Y). Open Claude\'s recommended template number. Drop in image, update all text fields. Export. Screenshot and paste into Blogging project chat for review.'},
-  ]},
-  {id:'s4',num:'04',title:'Full Review',note:'Upload the DOCX and all final images to the ESC Hub Blog Reviewer Bot for a complete review before anything goes into ESC Hub.',items:[
-    {id:'rv1',text:'Open a new chat in the ESC Hub Blog Reviewer Bot. Upload the DOCX and say: Please review this post and all images.'},
-    {id:'rv2',text:'Upload the featured image PNG'},
-    {id:'rv3',text:'Upload all body images'},
-    {id:'rv4',text:'Upload the IG/FB graphic'},
-    {id:'rv5',text:'Upload the Pinterest graphic'},
-    {id:'rv6',text:'Read the review — fix any content issues in the DOCX and remake any flagged images'},
-    {id:'rv7',text:'Resize body images at: birme.net/?target_width=1200&target_height=675'},
-    {id:'rv8',text:'Convert ALL images to WebP at: tinyimage.online/convert/png-to-webp/ — MAXIMUM 150KB'},
-    {id:'rv9',text:'Rename all files using the SEO filenames from Claude\'s output'},
-  ]},
-  {id:'s5',num:'05',title:'Set Up & Schedule in ESC Hub',note:'All content and images are approved and converted. Build the post in ESC Hub and schedule it.',items:[
-    {id:'p1',text:'Paste the article from the DOCX into the ESC Hub blog editor'},
-    {id:'p2',text:'Add a Code Block in the position Claude specified in the output, and enter the code from: docs.google.com/document/d/1w2KiNdQBKAsp7pxksz_c7_t17aOMQI5aWZZMe4n_Ot8/edit'},
-    {id:'p3',text:'Upload all WebP images to the Blogging folder in the ESC Hub media library'},
-    {id:'p4',text:'Find each [Insert Image: filename.webp] marker — insert the matching image, add alt text, delete the markers'},
-    {id:'p5',text:'At the bottom of the post, insert the Pinterest image — set width to 350 and leave height blank'},
-    {id:'p6',text:'Click the button at top right to move to the next screen'},
-    {id:'p7',text:'Set the URL slug — use the URL SLUG from Claude\'s output'},
-    {id:'p8',text:'Set the category (ESC Hub posts only) — use Claude\'s Category recommendation'},
-    {id:'p9',text:'Set the featured image — add the alt text and caption from Claude\'s Featured Image section'},
-    {id:'p10',text:'Paste in the meta title from Claude\'s output'},
-    {id:'p11',text:'Paste in the meta description from Claude\'s output'},
-    {id:'p12',text:'Preview on desktop and mobile'},
-    {id:'p13',text:'Check the schedule date in the dashboard'},
-    {id:'p14',text:'Schedule the post — do not publish immediately'},
-    {id:'p15',text:'Schedule on Instagram for the go-live date using Claude\'s Instagram caption'},
-    {id:'p16',text:'Share to Facebook on the go-live date using Claude\'s Facebook caption'},
-  ]},
-  {id:'s6',num:'06',title:'Go-Live Date',note:'These steps happen ON the go-live date.',items:[
-    {id:'gl1',text:'Confirm the post is live at the scheduled URL'},
-    {id:'gl2',text:'Submit to Google Search Console: URL Inspection → paste URL → Request Indexing — update indexed status to Index Requested'},
-    {id:'gl3',text:'PINTEREST FIRST — Pin the graphic to the primary board as specified in Claude\'s output'},
-    {id:'gl4',text:'Resave the pin to the secondary board: ESC Hub Blog or No More Somedays Blog'},
-    {id:'gl5',text:'Copy the Pinterest pin URL'},
-    {id:'gl6',text:'Go into ESC Hub and open the blog post in the editor'},
-    {id:'gl7',text:'Find the Pinterest image at the bottom of the post'},
-    {id:'gl8',text:'Add the Pinterest pin URL as a hyperlink on the image with anchor text: Click to save this for later'},
-    {id:'gl9',text:'Save the post — update social tracker'},
-    {id:'gl10',text:'Once confirmed indexed in GSC, update indexed status to Indexed'},
-  ]}
-];
-const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
@@ -175,11 +112,6 @@ async function loadDests(){const{data}=await sb.from('link_destinations').select
 async function loadLinks(){
   const ids=bp().map(p=>p.id);if(!ids.length){_links=[];return}
   const{data}=await sb.from('internal_links').select('*').eq('blog',activeBlog);_links=data||[];
-}
-async function loadChecklist(pid){
-  const{data}=await sb.from('post_checklist').select('*').eq('post_id',pid);
-  _clChecked={};
-  (data||[]).forEach(r=>{if(r.checked)_clChecked[r.item_id]=true});
 }
 
 // BLOG/TAB
@@ -447,40 +379,7 @@ function openApproveModal(id){
   document.getElementById('approve-modal').classList.add('on');
 }
 
-function renderTracking(){
-  const posts=bp();
-  // NEEDS LINKS
-  const nl=posts.filter(p=>p.status==='live').map(p=>({...p,postLn:_links.filter(l=>l.from_post_id===p.id&&l.to_post_id).length,pageLn:_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length})).filter(p=>p.postLn<3||p.pageLn<2);
-  const nlEl=document.getElementById('track-links');
-  if(nlEl)nlEl.innerHTML=!nl.length?`<div class="empty" style="padding:1rem;color:var(--green)">All live posts fully linked.</div>`:nl.map(p=>{const lv=p.postLn>=3&&p.pageLn>=2?'green':(p.postLn>0||p.pageLn>0)?'amber':'red';return`<div class="post-row" onclick="openPost('${p.id}','links')" style="border-left:3px solid var(--${lv})"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary" style="flex:1;min-width:0">${esc(p.primary_keyword||p.title)}</div><span class="flag f-${lv}">${p.postLn}/3 · ${p.pageLn}/2</span></div></div>`}).join('');
-  // SOCIAL INCOMPLETE
-  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.pinterest_image_created||!s.pinterest_shared||!s.pinterest_in_blog||!s.fb_shared||!s.ig_shared)});
-  const siEl=document.getElementById('track-social');
-  if(siEl)siEl.innerHTML=!si.length?`<div class="empty" style="padding:1rem;color:var(--green)">All social complete.</div>`:si.map(p=>{const s=p.social_tracking?.[0]||{};return socialIconRow(s,p)}).filter(Boolean).join('');
-  // RECENTLY PUBLISHED
-  const rc=[...posts].filter(p=>p.status==='live'&&p.published_date).sort((a,b)=>new Date(b.published_date)-new Date(a.published_date)).slice(0,8);
-  const rcEl=document.getElementById('track-recent');
-  if(rcEl)rcEl.innerHTML=!rc.length?`<div class="empty" style="padding:1rem">No live posts yet.</div>`:rc.map(p=>`<div class="post-row" onclick="openPost('${p.id}','details')"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div class="prk">${fd(p.published_date)}</div></div>`).join('');
-  renderTrackingRankings();
-}
 
-async function renderTrackingRankings(){
-  const posts=bp().filter(p=>p.status==='live');
-  const rankEl=document.getElementById('track-rankings');if(!rankEl)return;
-  if(!posts.length){rankEl.innerHTML='<div class="empty" style="padding:1rem">No live posts yet.</div>';return}
-  const{data}=await sb.from('gsc_positions').select('*').in('post_id',posts.map(p=>p.id)).order('recorded_date',{ascending:false});
-  if(!data||!data.length){rankEl.innerHTML='<div class="empty" style="padding:1rem">No ranking data yet. Import from SerpRobot or GSC.</div>';return}
-  const byPost={};data.forEach(r=>{if(!byPost[r.post_id])byPost[r.post_id]=[];if(byPost[r.post_id].length<2)byPost[r.post_id].push(r)});
-  let html='';
-  Object.entries(byPost).forEach(([pid,ents])=>{
-    const post=gp(pid);if(!post)return;
-    const lt=ents[0],pv=ents[1];let ch='';
-    if(pv&&lt.position&&pv.position){const d=pv.position-lt.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'<span style="color:var(--text3)">—</span>'}
-    const src=lt.notes?.startsWith('SerpRobot')?'SR':lt.notes?.startsWith('GSC')?'GSC':'';
-    html+=`<div class="post-row" onclick="openPost('${pid}','gsc')"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(post.primary_keyword||post.title)}</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${src?`<span style="font-size:9px;font-weight:700;color:var(--text3)">${src}</span>`:''}<div style="font-size:16px;font-weight:700">${lt.position||'—'}</div>${ch}</div></div></div>`;
-  });
-  rankEl.innerHTML=html||'<div class="empty" style="padding:1rem">No data.</div>';
-}
 
 let _dragSrcId=null;
 let _researchSort='score'; // score | volume | ks | manual
@@ -828,571 +727,46 @@ const PLATFORM_MODIFIERS_TOP=['alternatives','alternative','vs','pricing','revie
 const PLATFORM_MODIFIERS_OTHER=['for coaches','for solopreneurs','cheapest alternative'];
 // Problem phrases stand alone — no modifiers stacked on them
 
-function clearUsedCombinations(){
-  if(!confirm('Clear all used keyword combinations? Next generation will include previously generated keywords.'))return;
-  localStorage.removeItem('kw-used-combos-'+activeBlog);
-  toast('Cleared — next generation starts fresh');
-}
 
-function getSeeds(){
-  return{
-    platforms:(localStorage.getItem('kw-seeds-platforms')||DEFAULT_PLATFORMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
-    problems:(localStorage.getItem('kw-seeds-problems')||DEFAULT_PROBLEMS.join('\n')).split('\n').map(s=>s.trim()).filter(Boolean),
-    modifiers:PLATFORM_MODIFIERS_TOP.concat(PLATFORM_MODIFIERS_OTHER)
-  };
-}
 
-function saveSeeds(){
-  const p=document.getElementById('kw-seeds-platforms')?.value||'';
-  const pr=document.getElementById('kw-seeds-problems')?.value||'';
-  localStorage.setItem('kw-seeds-platforms',p);
-  localStorage.setItem('kw-seeds-problems',pr);
-  toast('Seed lists saved');
-}
 
-function loadSeeds(){
-  const s=getSeeds();
-  const pe=document.getElementById('kw-seeds-platforms');if(pe)pe.value=s.platforms.join('\n');
-  const pre=document.getElementById('kw-seeds-problems');if(pre)pre.value=s.problems.join('\n');
-}
 
-function getUsedCombinations(){return new Set(JSON.parse(localStorage.getItem('kw-used-combos-'+activeBlog)||'[]'))}
-function saveUsedCombination(combo){const s=getUsedCombinations();s.add(combo);localStorage.setItem('kw-used-combos-'+activeBlog,JSON.stringify([...s].slice(-500)))}
 
-function getExistingKeywords(){
-  return new Set(allPosts.filter(p=>p.blog===activeBlog&&p.primary_keyword).map(p=>p.primary_keyword.toLowerCase().trim()));
-}
 
-function buildCandidatePool(type){
-  const seeds=getSeeds();
-  const used=getUsedCombinations();
-  const existing=getExistingKeywords();
-  const inQueue=new Set(getKwQueue().map(k=>k.keyword.toLowerCase().trim()));
-  const candidates=[];const tried=new Set();
 
-  const ok=(kw)=>!tried.has(kw)&&!used.has(kw)&&!existing.has(kw)&&!inQueue.has(kw);
-  const add=(kw,t)=>{if(ok(kw)){candidates.push({kw,type:t});tried.add(kw)}};
 
-  if(type==='competitor'||type==='all'){
-    // Top converting: platform + alternatives/vs/pricing/review
-    for(const mod of PLATFORM_MODIFIERS_TOP){
-      for(const plat of seeds.platforms){
-        add(`${plat.toLowerCase()} ${mod}`,'competitor');
-      }
-    }
-    // Secondary: platform + for coaches / for solopreneurs
-    for(const mod of PLATFORM_MODIFIERS_OTHER){
-      for(const plat of seeds.platforms){
-        add(`${plat.toLowerCase()} ${mod}`,'competitor');
-      }
-    }
-  }
 
-  if(type==='problem'||type==='all'){
-    // Problem phrases stand alone — already complete search queries
-    for(const prob of seeds.problems){
-      add(prob.toLowerCase(),'problem');
-    }
-  }
-
-  return candidates;
-}
-
-function generateCandidates(count,type='balanced'){
-  const used=getUsedCombinations();
-  let selected=[];
-
-  if(type==='balanced'){
-    const third=Math.floor(count/3);
-    const competitorPool=buildCandidatePool('competitor');
-    const problemPool=buildCandidatePool('problem');
-    // Shuffle each pool for variety
-    const shuffle=arr=>[...arr].sort(()=>Math.random()-.5);
-    selected=[
-      ...shuffle(competitorPool).slice(0,third+Math.ceil((count-third*2)/2)),
-      ...shuffle(problemPool).slice(0,third+Math.floor((count-third*2)/2)),
-    ].slice(0,count);
-  } else {
-    selected=buildCandidatePool(type).slice(0,count);
-  }
-
-  if(!selected.length){
-    document.getElementById('kw-generated-output').style.display='none';
-    toast('No new combinations available — try adding more seeds or clearing used combinations');
-    return;
-  }
-
-  // Mark as used
-  selected.forEach(c=>saveUsedCombination(c.kw));
-  if(!selected.length){document.getElementById('kw-generated-output').style.display='none';toast('No new combinations available — try adding more seeds');return}
-
-  // Mark as used
-  selected.forEach(c=>saveUsedCombination(c.kw));
-
-  const kwList=selected.map(c=>c.kw);
-  const el=document.getElementById('kw-generated-text');
-  if(el)el.textContent=kwList.join(', ');
-  document.getElementById('kw-generated-output').style.display='block';
-  // Store for bulk add
-  window._generatedKws=kwList;
-  toast(`${selected.length} keywords generated — copy for Keysearch`);
-}
-
-function copyGeneratedKeywords(){
-  const text=document.getElementById('kw-generated-text')?.textContent||'';
-  if(!text){toast('Generate keywords first');return}
-  navigator.clipboard.writeText(text);toast('Copied — paste into Keysearch');
-}
-
-function addAllToValidation(){
-  // Try stored variable first, fall back to reading from DOM
-  let kws=window._generatedKws||[];
-  if(!kws.length){
-    const text=document.getElementById('kw-generated-text')?.textContent||'';
-    if(text.trim())kws=text.split(',').map(k=>k.trim()).filter(Boolean);
-  }
-  if(!kws.length){toast('Generate keywords first');return}
-  const queue=getKwQueue();
-  const existing=new Set(queue.map(k=>k.keyword.toLowerCase()));
-  let added=0;
-  kws.forEach(kw=>{
-    if(!existing.has(kw.toLowerCase())){
-      queue.push({id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),keyword:kw,ks_score:null,volume:null,status:'new',added:localToday()});
-      added++;
-    }
-  });
-  saveKwQueue(queue);renderKwValidation();switchKwTab('validate');
-  toast(`${added} keywords added to validation queue`);
-}
 
 // KW QUEUE (localStorage)
-function getKwQueue(){return JSON.parse(localStorage.getItem('kw-queue-'+activeBlog)||'[]')}
-function saveKwQueue(q){localStorage.setItem('kw-queue-'+activeBlog,JSON.stringify(q))}
-function getKwApproved(){return JSON.parse(localStorage.getItem('kw-approved-'+activeBlog)||'[]')}
-function saveKwApproved(a){localStorage.setItem('kw-approved-'+activeBlog,JSON.stringify(a))}
 
-function kwStatus(ks,vol){
-  if(ks==null||vol==null)return'new';
-  if(ks<=30&&vol>=100&&vol<=3000)return'pass';
-  if(ks<=40&&vol>=50)return'maybe';
-  return'fail';
-}
 
-function kwStatusBadge(s){
-  const map={pass:'background:#e8f5ee;color:#1a6b37;border:1px solid #b8dfc6',maybe:'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0',fail:'background:var(--red-l);color:var(--red-t);border:1px solid #f0c8c8',new:'background:var(--bg2);color:var(--text3);border:1px solid var(--border)'};
-  const labels={pass:'✓ Pass',maybe:'~ Maybe',fail:'✕ Fail',new:'Not checked'};
-  return`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;${map[s]||map.new}">${labels[s]||s}</span>`;
-}
 
 let _kwFilter='all';
-function setKwFilter(f,btn){_kwFilter=f;document.querySelectorAll('#kwpane-validate .fchip').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderKwValidation()}
 
-function renderKwValidation(){
-  const queue=getKwQueue();
-  const el=document.getElementById('kw-validate-list');if(!el)return;
-  const existingKws=getExistingKeywords();
 
-  let filtered=queue;
-  if(_kwFilter!=='all')filtered=queue.filter(k=>k.status===_kwFilter||(k.status===undefined&&_kwFilter==='new'));
 
-  // Sort: pass first, then maybe, then new, then fail; within each by score desc
-  const order={pass:0,maybe:1,new:2,fail:3};
-  filtered.sort((a,b)=>{
-    const od=(order[a.status]||2)-(order[b.status]||2);
-    if(od!==0)return od;
-    return(calcScore(b.ks_score,b.volume)||0)-(calcScore(a.ks_score,a.volume)||0);
-  });
 
-  // Update counts
-  const passCount=queue.filter(k=>k.status==='pass').length;
-  const totalCount=queue.length;
-  const approvedEl=document.getElementById('kw-validate-count');if(approvedEl)approvedEl.textContent=totalCount;
-  const appCountEl=document.getElementById('kw-approved-count');if(appCountEl)appCountEl.textContent=getKwApproved().length;
 
-  if(!filtered.length){el.innerHTML=`<div class="empty">${queue.length?'No keywords match this filter.':'No keywords in queue. Generate candidates or upload a Keysearch CSV.'}</div>`;return}
 
-  el.innerHTML=filtered.map(k=>{
-    const score=calcScore(k.ks_score,k.volume);
-    const isN=activeBlog==='nms';
-    const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
-    const isExisting=existingKws.has((k.keyword||'').toLowerCase().trim());
-    const sweetSpot=k.volume>=300&&k.volume<=3000&&k.ks_score<=30;
-    return`<div class="post-row" style="padding:12px 16px;${k.status==='pass'?'border-left:3px solid var(--green)':k.status==='maybe'?'border-left:3px solid var(--amber)':k.status==='fail'?'border-left:3px solid var(--red-t)':''}">
-      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-            <span style="font-size:13px;font-weight:600">${esc(titleCase(k.keyword||''))}</span>
-            ${sweetSpot?'<span style="font-size:9px;background:var(--teal);color:#fff;border-radius:10px;padding:1px 6px;font-weight:700">⭐ Sweet spot</span>':''}
-            ${isExisting?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber-t);border-radius:10px;padding:1px 6px;border:1px solid #f0d8a0">Already have post</span>':''}
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="display:flex;gap:4px;align-items:center">
-              <span style="font-size:10px;color:var(--text3)">KS</span>
-              <input type="number" value="${k.ks_score!=null?k.ks_score:''}" min="0" max="100" placeholder="—" style="width:50px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:20px;text-align:center;font-family:Poppins,sans-serif" onchange="updateKwScore('${k.id}','ks_score',this.value)">
-            </div>
-            <div style="display:flex;gap:4px;align-items:center">
-              <span style="font-size:10px;color:var(--text3)">Vol</span>
-              <input type="number" value="${k.volume!=null?k.volume:''}" placeholder="—" style="width:70px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:20px;text-align:center;font-family:Poppins,sans-serif" onchange="updateKwScore('${k.id}','volume',this.value)">
-            </div>
-            ${kwStatusBadge(k.status||'new')}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-          ${score!=null?`<div class="score-badge" style="${badgeStyle};width:34px;height:34px;font-size:11px">${score}</div>`:''}
-          <div style="display:flex;gap:4px">
-            ${k.status==='pass'?`<button class="btn btn-p btn-xs" onclick="sendKwToPlanning('${k.id}')">→ Planning</button>`:''}
-            <button class="btn btn-danger btn-xs" onclick="removeFromQueue('${k.id}')">✕</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
 
-function updateKwScore(id,field,val){
-  const queue=getKwQueue();
-  const idx=queue.findIndex(k=>k.id===id);if(idx===-1)return;
-  queue[idx][field]=val===''?null:parseFloat(val);
-  queue[idx].status=kwStatus(queue[idx].ks_score,queue[idx].volume);
-  saveKwQueue(queue);renderKwValidation();
-}
 
-function removeFromQueue(id){
-  const queue=getKwQueue().filter(k=>k.id!==id);saveKwQueue(queue);renderKwValidation();
-}
 
-async function sendKwToPlanning(id){
-  const queue=getKwQueue();
-  const kw=queue.find(k=>k.id===id);if(!kw)return;
-  const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw.keyword,ks_score:kw.ks_score,search_volume:kw.volume,status:'idea',current_step:0,indexed:'no'}).select().single();
-  if(error){toast('Error: '+error.message);return}
-  await sb.from('social_tracking').insert({post_id:data.id});
-  // Move to approved history
-  const approved=getKwApproved();
-  approved.unshift({...kw,sent:localToday()});
-  saveKwApproved(approved.slice(0,200));
-  // Remove from queue
-  saveKwQueue(queue.filter(k=>k.id!==id));
-  await loadPosts();renderKwValidation();renderKwApproved();
-  toast(`"${titleCase(kw.keyword)}" sent to Planning`);
-}
-
-function clearFailedKw(){
-  const queue=getKwQueue();
-  const remaining=queue.filter(k=>k.status!=='fail');
-  const count=queue.length-remaining.length;
-  if(!count){toast('No failed keywords to clear');return}
-  if(!confirm(`Clear ${count} failed keyword${count>1?'s':''}?`))return;
-  saveKwQueue(remaining);renderKwValidation();toast(`${count} failed keywords cleared`);
-}
-
-function clearAllKwQueue(){
-  const queue=getKwQueue();
-  if(!queue.length){toast('Queue is already empty');return}
-  if(!confirm(`Clear all ${queue.length} keywords from the queue? This cannot be undone.`))return;
-  saveKwQueue([]);renderKwValidation();toast('Queue cleared');
-}
-
-async function sendAllPassing(){
-  const queue=getKwQueue();
-  const passing=queue.filter(k=>k.status==='pass');
-  if(!passing.length){toast('No passing keywords in queue');return}
-  for(const kw of passing){await sendKwToPlanning(kw.id)}
-  toast(`${passing.length} keywords sent to Planning`);
-}
-
-function renderKwApproved(){
-  const el=document.getElementById('kw-approved-list');if(!el)return;
-  const approved=getKwApproved();
-  if(!approved.length){el.innerHTML='<div class="empty">No keywords approved yet.</div>';return}
-  el.innerHTML=approved.map(k=>`<div class="post-row"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:13px;font-weight:600">${esc(titleCase(k.keyword||''))}</div><div class="prk">KS ${k.ks_score||'—'} · ${k.volume?.toLocaleString()||'—'}/mo · Sent ${fd(k.sent)}</div></div>${kwStatusBadge('pass')}</div></div>`).join('');
-}
-
-function clearApprovedKw(){if(!confirm('Clear approved keyword history?'))return;saveKwApproved([]);renderKwApproved();toast('History cleared')}
 
 // UNIFIED MULTI-FILE IMPORTER — handles Keysearch + GKP, merges overlaps
-async function importKwFiles(e){
-  const files=[...e.target.files];
-  if(!files.length)return;
-  document.getElementById('kw-file-label').textContent='Processing…';
-  document.getElementById('kw-import-result').innerHTML='';
-  const parsed={};
-
-  for(const file of files){
-    const buffer=await file.arrayBuffer();
-    let text='';
-    // Check for UTF-16 BOM (FF FE)
-    const bytes=new Uint8Array(buffer);
-    const hasUTF16BOM=(bytes[0]===0xFF&&bytes[1]===0xFE)||(bytes[0]===0xFE&&bytes[1]===0xFF);
-    if(hasUTF16BOM){
-      try{text=new TextDecoder('utf-16').decode(buffer).replace(/\uFEFF/g,'');}
-      catch(ex){text=new TextDecoder('utf-8').decode(buffer).replace(/\uFEFF/g,'');}
-    } else {
-      text=new TextDecoder('utf-8').decode(buffer).replace(/\uFEFF/g,'');
-    }
-
-    const isKS=text.includes('Score')||/^keyword\t/i.test(text.trim());
-
-    if(isKS){
-      const lines=text.split(/\r?\n/).filter(Boolean);
-      const singleHeader=/^keyword\tvolume/i.test(lines[0].replace(/^\uFEFF/,''));
-      if(singleHeader){
-        for(let i=1;i<lines.length;i++){
-          const cols=lines[i].split('\t');
-          const kw=(cols[0]||'').trim();
-          if(!kw||kw.toLowerCase().startsWith('url')||kw.startsWith('http'))continue;
-          const vol=parseInt(cols[1])||null;
-          const ks=parseFloat(cols[4])||null;
-          const kwl=kw.toLowerCase();
-          if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
-          if(ks!=null)parsed[kwl].ks_score=ks;
-          if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
-        }
-      } else {
-        const kwHeader=/^keyword\tvolume/i;
-        let i=0;
-        while(i<lines.length){
-          if(kwHeader.test(lines[i])){
-            i++;
-            if(i<lines.length){
-              const cols=lines[i].split('\t');
-              const kw=(cols[0]||'').trim();
-              if(kw&&!kw.toLowerCase().startsWith('url')&&!kw.startsWith('http')){
-                const vol=parseInt(cols[1])||null;
-                const ks=parseFloat(cols[4])||null;
-                const kwl=kw.toLowerCase();
-                if(!parsed[kwl])parsed[kwl]={keyword:kw,ks_score:null,volume:null};
-                if(ks!=null)parsed[kwl].ks_score=ks;
-                if(vol!=null&&parsed[kwl].volume==null)parsed[kwl].volume=vol;
-              }
-            }
-          }
-          i++;
-        }
-      }
-    }
-  }
-
-  const allParsed=Object.values(parsed);
-  if(!allParsed.length){
-    document.getElementById('kw-import-result').innerHTML='<div style="color:var(--red-t);font-size:12px">Could not parse files. Check they are Keysearch or GKP exports.</div>';
-    document.getElementById('kw-file-label').textContent='⬆ Upload CSV files';
-    return;
-  }
-
-  const queue=getKwQueue();
-  const existingMap={};
-  queue.forEach(k=>{existingMap[k.keyword.toLowerCase().trim()]=k;});
-  let added=0,merged=0;
-
-  allParsed.forEach(p=>{
-    const kwl=p.keyword.toLowerCase().trim();
-    if(existingMap[kwl]){
-      const existing=existingMap[kwl];
-      let changed=false;
-      if(p.ks_score!=null&&existing.ks_score==null){existing.ks_score=p.ks_score;changed=true;}
-      if(p.volume!=null&&existing.volume==null){existing.volume=p.volume;changed=true;}
-      if(changed){existing.status=kwStatus(existing.ks_score,existing.volume);merged++;}
-    } else {
-      queue.push({
-        id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),
-        keyword:p.keyword,
-        ks_score:p.ks_score,
-        volume:p.volume,
-        status:kwStatus(p.ks_score,p.volume),
-        added:localToday()
-      });
-      added++;
-    }
-  });
-
-  saveKwQueue(queue);
-  renderKwValidation();
-  const parts=[];
-  if(added)parts.push(added+' new keywords added');
-  if(merged)parts.push(merged+' existing keywords updated with missing data');
-  document.getElementById('kw-import-result').innerHTML='<div style="color:var(--green);font-weight:600;font-size:12px">✓ '+parts.join(' · ')+'</div>';
-  document.getElementById('kw-file-label').textContent='✓ '+files.map(f=>f.name).join(', ');
-  switchKwTab('validate');
-  toast(parts.join(' · '));
-  e.target.value='';
-}
 // GKP CSV import
-async function importGKPCSV(e){
-  const file=e.target.files[0];if(!file)return;
-  document.getElementById('kw-file-label').textContent=file.name+' — processing…';
-  const buffer=await file.arrayBuffer();
-  const text=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
-  const lines=text.split(/\r?\n/).filter(Boolean);
-  // Find header row
-  const headerIdx=lines.findIndex(l=>l.includes('Avg. monthly searches'));
-  if(headerIdx===-1){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">Could not find GKP header row. Make sure you exported from Google Keyword Planner.</div>`;return}
-  const headers=lines[headerIdx].split('\t');
-  const kwIdx=headers.findIndex(h=>h.toLowerCase().includes('keyword'));
-  const volIdx=headers.findIndex(h=>h.includes('Avg. monthly searches'));
-  const compIdx=headers.findIndex(h=>h==='Competition');
-  const compNumIdx=headers.findIndex(h=>h.includes('indexed value'));
-  const imported=[];
-  for(let i=headerIdx+1;i<lines.length;i++){
-    const cols=lines[i].split('\t');
-    if(cols.length<3)continue;
-    const kw=(cols[kwIdx]||'').trim();
-    if(!kw||kw.startsWith('http'))continue;
-    const volRaw=(cols[volIdx]||'').replace(/,/g,'').trim();
-    const vol=volRaw&&volRaw!=='--'?parseInt(volRaw)||null:null;
-    // Map competition to approximate KS score
-    const comp=(cols[compIdx]||'').trim().toLowerCase();
-    const compNum=parseFloat(cols[compNumIdx]||'')||null;
-    let ks=null;
-    if(compNum!=null)ks=Math.round(compNum*0.4); // scale 0-100 → 0-40
-    else if(comp==='low')ks=20;
-    else if(comp==='medium')ks=35;
-    else if(comp==='high')ks=60;
-    imported.push({
-      id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),
-      keyword:kw,ks_score:ks,volume:vol,
-      status:kwStatus(ks,vol),
-      added:localToday(),source:'gkp'
-    });
-  }
-  if(!imported.length){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">No keywords found. Check the file format.</div>`;return}
-  const queue=getKwQueue();
-  const existingKws=new Set(queue.map(k=>k.keyword.toLowerCase().trim()));
-  const newOnes=imported.filter(k=>!existingKws.has(k.keyword.toLowerCase().trim()));
-  const skipped=imported.length-newOnes.length;
-  saveKwQueue([...queue,...newOnes]);
-  renderKwValidation();
-  document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${newOnes.length} keywords imported from Google Keyword Planner · ${skipped} duplicates skipped</div>`;
-  document.getElementById('kw-file-label').textContent='✓ '+file.name;
-  switchKwTab('validate');toast(`${newOnes.length} keywords imported from GKP`);
-  e.target.value='';
-}
 
 // Keysearch CSV import
-async function importKeysearchCSV(e){
-  const file=e.target.files[0];if(!file)return;
-  document.getElementById('kw-file-label').textContent=file.name+' — processing…';
-  const buffer=await file.arrayBuffer();
-  let text='';
-  try{const decoder=new TextDecoder('utf-16le');text=decoder.decode(buffer).replace(/^\uFEFF/,'')}
-  catch(ex){text=new TextDecoder('utf-8').decode(buffer)}
-  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const imported=[];let matched=0,skipped=0;
-  const kwHeader=/^keyword\tvolume/i;
-  let i=0;
-  while(i<lines.length){
-    if(kwHeader.test(lines[i])){
-      i++;
-      // Next non-empty line is the keyword data
-      if(i<lines.length){
-        const cols=lines[i].split('\t');
-        const kw=(cols[0]||'').trim();
-        const vol=parseInt(cols[1])||null;
-        const ks=parseFloat(cols[4])||null;
-        if(kw&&kw.toLowerCase()!=='url'){
-          imported.push({id:'kw-'+Date.now()+'-'+Math.random().toString(36).slice(2),keyword:kw,ks_score:ks,volume:vol,status:kwStatus(ks,vol),added:localToday()});
-          matched++;
-        }
-      }
-    }
-    i++;
-  }
-  if(!matched){document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--red-t);font-size:12px">Could not parse file. Expected Keysearch difficulty CSV format.</div>`;document.getElementById('kw-file-label').textContent='Upload Keysearch CSV';return}
-  // Merge into queue, skip duplicates
-  const queue=getKwQueue();
-  const existingKws=new Set(queue.map(k=>k.keyword.toLowerCase().trim()));
-  const newOnes=imported.filter(k=>!existingKws.has(k.keyword.toLowerCase().trim()));
-  skipped=imported.length-newOnes.length;
-  saveKwQueue([...queue,...newOnes]);
-  renderKwValidation();
-  document.getElementById('kw-import-result').innerHTML=`<div style="color:var(--green);font-weight:600;font-size:12px">✓ ${newOnes.length} keywords imported · ${skipped} duplicates skipped</div>`;
-  document.getElementById('kw-file-label').textContent='✓ '+file.name;
-  switchKwTab('validate');toast(`${newOnes.length} keywords imported`);
-  e.target.value='';
-}
 
 // Quick wins from GSC
-async function findQuickWins(){
-  const el=document.getElementById('kw-quickwins');if(!el)return;
-  el.innerHTML='<div style="font-size:12px;color:var(--text2)">Checking GSC data…</div>';
-  const posts=bp().filter(p=>p.status==='live');
-  if(!posts.length){el.innerHTML='<div style="font-size:12px;color:var(--text3)">No live posts to check.</div>';return}
-  const{data}=await sb.from('gsc_positions').select('*').in('post_id',posts.map(p=>p.id)).order('recorded_date',{ascending:false});
-  if(!data||!data.length){el.innerHTML='<div style="font-size:12px;color:var(--text3)">No GSC data yet. Import from the weekly GSC button on the dashboard.</div>';return}
-  const byPost={};data.forEach(r=>{if(!byPost[r.post_id])byPost[r.post_id]=r});
-  const quickWins=Object.entries(byPost).filter(([pid,r])=>r.position>=11&&r.position<=30).sort((a,b)=>a[1].position-b[1].position);
-  if(!quickWins.length){el.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ No keywords in the 11-30 range — either ranking on page 1 or not yet in top 30.</div>';return}
-  el.innerHTML=quickWins.map(([pid,r])=>{const p=gp(pid);if(!p)return'';return`<div class="post-row" onclick="openPost('${pid}','gsc')" style="border-left:3px solid var(--amber)"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:12px;font-weight:600">${esc(titleCase(p.primary_keyword||p.title||''))}</div><div class="prk">Position ${r.position.toFixed(1)} · ${fd(r.recorded_date)}</div></div><span style="font-size:14px;font-weight:700;color:var(--amber-t)">#${Math.round(r.position)}</span></div></div>`}).filter(Boolean).join('');
-}
 
 // KW tab switching
 let _kwTab='generate';
-function switchKwTab(tab){
-  _kwTab=tab;
-  ['generate','validate','approved','dump'].forEach(t=>{
-    const pane=document.getElementById('kwpane-'+t);if(pane)pane.style.display=t===tab?'block':'none';
-    const btn=document.getElementById('kwtab-'+t);if(btn)btn.classList.toggle('on',t===tab);
-  });
-  if(tab==='validate')renderKwValidation();
-  if(tab==='approved')renderKwApproved();
-  if(tab==='generate')loadSeeds();
-}
 
 function initKeywordsTab(){
   // New Keywords tab is static HTML (seed box + research button); nothing to initialise.
   const ta=document.getElementById('kw-seeds');if(ta)ta.focus();
 }
 
-async function rankAndGroupKeywords(){
-  const apiKey=localStorage.getItem('claude-api-key');
-  const input=document.getElementById('kw-dump-input').value.trim();
-  if(!input){toast('Paste some keywords first');return}
-  if(!apiKey){toast('Add Claude API key in Settings first');return}
-  const btn=document.getElementById('kw-dump-btn');btn.textContent='Thinking…';btn.disabled=true;
-  document.getElementById('kw-dump-result').innerHTML=`<div class="card"><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><div class="spinner"></div>Grouping and ranking keywords…</div></div>`;
-  const prompt=`You are a content strategist for ${BM[activeBlog].name}, a blog targeting coaches and solopreneurs.\n\nHere are keywords to group and rank:\n${input}\n\nEach line may include volume and KD score after the keyword (e.g. "tools for small business 5400 30" means volume=5400, KD=30).\n\nGroup them into topic clusters. Within each cluster, identify the single best PRIMARY keyword (highest volume + lowest KD combination). Rank remaining keywords by writing priority.\n\nIMPORTANT: Use the EXACT volume and KD numbers provided in the input. Do not estimate or change them.\n\nRespond ONLY with JSON:\n[{"cluster":"cluster name","keywords":[{"keyword":"kw","ks":30,"volume":5400,"priority":"high|medium|low","reason":"brief reason"}]}]\n\nThe first keyword in each cluster array must be the PRIMARY (best) keyword.`;
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
-    const rd=await res.json();
-    if(!res.ok){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">API error ${res.status}: ${esc(rd.error?.message||JSON.stringify(rd))}</div>`;return}
-    const rawText=rd.content?.[0]?.text||'';
-    if(!rawText){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Empty response from Claude. Check your API key in Settings.</div>`;return}
-    let clusters=[];
-    try{clusters=JSON.parse(rawText.replace(/```json|```/g,'').trim())}
-    catch(pe){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Could not parse response. Raw output:<br><pre style="font-size:10px;white-space:pre-wrap;margin-top:6px">${esc(rawText.slice(0,500))}</pre></div>`;return}
-    let html='';
-    let _clusterData={};
-    clusters.forEach((c,ci)=>{
-      // Pick best primary = highest priority then highest score
-      const ranked=[...c.keywords].sort((a,b)=>{
-        const pOrder={high:0,medium:1,low:2};
-        const pd=(pOrder[a.priority||'medium']||1)-(pOrder[b.priority||'medium']||1);
-        if(pd!==0)return pd;
-        return(calcScore(b.ks,b.volume)||0)-(calcScore(a.ks,a.volume)||0);
-      });
-      _clusterData[ci]=ranked;
-      const primary=ranked[0];
-      const suppArr=ranked.slice(1).map(k=>k.keyword);
-      html+=`<div class="kw-cluster">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div class="kw-cluster-title" style="margin:0">${esc(c.cluster)}</div>
-          <button class="btn btn-p btn-xs" onclick="addClusterAsPost(${ci})" style="white-space:nowrap;flex-shrink:0">＋ Add cluster as post</button>
-        </div>`;
-      c.keywords.forEach(k=>{
-        const sc=calcScore(k.ks,k.volume);
-        const pri=k.priority||'medium';
-        const priColor=pri==='high'?'var(--red-t)':pri==='medium'?'var(--amber-t)':'var(--green)';
-        const isPrimary=k.keyword===primary.keyword;
-        html+=`<div class="kw-cluster-item" style="${isPrimary?'background:var(--teal-l);border-left:3px solid var(--teal);':''}"><div style="flex:1"><div style="font-size:12px;font-weight:600">${esc(k.keyword)}${isPrimary?' <span style="font-size:9px;background:var(--teal);color:#fff;border-radius:10px;padding:1px 6px;font-weight:600;vertical-align:middle">PRIMARY</span>':''}</div><div style="font-size:11px;color:var(--text3)">${esc(k.reason)}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${k.ks!=null?`<span class="pill pill-g">KS ${k.ks}</span>`:''}<span style="font-size:10px;font-weight:700;color:${priColor}">${pri.toUpperCase()}</span><button class="btn btn-xs" onclick="addKwToIdeas(this)" data-kw="${esc(k.keyword)}" data-ks="${k.ks||''}" data-vol="${k.volume||''}">+ Add</button></div></div>`;
-      });
-      html+=`</div>`;
-    });
-    // Store cluster data globally for addClusterAsPost
-    window._kwClusterData=_clusterData;
-    document.getElementById('kw-dump-result').innerHTML=html||'<div class="empty">No clusters returned.</div>';
-  }catch(e){document.getElementById('kw-dump-result').innerHTML=`<div class="card" style="color:var(--red-t);font-size:13px">Error: ${esc(e.message)}</div>`}
-  finally{btn.textContent='✦ Rank and group';btn.disabled=false}
-}
 
 async function addKwToIdeas(el){const kw=el.dataset.kw,ks=el.dataset.ks,vol=el.dataset.vol;
   const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw,ks_score:parseInt(ks)||null,search_volume:parseInt(vol)||null,status:'idea',current_step:0,indexed:'no'}).select().single();
@@ -1537,84 +911,6 @@ async function deletePost(){
 }
 
 // CHECKLIST
-function renderChecklist(){
-  const total=ALL_ITEM_IDS.length,done=ALL_ITEM_IDS.filter(id=>_clChecked[id]).length,pct=Math.round((done/total)*100);
-  document.getElementById('prog-summary').textContent=`${done} of ${total} steps complete (${pct}%)`;
-  document.getElementById('prog-fill').style.width=pct+'%';
-  // Remember which sections are open before wiping
-  const openSections=new Set();
-  CL_STEPS.forEach(s=>{const b=document.getElementById('cl-body-'+s.id);if(b&&b.style.display!=='none')openSections.add(s.id)});
-  let html='';
-  CL_STEPS.forEach(step=>{
-    const sd=step.items.filter(i=>_clChecked[i.id]).length,allDone=sd===step.items.length;
-    html+=`<div class="cl-section"><button class="cl-hdr" onclick="toggleClStep('${step.id}')"><div class="cl-num ${allDone?'done':''}">${allDone?'✓':step.num}</div><div class="cl-title">${step.title}</div><div class="cl-prog">${sd}/${step.items.length}</div><span id="cl-arr-${step.id}" style="font-size:13px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span></button><div id="cl-body-${step.id}" class="cl-body" style="display:none">${step.note?`<div class="cl-note">💡 ${esc(step.note)}${step.id==='s2'?`<div style="margin-top:8px"><button class="btn btn-p btn-sm" onclick="copyBriefAndOpen()" style="font-size:11px">📋 Copy brief & open Blogging project</button></div>`:''}</div>`:''} ${step.items.map(item=>`<div class="cl-item${_clChecked[item.id]?' ck':''}"><div class="cl-cb" onclick="toggleClItem('${item.id}')" title="Mark as done">${_clChecked[item.id]?'✓':''}</div><span class="cl-text">${esc(item.text)}</span></div>`).join('')}</div></div>`;
-  });
-  document.getElementById('cl-sections').innerHTML=html;
-  // Restore open sections first
-  openSections.forEach(id=>{
-    const body=document.getElementById('cl-body-'+id),arr=document.getElementById('cl-arr-'+id);
-    if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}
-  });
-  // If nothing was open yet, auto-open the first incomplete step
-  if(!openSections.size){
-    const activeStep=CL_STEPS.find(s=>s.items.some(i=>!_clChecked[i.id]));
-    if(activeStep){const body=document.getElementById('cl-body-'+activeStep.id),arr=document.getElementById('cl-arr-'+activeStep.id);if(body){body.style.display='block';if(arr)arr.style.transform='rotate(180deg)'}}
-  }
-}
-function toggleClStep(id){
-  CL_STEPS.forEach(s=>{
-    const body=document.getElementById('cl-body-'+s.id);
-    const arr=document.getElementById('cl-arr-'+s.id);
-    if(s.id===id){
-      const open=body?.style.display!=='none';
-      if(body)body.style.display=open?'none':'block';
-      if(arr)arr.style.transform=open?'rotate(0)':'rotate(180deg)';
-    } else {
-      if(body)body.style.display='none';
-      if(arr)arr.style.transform='rotate(0)';
-    }
-  });
-}
-async function toggleClItem(itemId){
-  if(!curPost)return;
-  const wasAllDone=ALL_ITEM_IDS.every(id=>_clChecked[id]);
-  const newVal=!_clChecked[itemId];_clChecked[itemId]=newVal;
-  await sb.from('post_checklist').upsert({post_id:curPost,item_id:itemId,checked:newVal},{onConflict:'post_id,item_id'});
-  const step=calcCurrentStep();
-  await sb.from('posts').update({current_step:step}).eq('id',curPost);
-  await loadPosts();
-
-  // Check if a step just completed — auto-open next step
-  const prevStepIdx=CL_STEPS.findIndex(s=>s.items.some(i=>i.id===itemId));
-  if(newVal&&prevStepIdx>=0){
-    const thisStep=CL_STEPS[prevStepIdx];
-    const stepDone=thisStep.items.every(i=>_clChecked[i.id]);
-    if(stepDone&&prevStepIdx<CL_STEPS.length-1){
-      // Auto-open next step after re-render
-      setTimeout(()=>{
-        const nextId=CL_STEPS[prevStepIdx+1].id;
-        toggleClStep(nextId);
-      },150);
-    }
-  }
-
-  renderChecklist();renderPosts();
-  const nowAllDone=ALL_ITEM_IDS.every(id=>_clChecked[id]);
-  if(!wasAllDone&&nowAllDone){const p=gp(curPost);celebrate(p?.primary_keyword||p?.title||'Post');checkMilestone();}
-}
-function calcCurrentStep(){
-  let maxStep=0;
-  CL_STEPS.forEach((s,i)=>{if(s.items.some(item=>_clChecked[item.id]))maxStep=i+2});
-  if(ALL_ITEM_IDS.every(id=>_clChecked[id]))maxStep=6;
-  return maxStep;
-}
-async function resetChecklist(){
-  if(!confirm('Reset all checklist items for this post?'))return;
-  _clChecked={};
-  await sb.from('post_checklist').delete().eq('post_id',curPost);
-  await sb.from('posts').update({current_step:0}).eq('id',curPost);
-  await loadPosts();renderChecklist();renderPosts();toast('Checklist reset');
-}
 
 // GSC
 function showAddGsc(){document.getElementById('gsc-form').style.display='block';document.getElementById('gsc-date').value=localToday()}
@@ -1996,26 +1292,6 @@ async function handleGscFileWeekly(e){
 }
 
 // COPY BRIEF AND OPEN PROJECT
-function copyBriefAndOpen(){
-  const p=gp(curPost);if(!p)return;
-  const supp=p.supplementary_keywords||'';
-  const brief=`Blog: ${activeBlog==='esc'?'ESC Hub — eschub.com/blog':'No More Somedays — escapepreneur.com/blog'}
-Primary keyword: ${p.primary_keyword||''}
-KS Score: ${p.ks_score!=null?p.ks_score:'—'}
-Monthly search volume: ${p.search_volume!=null?p.search_volume.toLocaleString():'—'}
-${supp?`Secondary keywords: ${supp}`:''}
-${p.unique_take?`Unique take / Karen's angle: ${p.unique_take}`:''}
-${p.serp_notes?`SERP analysis doc: ${p.serp_notes}`:''}
-
-Please generate the complete blog post package including: full article, meta title, meta description, URL slug, category, all Freepik image prompts with SEO filenames and alt text, featured image Canva brief, Canva template recommendation, Pinterest board recommendation, Instagram caption, Facebook caption, and Pinterest description.`;
-  navigator.clipboard.writeText(brief).then(()=>{
-    window.open(BLOGGING_PROJECT_URL,'_blank');
-    toast('Brief copied — paste it into the new chat',3000);
-  }).catch(()=>{
-    window.open(BLOGGING_PROJECT_URL,'_blank');
-    toast('Open the project and paste your brief manually',3000);
-  });
-}
 
 // ── IN-APP DRAFT GENERATION + REVIEW ────────────────────────────
 const GEN_FN='/.netlify/functions/generate-background';
