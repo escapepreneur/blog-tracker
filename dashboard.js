@@ -67,7 +67,7 @@ const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
 let sfilt='live',curPost=null,curSocId=null;
-let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[];
+let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[];
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
@@ -1321,12 +1321,8 @@ function switchKwTab(tab){
 }
 
 function initKeywordsTab(){
-  // Show Thursday banner
-  const day=new Date().getDay();
-  const banner=document.getElementById('thursday-banner');
-  if(banner)banner.style.display=day===4?'flex':'none';
-  loadSeeds();
-  renderKwValidation();
+  // New Keywords tab is static HTML (seed box + research button); nothing to initialise.
+  const ta=document.getElementById('kw-seeds');if(ta)ta.focus();
 }
 
 async function rankAndGroupKeywords(){
@@ -2049,6 +2045,92 @@ async function addOpportunityKeyword(i){
   const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:x.query,status:'idea',current_step:0,indexed:'no',serp_notes:`GSC opportunity: pos ${x.position.toFixed(1)}, ${x.impressions} impr, ${(x.ctr*100).toFixed(1)}% CTR — ${x.page||''}`});
   if(error){toast('Add failed: '+error.message,4000);return;}
   await loadPosts();render();toast('Added "'+x.query+'" as an idea ✓',3000);
+}
+// KEYWORD RESEARCH (Keywords tab): seeds -> DataForSEO expand -> Claude cluster/score.
+const _kwErr=(m)=>`<div class="card" style="padding:1rem;color:var(--red-t);background:#fff5f5;border-color:#f3c0c0">${esc(m)}</div>`;
+const _kwUUID=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)});
+async function researchKeywords(){
+  const ta=document.getElementById('kw-seeds');if(!ta)return;
+  const seeds=(ta.value||'').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,8);
+  if(!seeds.length){toast('Add at least one seed keyword');return;}
+  const broaden=!!(document.getElementById('kw-broaden')||{}).checked;
+  const runId=_kwUUID();
+  const btn=document.getElementById('kw-research-btn');if(btn)btn.disabled=true;
+  const status=document.getElementById('kw-research-status');
+  const results=document.getElementById('kw-research-results');if(results)results.innerHTML='';
+  if(status)status.innerHTML='<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 10px"></div>Pulling live keyword data and clustering into post ideas… this takes 30–60 seconds.</div>';
+  const{error:insErr}=await sb.from('keyword_runs').insert({id:runId,blog:activeBlog,seeds,broaden,status:'working'});
+  if(insErr){if(status)status.innerHTML=_kwErr('Could not start: '+insErr.message);if(btn)btn.disabled=false;return;}
+  let httpStatus;
+  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden})});httpStatus=r.status;}
+  catch(e){httpStatus='err';}
+  if(httpStatus!==202&&httpStatus!==200){if(status)status.innerHTML=_kwErr('Could not start research (status '+httpStatus+'). Try again in a moment.');if(btn)btn.disabled=false;return;}
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const{data}=await sb.from('keyword_runs').select('status,result,error').eq('id',runId).single();
+    if(data&&data.status==='done'){clearInterval(iv);if(btn)btn.disabled=false;renderClusters(data.result);}
+    else if(data&&data.status==='error'){clearInterval(iv);if(btn)btn.disabled=false;if(status)status.innerHTML=_kwErr(data.error||'Research failed.');}
+    else if(Date.now()-start>200000){clearInterval(iv);if(btn)btn.disabled=false;if(status)status.innerHTML=_kwErr('Still working or it hit a snag. Try again.');}
+  },5000);
+}
+function _oppColor(n){return n>=80?'var(--green)':n>=60?'#0891b2':n>=40?'#b45309':'var(--text3)'}
+function _clusterCard(c,i){
+  const dup=c.overlaps_existing?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:6px 9px;margin:8px 0 0;font-size:11px;color:#9a3412">⚠ Looks similar to an existing post: <b>${esc(c.overlaps_existing)}</b></div>`:'';
+  const chip=(t)=>`<span style="display:inline-block;background:var(--bg2);border-radius:10px;padding:2px 8px;font-size:11px;color:var(--text2);margin:2px 4px 2px 0">${esc(t)}</span>`;
+  const supp=(c.supporting_keywords||[]).slice(0,8).map(chip).join('');
+  const action=c.overlaps_existing
+    ? `<button class="btn btn-xs btn-ghost" id="kwadd-${i}" onclick="addClusterIdea(${i})">+ Add anyway</button>`
+    : `<button class="btn btn-xs btn-p" id="kwadd-${i}" onclick="addClusterIdea(${i})">+ Add to ideas</button>`;
+  return `<div class="card" style="margin-bottom:10px;padding:14px">
+    <div style="display:grid;grid-template-columns:46px 1fr auto;gap:12px;align-items:start">
+      <div style="text-align:center"><div style="font-size:20px;font-weight:800;line-height:1;color:${_oppColor(c.opportunity)}">${c.opportunity}</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">score</div></div>
+      <div style="min-width:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.3">${esc(c.suggested_title||c.topic)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:5px">${esc(c.angle||'')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <span style="font-size:12px;font-weight:600;color:var(--teal-d)">${esc(c.primary_keyword)}</span>
+          <span style="font-size:11px;color:var(--text3)">${(c.primary_volume!=null?c.primary_volume.toLocaleString():'?')}/mo · KD ${c.primary_difficulty??'?'} · ${esc(c.intent||'')}</span>
+        </div>
+        ${supp?`<div style="margin-top:8px">${supp}</div>`:''}
+        ${dup}
+      </div>
+      <div style="white-space:nowrap">${action}</div>
+    </div>
+  </div>`;
+}
+function renderClusters(out){
+  _kwClusters=(out&&out.clusters)||[];
+  const status=document.getElementById('kw-research-status');if(status)status.innerHTML='';
+  const el=document.getElementById('kw-research-results');if(!el)return;
+  if(!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc((out&&out.note)||'No new post ideas found — those seeds may already be well covered. Try different or broader seeds.')}</div>`;return;}
+  const fresh=_kwClusters.filter(c=>!c.overlaps_existing);
+  const cnt=(out&&out.counts)||{};
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
+      <div style="font-size:12px;color:var(--text2)">${_kwClusters.length} topic ${_kwClusters.length===1?'idea':'ideas'}${cnt.raw?` · ${cnt.raw} keywords analysed`:''}${out.cost?` · $${out.cost}`:''}</div>
+      ${fresh.length?`<button class="btn btn-p btn-sm" onclick="addAllClusters()">+ Add all ${fresh.length} new ${fresh.length===1?'idea':'ideas'}</button>`:''}
+    </div>`+_kwClusters.map((c,i)=>_clusterCard(c,i)).join('');
+}
+async function addClusterIdea(i){
+  const c=_kwClusters[i];if(!c)return;
+  const exists=bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase());
+  if(exists){toast('Already in your list');return;}
+  const supp=(c.supporting_keywords||[]).join(', ');
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,serp_notes:`Keyword research: ${(c.total_volume||c.primary_volume||'?')}/mo total, difficulty ~${c.avg_difficulty??c.primary_difficulty??'?'}, ${c.intent||''} intent. Opportunity ${c.opportunity}/100.`});
+  if(error){toast('Add failed: '+error.message,4000);return;}
+  await loadPosts();render();
+  const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';
+  toast('Added "'+c.primary_keyword+'" to ideas ✓',2500);
+}
+async function addAllClusters(){
+  let added=0;
+  for(let i=0;i<_kwClusters.length;i++){
+    const c=_kwClusters[i];if(c.overlaps_existing)continue;
+    if(bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase()))continue;
+    const supp=(c.supporting_keywords||[]).join(', ');
+    const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
+    if(!error){added++;const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';}
+  }
+  await loadPosts();render();toast('Added '+added+' new '+(added===1?'idea':'ideas')+' ✓',3000);
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.

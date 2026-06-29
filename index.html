@@ -541,134 +541,23 @@ input[type=file]{width:100%}
     <!-- KEYWORDS -->
     <div id="pane-keywords" class="pane">
       <div class="ph">
-        <div><div class="pt">Keyword Research</div><div class="ps">Generate candidates, validate in Keysearch, send to Planning</div></div>
+        <div><div class="pt">Keyword Research</div><div class="ps">Seed a few terms → live search data → Claude clusters them into scored post ideas</div></div>
       </div>
       <div class="pb">
 
-        <!-- THURSDAY BANNER (shown on Thursdays) -->
-        <div id="thursday-banner" style="display:none;background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div>
-            <div style="font-size:15px;font-weight:700;margin-bottom:3px">☕ Good morning — it's keyword research Thursday</div>
-            <div style="font-size:12px;opacity:.85">Generate your next batch of candidates, validate in Keysearch, and queue the winners.</div>
-          </div>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3);white-space:nowrap" onclick="document.getElementById('thursday-banner').style.display='none'">Dismiss</button>
-        </div>
-
-        <!-- TABS -->
-        <div class="mtabs" style="margin-bottom:16px">
-          <button class="mtab on" id="kwtab-generate" onclick="switchKwTab('generate')">Generate</button>
-          <button class="mtab" id="kwtab-validate" onclick="switchKwTab('validate')">Validate <span id="kw-validate-count" style="background:var(--teal);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">0</span></button>
-          <button class="mtab" id="kwtab-approved" onclick="switchKwTab('approved')">Approved <span id="kw-approved-count" style="background:var(--green);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">0</span></button>
-          <button class="mtab" id="kwtab-dump" onclick="switchKwTab('dump')">Keyword dump</button>
-        </div>
-
-        <!-- GENERATE TAB -->
-        <div id="kwpane-generate">
-          <div class="g2" style="margin-bottom:14px">
-            <!-- SEED LISTS -->
-            <div class="card">
-              <div class="sh" style="margin-bottom:10px">Seed lists — click to edit</div>
-              <div style="margin-bottom:10px">
-                <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px">Competitor platforms</div>
-                <textarea id="kw-seeds-platforms" rows="5" style="resize:none;font-size:11px" placeholder="Kajabi&#10;Teachable&#10;Calendly..."></textarea>
-              </div>
-              <div style="margin-bottom:10px">
-                <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px">Problem phrases <span style="font-weight:400;color:var(--text3)">— complete search queries, one per line</span></div>
-                <textarea id="kw-seeds-problems" rows="8" style="resize:none;font-size:11px" placeholder="crm for coaches&#10;email automation for coaches&#10;consolidate business software..."></textarea>
-              </div>
-              <button class="btn btn-p btn-sm" onclick="saveSeeds()" style="margin-top:10px;width:100%;justify-content:center">Save seed lists</button>
-            </div>
-            <!-- GENERATOR -->
-            <div>
-              <div class="card" style="margin-bottom:10px">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                  <div><div style="font-size:14px;font-weight:700">Generate candidates</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Fresh keywords only — nothing you've already used</div></div>
-                </div>
-                <div style="margin-bottom:10px">
-                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">Balanced mix</div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-                    <button class="btn btn-p" onclick="generateCandidates(50,'balanced')">⚖ Generate 50 (balanced)</button>
-                    <button class="btn" onclick="generateCandidates(25,'balanced')">⚖ 25 balanced</button>
-                  </div>
-                  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">By category</div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn" onclick="generateCandidates(25,'competitor')">🔀 Competitor only (25)</button>
-                    <button class="btn" onclick="generateCandidates(25,'problem')">💡 Problem-based only (25)</button>
-                  </div>
-                </div>
-                  <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-                    <button class="btn btn-xs" style="color:var(--text3)" onclick="clearUsedCombinations()">↺ Reset used combinations</button>
-                    <span style="font-size:10px;color:var(--text3);margin-left:6px">Clears memory so previously generated keywords appear again</span>
-                  </div>
-                  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:8px">
-                    <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ready to paste into Keysearch (comma separated)</div>
-                    <div id="kw-generated-text" style="font-size:12px;color:var(--text);line-height:1.8;word-break:break-word"></div>
-                  </div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn btn-p btn-sm" onclick="copyGeneratedKeywords()">Copy for Keysearch</button>
-                    <button class="btn btn-sm" onclick="addAllToValidation()">Add all to validation queue</button>
-                  </div>
-                </div>
-              </div>
-              <div class="card">
-                <div style="font-size:13px;font-weight:700;margin-bottom:8px">Quick wins from GSC</div>
-                <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">Keywords where you're already ranking 11-30 — one good post away from page 1</div>
-                <button class="btn btn-p btn-sm" onclick="findQuickWins()">Find quick wins</button>
-                <div id="kw-quickwins" style="margin-top:10px"></div>
-              </div>
-            </div>
+        <!-- FIND NEW KEYWORDS -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px">Find new keywords</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Enter a few seed terms — topics, products, or competitor names. Short head terms work best (e.g. <b>gohighlevel</b>, <b>email marketing</b>, <b>sales funnel</b>), one per line. I pull live search volume + difficulty from DataForSEO, then Claude clusters them into post ideas scored for this brand and drops anything you've already covered.</div>
+          <textarea id="kw-seeds" rows="4" style="resize:vertical;width:100%;font-size:13px;margin-bottom:10px" placeholder="gohighlevel&#10;email marketing for coaches&#10;sales funnel&#10;crm"></textarea>
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-p" id="kw-research-btn" onclick="researchKeywords()">&#10022; Research keywords</button>
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="kw-broaden" style="width:auto;margin:0"> Broaden the net <span style="color:var(--text3)">(more ideas, a little noisier)</span></label>
+            <span style="font-size:11px;color:var(--text3)">Live Google data · ~1–4&cent; per run</span>
           </div>
         </div>
-
-        <!-- VALIDATE TAB -->
-        <div id="kwpane-validate" style="display:none">
-          <div class="card" style="margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-            <div><div style="font-size:14px;font-weight:700">Import Keysearch CSV</div><div style="font-size:11px;color:var(--text2);margin-top:2px">Export from Keysearch → upload here — scores and volumes auto-populate</div></div>
-            <div style="border:2px dashed var(--teal);border-radius:var(--r2);padding:10px 18px;cursor:pointer;text-align:center" onclick="document.getElementById('kw-import-files').click()">
-              <div style="font-size:12px;color:var(--teal-d);font-weight:600" id="kw-file-label">⬆ Upload Keysearch CSV</div>
-            </div>
-            <input type="file" id="kw-import-files" accept=".csv,.txt" multiple style="display:none" onchange="importKwFiles(event)">
-          </div>
-            <div id="kw-import-result"></div>
-          </div>
-            <div class="filters" style="margin:0">
-              <button class="fchip on" onclick="setKwFilter('all',this)" id="kwf-all">All</button>
-              <button class="fchip" onclick="setKwFilter('pass',this)">✓ Pass</button>
-              <button class="fchip" onclick="setKwFilter('maybe',this)">~ Maybe</button>
-              <button class="fchip" onclick="setKwFilter('fail',this)">✕ Fail</button>
-              <button class="fchip" onclick="setKwFilter('new',this)">Not checked</button>
-            </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <button class="btn btn-p btn-sm" onclick="sendAllPassing()">Send all passing to Planning →</button>
-            <button class="btn btn-sm" onclick="clearFailedKw()">Clear all failed</button>
-            <button class="btn btn-danger btn-sm" onclick="clearAllKwQueue()">Clear entire queue</button>
-          </div>
-          </div>
-          <div id="kw-validate-list" style="padding:0 4px"></div>
-        </div>
-
-        <!-- APPROVED TAB -->
-        <div id="kwpane-approved" style="display:none">
-          <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:13px;color:var(--text2)">Keywords validated and sent to Planning. History for reference.</div>
-            <button class="btn btn-danger btn-xs" onclick="clearApprovedKw()">Clear history</button>
-          </div>
-          <div id="kw-approved-list"></div>
-        </div>
-
-        <!-- DUMP TAB -->
-        <div id="kwpane-dump" style="display:none">
-          <div class="card">
-            <div class="sh">Paste keywords — one per line, optionally with volume and KD</div>
-            <textarea id="kw-dump-input" rows="8" style="resize:vertical;margin-bottom:10px" placeholder="b2b sales funnels&#10;sales funnel for coaches 590 20&#10;webinar funnel (390/26)&#10;evergreen funnel&#10;types of funnels 1900 35"></textarea>
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="btn btn-p" id="kw-dump-btn" onclick="rankAndGroupKeywords()">✦ Rank and group</button>
-              <span style="font-size:11px;color:var(--text3)">Claude groups by topic cluster and ranks each by writing priority</span>
-            </div>
-          </div>
-          <div id="kw-dump-result"></div>
-        </div>
+        <div id="kw-research-status"></div>
+        <div id="kw-research-results"></div>
 
       </div>
   </main>

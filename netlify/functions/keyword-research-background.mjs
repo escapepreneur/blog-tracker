@@ -108,7 +108,6 @@ async function runPipeline(blog, seeds, broaden, covered) {
   const data = await res.json();
   const tu = (data.content || []).find(x => x.type === 'tool_use');
   if (!tu) throw new Error('No tool_use in Claude response');
-  const _debug = { stop_reason: data.stop_reason, raw_clusters: (tu.input.clusters || []).length };
 
   // Attach live metrics back to each cluster from the keyword the model chose.
   const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
@@ -138,7 +137,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
     })
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
 
-  return { clusters, counts: { raw: rawCount, used: keywords.length, clusters: clusters.length }, cost: Math.round(cost * 10000) / 10000, _debug };
+  return { clusters, counts: { raw: rawCount, used: keywords.length, clusters: clusters.length }, cost: Math.round(cost * 10000) / 10000 };
 }
 
 export const handler = async (event) => {
