@@ -310,7 +310,7 @@ input[type=file]{width:100%}
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
-      <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Keywords</button>
+      <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Planning</button>
     </nav>
     <div class="sb-btm"><button onclick="showSettings()">⚙ Settings</button></div>
   </aside>
@@ -465,14 +465,6 @@ input[type=file]{width:100%}
         </div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div><div style="font-size:14px;font-weight:700">Content clusters</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Your topic clusters and how complete each one is. Build new ones in Keywords; assign existing posts via the Cluster field on each post.</div></div>
-            <button class="btn btn-p btn-sm" onclick="renderClusterView()">Refresh</button>
-          </div>
-          <div id="cluster-launch-status"></div>
-          <div id="cluster-view"><div class="empty" style="padding:1rem">Loading…</div></div>
-        </div>
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div><div style="font-size:14px;font-weight:700">Content gap finder</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Claude analyses your existing posts and finds topics you haven't covered yet</div></div>
             <button class="btn btn-p btn-sm" id="gap-btn" onclick="findContentGaps()">Find content gaps</button>
           </div>
@@ -511,7 +503,7 @@ input[type=file]{width:100%}
     <!-- KEYWORDS -->
     <div id="pane-keywords" class="pane">
       <div class="ph">
-        <div><div class="pt">Keyword Research</div><div class="ps">Seed a few terms → live search data → Claude clusters them into scored post ideas</div></div>
+        <div><div class="pt">Planning</div><div class="ps">Research keywords, build content clusters, and pick what to write next</div></div>
       </div>
       <div class="pb">
 
@@ -539,6 +531,16 @@ input[type=file]{width:100%}
         </div>
         <div id="kw-research-status"></div>
         <div id="kw-research-results"></div>
+
+        <!-- CONTENT CLUSTERS (your topic clusters + launch) -->
+        <div class="card" style="margin-top:22px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Content clusters</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Your topic clusters and how complete each one is. Build new ones with the researcher above; assign existing posts via the Cluster field on each post.</div></div>
+            <button class="btn btn-p btn-sm" onclick="renderClusterView()">Refresh</button>
+          </div>
+          <div id="cluster-launch-status"></div>
+          <div id="cluster-view"><div class="empty" style="padding:1rem">Loading…</div></div>
+        </div>
 
         <!-- IDEA BACKLOG (your queued keywords, not yet scheduled) -->
         <div style="margin-top:22px;border-top:1px solid var(--border);padding-top:18px">

@@ -127,13 +127,13 @@ function switchBlog(blog){
 function refreshActivePane(){
   switch(activeTab){
     case 'links':renderLinksPane();break;
-    case 'insights':renderOpportunities();renderClusterView();break;
-    case 'keywords':{ // research results + seed suggestions are brand-specific — clear the previous brand's run; refresh the idea backlog
+    case 'insights':renderOpportunities();break;
+    case 'keywords':{ // research results + seed suggestions are brand-specific — clear the previous brand's run; refresh clusters + idea backlog
       _kwClusters=[];_seedSuggestions=[];
       const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
       const s=document.getElementById('kw-research-status');if(s)s.innerHTML='';
       const sg=document.getElementById('kw-seed-suggestions');if(sg)sg.innerHTML='';
-      renderResearch();
+      renderClusterView();renderResearch();
       break;}
     case 'calendar':renderCalendar();renderPipeline();break;
   }
@@ -152,8 +152,8 @@ function switchTab(name,filter){
     renderPosts();
   }
   if(name==='links')renderLinksPane();
-  if(name==='keywords'){initKeywordsTab();renderResearch();}
-  if(name==='insights'){renderOpportunities();renderClusterView();}
+  if(name==='keywords'){initKeywordsTab();renderClusterView();renderResearch();}
+  if(name==='insights'){renderOpportunities();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -1509,7 +1509,7 @@ function _statusPill(s){
 function renderClusterView(){
   const el=document.getElementById('cluster-view');if(!el)return;
   const posts=bp().filter(p=>p.cluster&&String(p.cluster).trim());
-  if(!posts.length){el.innerHTML='<div class="empty" style="padding:1rem">No clusters yet. Build one in <b>Keywords → Content cluster</b>, or tag posts with a cluster name via the <b>Topic cluster</b> field in each post\'s details.</div>';return;}
+  if(!posts.length){el.innerHTML='<div class="empty" style="padding:1rem">No clusters yet. Build one with the researcher above (<b>Content cluster</b> mode), or tag posts with a cluster name via the <b>Topic cluster</b> field in each post\'s details.</div>';return;}
   const groups={};posts.forEach(p=>{const c=String(p.cluster).trim();(groups[c]=groups[c]||[]).push(p)});
   const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
   const row=(p)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg2)">
