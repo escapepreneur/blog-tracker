@@ -133,7 +133,7 @@ function refreshActivePane(){
       const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
       const s=document.getElementById('kw-research-status');if(s)s.innerHTML='';
       const sg=document.getElementById('kw-seed-suggestions');if(sg)sg.innerHTML='';
-      renderClusterView();renderResearch();
+      renderClusters();renderResearch();
       break;}
     case 'calendar':renderCalendar();renderPipeline();break;
   }
@@ -152,7 +152,7 @@ function switchTab(name,filter){
     renderPosts();
   }
   if(name==='links')renderLinksPane();
-  if(name==='keywords'){initKeywordsTab();renderClusterView();renderResearch();}
+  if(name==='keywords'){initKeywordsTab();renderClusters();renderResearch();}
   if(name==='insights'){renderOpportunities();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -1506,6 +1506,15 @@ function _statusPill(s){
   const x=m[s]||['#6b7280',esc(s||'—')];
   return `<span style="font-size:10px;font-weight:700;color:${x[0]}">${x[1]}</span>`;
 }
+let _clusterDrafts={}; // post_id -> draft meta for unpublished clustered posts (drives Prepare/Publish state)
+async function loadClusterDraftState(){
+  _clusterDrafts={};
+  const ids=bp().filter(p=>p.cluster&&String(p.cluster).trim()&&!p.ghl_post_id).map(p=>p.id);
+  if(!ids.length)return;
+  try{const{data}=await sb.from('post_drafts').select('post_id,check_report').in('post_id',ids);(data||[]).forEach(d=>{_clusterDrafts[d.post_id]={verdict:d.check_report&&d.check_report.verdict};});}catch(e){}
+}
+// Load draft-readiness, then paint the cluster view (so Prepare/Publish buttons reflect reality).
+async function renderClusters(){await loadClusterDraftState();renderClusterView();}
 function renderClusterView(){
   const el=document.getElementById('cluster-view');if(!el)return;
   const posts=bp().filter(p=>p.cluster&&String(p.cluster).trim());
@@ -1521,16 +1530,23 @@ function renderClusterView(){
     const pillar=arr.find(p=>p.is_pillar);
     const supp=arr.filter(p=>!p.is_pillar);
     const live=arr.filter(p=>p.status==='live').length;
-    const unpub=arr.filter(p=>!p.ghl_post_id).length;
+    const unpubPosts=arr.filter(p=>!p.ghl_post_id);
+    const unpub=unpubPosts.length;
+    const prepared=unpubPosts.filter(p=>_clusterDrafts[p.id]).length;
+    const ready=unpub>0&&prepared===unpub; // every unpublished post has a draft ready to review
+    const en=esc(name).replace(/'/g,"\\'");
     return `<div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px">
         <div style="font-size:13px;font-weight:700;min-width:0">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
-        <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
-          ${unpub?`<button class="btn btn-xs btn-p" onclick="launchCluster('${esc(name).replace(/'/g,"\\'")}')">⚡ Launch ${unpub}</button>`:''}
-          <button class="btn btn-xs btn-danger" onclick="deleteCluster('${esc(name).replace(/'/g,"\\'")}')" title="Remove this whole cluster">Remove</button>
+          ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${ready?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
+          ${ready?`<button class="btn btn-xs" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="publishCluster('${en}')" title="Publish the reviewed drafts live, all at once and interlinked">Publish ${unpub} →</button>`:''}
+          ${unpub?`<button class="btn btn-xs btn-ghost" onclick="launchCluster('${en}')" title="Skip review: generate and publish in one go">⚡ Launch now</button>`:''}
+          <button class="btn btn-xs btn-danger" onclick="deleteCluster('${en}')" title="Remove this whole cluster">Remove</button>
         </div>
       </div>
+      ${ready?`<div style="font-size:11px;color:var(--green);margin-bottom:4px">✓ ${unpub} draft${unpub===1?'':'s'} ready — open each post's Draft tab to review, then Publish</div>`:''}
       ${pillar?row(pillar):''}${supp.map(row).join('')}
     </div>`;
   }).join('');
@@ -1541,33 +1557,50 @@ function _clusterBanner(html,kind){
   const bd=kind==='error'?'#f3c0c0':kind==='done'?'#bfe3c9':'#c5e6e6';
   el.innerHTML=`<div style="background:${bg};border:1px solid ${bd};border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px">${kind==='working'?'<div class="spinner"></div>':''}<div>${html}</div></div>`;
 }
-async function launchCluster(name){
-  const posts=bp().filter(p=>String(p.cluster||'').trim()===name);
-  const unpub=posts.filter(p=>!p.ghl_post_id);
-  if(!unpub.length){toast('Every post in this cluster is already live');return;}
-  if(!confirm(`Launch the "${name}" cluster?\n\nThis GENERATES and PUBLISHES ${unpub.length} post${unpub.length===1?'':'s'} live on your blog — all at once, fully interlinked (pillar ↔ supporting).\n\nThey go live immediately. Continue?`))return;
+// Shared runner for the three cluster actions. payload picks the backend mode;
+// working = banner text while it runs; onDone(result) fires on success.
+async function _startClusterJob({name,payload,working,onDone}){
   const id=_kwUUID();
   const{error}=await sb.from('cluster_launches').insert({id,blog:activeBlog,cluster:name,status:'working'});
   if(error){toast('Could not start: '+error.message,4000);return;}
-  let st;try{const r=await fetch('/.netlify/functions/launch-cluster-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({launch_id:id,blog:activeBlog,cluster:name})});st=r.status;}catch(e){st='err';}
-  if(st!==202&&st!==200){_clusterBanner('Could not start launch (status '+st+').','error');return;}
-  _clusterBanner(`Launching <b>${esc(name)}</b> — generating ${unpub.length} posts. This takes a few minutes; you can keep working.`,'working');
+  let st;try{const r=await fetch('/.netlify/functions/launch-cluster-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({launch_id:id,blog:activeBlog,cluster:name,...payload})});st=r.status;}catch(e){st='err';}
+  if(st!==202&&st!==200){_clusterBanner('Could not start (status '+st+').','error');return;}
+  _clusterBanner(working,'working');
   const start=Date.now();
   const iv=setInterval(async()=>{
     const{data}=await sb.from('cluster_launches').select('status,result,error').eq('id',id).single();
     if(!data)return;
-    if(data.status==='done'){
-      clearInterval(iv);await loadPosts();
-      const n=(data.result&&data.result.count)||0;
-      _clusterBanner(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');
-      renderClusterView();toast('Cluster launched — '+n+' live ✓',4000);
-    }else if(data.status==='error'){
-      clearInterval(iv);_clusterBanner('⚠ '+esc(data.error||'Launch failed.'),'error');
-    }else if(data.result&&data.result.phase){
-      _clusterBanner(`Launching <b>${esc(name)}</b> — ${data.result.phase==='publishing'?'publishing posts live…':'generating '+(data.result.total||'')+' posts…'}`,'working');
-    }
-    if(Date.now()-start>840000){clearInterval(iv);_clusterBanner('Still working — reopen Insights shortly to see the result.','working');}
+    if(data.status==='done'){clearInterval(iv);await loadPosts();onDone(data.result||{});}
+    else if(data.status==='error'){clearInterval(iv);_clusterBanner('⚠ '+esc(data.error||'Failed.'),'error');}
+    if(Date.now()-start>840000){clearInterval(iv);_clusterBanner('Still working — refresh shortly to see the result.','working');}
   },6000);
+}
+// Step 1 of the reviewed launch: generate every post as an interlinked DRAFT (nothing goes live).
+async function prepareCluster(name){
+  const unpub=bp().filter(p=>String(p.cluster||'').trim()===name&&!p.ghl_post_id);
+  if(!unpub.length){toast('Every post in this cluster is already live');return;}
+  if(!confirm(`Prepare the "${name}" cluster?\n\nThis writes all ${unpub.length} post${unpub.length===1?'':'s'} as drafts, fully interlinked (pillar ↔ supporting), so you can review every one before anything goes live. Nothing is published yet.\n\nTakes a few minutes; you can keep working. Continue?`))return;
+  _startClusterJob({name,payload:{dry_run:true},
+    working:`Preparing <b>${esc(name)}</b> — writing ${unpub.length} interlinked drafts. A few minutes; nothing goes live.`,
+    onDone:(res)=>{const n=(res.would_publish||[]).length||unpub.length;_clusterBanner(`✓ Prepared <b>${esc(name)}</b> — ${n} draft${n===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');renderClusters();toast('Cluster prepared — review then publish ✓',4000);}});
+}
+// Step 2: publish the reviewed drafts, all at once, to their reserved URLs (links stay intact).
+async function publishCluster(name){
+  const unpub=bp().filter(p=>String(p.cluster||'').trim()===name&&!p.ghl_post_id);
+  if(!unpub.length){toast('Every post in this cluster is already live');return;}
+  if(!confirm(`Publish the "${name}" cluster?\n\nThis takes the ${unpub.length} reviewed draft${unpub.length===1?'':'s'} and publishes them live — all at once, fully interlinked. Continue?`))return;
+  _startClusterJob({name,payload:{publish_prepared:true},
+    working:`Publishing <b>${esc(name)}</b> — ${unpub.length} reviewed post${unpub.length===1?'':'s'} going live…`,
+    onDone:(res)=>{const n=res.count||0;_clusterBanner(`✓ Published <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');renderClusters();toast('Cluster published — '+n+' live ✓',4000);}});
+}
+// One-shot: generate AND publish in a single pass, skipping the review gate (checker still blocks).
+async function launchCluster(name){
+  const unpub=bp().filter(p=>String(p.cluster||'').trim()===name&&!p.ghl_post_id);
+  if(!unpub.length){toast('Every post in this cluster is already live');return;}
+  if(!confirm(`Launch the "${name}" cluster now?\n\nThis GENERATES and PUBLISHES ${unpub.length} post${unpub.length===1?'':'s'} live in one go — fully interlinked, with no review stop. They go live immediately.\n\n(Prefer to check them first? Use "Prepare for review" instead.) Continue?`))return;
+  _startClusterJob({name,payload:{},
+    working:`Launching <b>${esc(name)}</b> — generating ${unpub.length} posts. A few minutes; you can keep working.`,
+    onDone:(res)=>{const n=res.count||0;_clusterBanner(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');renderClusters();toast('Cluster launched — '+n+' live ✓',4000);}});
 }
 // Remove a whole cluster: deletes every post tagged with this cluster name (same child-row
 // cleanup as bulkDeleteResearch). Warns if any are already live (they stay published on the blog).
@@ -1586,7 +1619,7 @@ async function deleteCluster(name){
     await sb.from('social_tracking').delete().eq('post_id',id);
     await sb.from('posts').delete().eq('id',id);
   }
-  await loadPosts();renderClusterView();renderResearch();render();
+  await loadPosts();renderClusters();renderResearch();render();
   toast(`"${name}" cluster removed — ${posts.length} post${posts.length===1?'':'s'} deleted`);
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing

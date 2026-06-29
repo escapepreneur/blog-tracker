@@ -39,7 +39,7 @@ export const handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'bad JSON' }); }
-  const { launch_id, blog, cluster, dry_run } = body;
+  const { launch_id, blog, cluster, dry_run, publish_prepared } = body;
   const b = BRANDS[blog];
 
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
@@ -62,6 +62,44 @@ export const handler = async (event) => {
     const alreadyLive = posts.filter(p => p.ghl_post_id && p.url);
     const toPublish = posts.filter(p => !p.ghl_post_id);
     if (!toPublish.length) { await finish({ status: 'done', result: { published: [], skipped: posts.map(p => ({ title: p.title, reason: 'already live' })), note: 'Every post in this cluster is already live.' } }); return json(200, {}); }
+
+    // PUBLISH-PREPARED: ship the drafts a previous Prepare (dry_run) pass already generated —
+    // to their reserved slugs, WITHOUT regenerating — so what Karen reviewed is exactly what
+    // goes live. Bodies already cross-link to the reserved URLs, so they interlink on publish.
+    if (publish_prepared) {
+      const ids = toPublish.map(p => p.id);
+      const drafts = await (await rest(`post_drafts?post_id=in.(${ids.join(',')})&select=*`)).json();
+      const draftBy = {}; (drafts || []).forEach(d => { draftBy[d.post_id] = d; });
+      const missing = toPublish.filter(p => !draftBy[p.id]);
+      const failing = toPublish.filter(p => draftBy[p.id] && draftBy[p.id].check_report && draftBy[p.id].check_report.verdict === 'fail');
+      if (missing.length || failing.length) {
+        const parts = [];
+        if (missing.length) parts.push(`${missing.length} not prepared yet — run Prepare first`);
+        if (failing.length) parts.push(`${failing.length} still have must-fix issues: ` + failing.map(p => `"${p.title || p.primary_keyword}"`).join(', '));
+        await finish({ status: 'error', error: `Can't publish — ${parts.join('; ')}.` });
+        return json(200, {});
+      }
+      await finish({ status: 'working', result: { phase: 'publishing', total: toPublish.length } });
+      const today0 = new Date().toISOString().slice(0, 10);
+      const pubd = [];
+      for (const p of toPublish) {
+        const row = draftBy[p.id];
+        const slug = row.slug;
+        // The body links to this exact reserved URL. If the slug got taken since Prepare we must
+        // NOT silently change it (that breaks the in-body links) — tell Karen to re-prepare.
+        const taken = await slugExists({ brand: blog, slug, pit: PIT });
+        if (taken === true) { await finish({ status: 'error', error: `The URL "/${slug}" was taken since you prepared this cluster — re-run Prepare to refresh the links, then publish.` }); return json(200, {}); }
+        const draft = { body_html: row.body_html, meta_title: row.meta_title, meta_description: row.meta_description, slug, category: row.category, internal_links: row.internal_links, assets: row.assets || {} };
+        const r = await createBlogPost({ brand: blog, post: p, draft, pit: PIT, status: 'PUBLISHED', imageAltText: (row.assets && row.assets.title) || p.primary_keyword });
+        await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ghl_post_id: r.id, url: r.url, status: 'live', published_date: today0, scheduled_date: today0, confirmed_live: true, indexed: 'requested', current_step: 5 }) });
+        try { await requestIndexing(r.url); } catch {}
+        try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId: p.id, brand: blog, bodyHtml: draft.body_html }); } catch {}
+        if (GH_TOKEN) { try { await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' }, body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: p.id } }) }); } catch {} }
+        pubd.push({ title: (row.assets && row.assets.title) || p.title, url: r.url, is_pillar: !!p.is_pillar });
+      }
+      await finish({ status: 'done', result: { cluster, published: pubd, count: pubd.length, already_live: alreadyLive.length, mode: 'publish_prepared' } });
+      return json(200, { ok: true, published: pubd.length });
+    }
 
     // 2. Reserve a unique slug/URL for each post to publish (verify against GHL + the batch).
     const used = new Set(alreadyLive.map(p => (p.url || '').split('/').pop()).filter(Boolean));
