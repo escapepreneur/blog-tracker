@@ -67,7 +67,7 @@ const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
 let sfilt='live',curPost=null,curSocId=null;
-let allPosts=[],allDests=[],_links=[],_clChecked={};
+let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[];
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
@@ -207,6 +207,7 @@ function switchTab(name,filter){
   if(name==='ideas')renderIdeas();
   if(name==='research')renderResearch();
   if(name==='keywords')initKeywordsTab();
+  if(name==='insights')renderOpportunities();
   if(name==='planning'){renderPlanning();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -2006,6 +2007,40 @@ let _genPolling={},_curDraft=null;
 async function loadDraft(postId){
   try{const{data}=await sb.from('post_drafts').select('*').eq('post_id',postId).maybeSingle();return data||null;}
   catch(e){return null;}
+}
+// Search Console opportunities (Insights tab): striking-distance + low-CTR queries.
+async function renderOpportunities(){
+  const el=document.getElementById('gsc-opps');if(!el)return;
+  el.innerHTML='<div class="empty" style="padding:1rem">Loading from Search Console…</div>';
+  let j;
+  try{const r=await fetch('/.netlify/functions/gsc-opportunities?blog='+activeBlog);j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
+  catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load opportunities: '+esc(String(e&&e.message||e))+'</div>';return;}
+  _gscOpps=[...(j.striking||[]),...(j.lowCtr||[])];
+  const row=(x,i)=>{
+    const post=allPosts.find(p=>p.url&&x.page&&p.url.replace(/\/+$/,'')===x.page.replace(/\/+$/,''));
+    const act=post?`<button class="btn btn-xs" onclick="openPost('${post.id}','draft')">Optimise</button>`:(x.page?`<a class="btn btn-xs" href="${esc(x.page)}" target="_blank" rel="noopener">Page</a>`:'');
+    return `<div style="display:grid;grid-template-columns:1fr 46px 60px 48px auto;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--bg2)">
+      <div style="min-width:0;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.query)}</div>
+      <div style="text-align:center;font-size:12px"><b>${x.position.toFixed(1)}</b><div style="font-size:9px;color:var(--text3)">pos</div></div>
+      <div style="text-align:center;font-size:12px">${x.impressions.toLocaleString()}<div style="font-size:9px;color:var(--text3)">impr</div></div>
+      <div style="text-align:center;font-size:12px">${(x.ctr*100).toFixed(1)}%<div style="font-size:9px;color:var(--text3)">ctr</div></div>
+      <div style="display:flex;gap:4px">${act}<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button></div>
+    </div>`;
+  };
+  const n=(j.striking||[]).length;
+  const sec=(title,note,arr,off)=>arr.length?`<div style="margin-top:12px"><div class="sh">${title}</div><div style="font-size:11px;color:var(--text3);margin:2px 0 6px">${note}</div>${arr.map((x,k)=>row(x,off+k)).join('')}</div>`:'';
+  el.innerHTML=`<div style="font-size:11px;color:var(--text3)">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed</div>`
+    +sec('Striking distance — nudge to page 1','Already ranking just off the top. Optimise the post, or write a stronger one.',j.striking||[],0)
+    +sec('Page 1, weak click-through','Ranking but barely clicked - usually a title/meta tweak.',j.lowCtr||[],n)
+    +((!(j.striking||[]).length&&!(j.lowCtr||[]).length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
+}
+async function addOpportunityKeyword(i){
+  const x=_gscOpps[i];if(!x)return;
+  const exists=bp().find(p=>(p.primary_keyword||'').toLowerCase()===x.query.toLowerCase());
+  if(exists){toast('Already in your list');return;}
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:x.query,status:'idea',current_step:0,indexed:'no',serp_notes:`GSC opportunity: pos ${x.position.toFixed(1)}, ${x.impressions} impr, ${(x.ctr*100).toFixed(1)}% CTR — ${x.page||''}`});
+  if(error){toast('Add failed: '+error.message,4000);return;}
+  await loadPosts();render();toast('Added "'+x.query+'" as an idea ✓',3000);
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.

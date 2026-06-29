@@ -492,8 +492,15 @@ input[type=file]{width:100%}
     </div>
     <!-- INSIGHTS -->
     <div id="pane-insights" class="pane">
-      <div class="ph"><div><div class="pt">Insights</div><div class="ps">Content gaps, post list, Pinterest tracker</div></div></div>
+      <div class="ph"><div><div class="pt">Insights</div><div class="ps">Search Console opportunities, content gaps, snapshot</div></div></div>
       <div class="pb">
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Search Console opportunities</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Keywords your posts already rank for (live data). Push the close ones to page 1; fix weak titles.</div></div>
+            <button class="btn btn-p btn-sm" id="opps-btn" onclick="renderOpportunities()">Refresh</button>
+          </div>
+          <div id="gsc-opps"><div class="empty" style="padding:1rem">Loading from Search Console…</div></div>
+        </div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div><div style="font-size:14px;font-weight:700">Content gap finder</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Claude analyses your existing posts and finds topics you haven't covered yet</div></div>
