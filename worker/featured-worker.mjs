@@ -4,6 +4,7 @@
 import { searchPexels } from '../netlify/functions/_lib/pexels.mjs';
 import { uploadMedia, updatePostImage } from '../netlify/functions/_lib/ghl.mjs';
 import { renderFeatured } from './render-featured.mjs';
+import { renderPin } from './render-pin.mjs';
 
 const SUPA = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,6 +38,16 @@ async function processOne(row) {
   const jpeg = await renderFeatured({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg, brand });
   const up = await uploadMedia({ buffer: jpeg, filename: `featured-${row.post_id}.jpg`, pit: PIT });
   const assets = { ...a, featured_image_url: up.url, featured_bg_index: idx };
+
+  // Pinterest pin (1000x1500, same bg + title) — stored for in-body embed + Pinterest posting.
+  if (!a.pin_image_url) {
+    try {
+      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg, brand });
+      const pinUp = await uploadMedia({ buffer: pinJpeg, filename: `pin-${row.post_id}.jpg`, pit: PIT });
+      assets.pin_image_url = pinUp.url;
+      console.log('  pin ✓', row.post_id, '->', pinUp.url);
+    } catch (e) { console.error('  pin render failed', row.post_id, e.message); }
+  }
   await rest(`post_drafts?post_id=eq.${row.post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) });
   console.log('  featured ✓', row.post_id, '->', up.url);
 

@@ -45,11 +45,19 @@ export async function slugExists({ brand, slug, pit }) {
 export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT', publishedAt, imageUrl, imageAltText }) {
   const b = BRANDS[brand];
   const title = (draft.assets && draft.assets.title) || post.title || post.primary_keyword;
+  let rawHTML = embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images);
+  // Embed the Pinterest pin near the end (a "save this" graphic). Body is final at create
+  // time, so it must be baked in here. Inline styles only — GHL strips classes.
+  const pinUrl = draft.assets && draft.assets.pin_image_url;
+  if (pinUrl) {
+    const alt = String(title).replace(/"/g, '&quot;');
+    rawHTML += `<p style="text-align:center;margin:36px 0 4px"><img src="${pinUrl}" alt="${alt}" style="display:block;margin:0 auto;max-width:600px;width:100%;height:auto;border-radius:10px"></p>`;
+  }
   const payload = {
     title,
     locationId: LOC,
     blogId: b.blogId,
-    rawHTML: embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images),
+    rawHTML,
     status,
     categories: [pickCategoryId(brand, draft.category, post)].filter(Boolean),
     author: b.authorId,
