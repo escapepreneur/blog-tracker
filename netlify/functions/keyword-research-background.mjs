@@ -56,7 +56,7 @@ function buildPrompt(b, keywords, covered) {
 READER: ${b.reader}
 POSITIONING: ${b.positioning}
 
-Cluster the keywords below into postable blog topics for this reader. Group keywords one article would naturally target into a single cluster. For each cluster pick the strongest primary keyword (exact string from the list), suggest an H1 title in the brand voice, give a one-sentence angle, classify intent, and score the opportunity 0-100 (balance real search volume, low keyword difficulty, AND genuine fit with this reader — a high-volume keyword that is off-brand or that this reader would never search is a LOW opportunity).
+Cluster the keywords below into postable blog topics for this reader. Return the 12-18 HIGHEST-OPPORTUNITY clusters — you do NOT need to place every keyword; ignore weak or off-topic ones. Group keywords one article would naturally target into a single cluster. For each cluster pick the strongest primary keyword (exact string from the list), suggest an H1 title in the brand voice, give a one-sentence angle, classify intent, and score the opportunity 0-100 (balance real search volume, low keyword difficulty, AND genuine fit with this reader — a high-volume keyword that is off-brand or that this reader would never search is a LOW opportunity).
 
 Set relevant:false for keywords that are off-topic noise (the expansion API sometimes returns unrelated terms). Set overlaps_existing to an existing title if the topic duplicates one of our current posts.
 
@@ -91,7 +91,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
   }
   let keywords = [...byKw.values()].sort((a, c) => (c.volume || 0) - (a.volume || 0));
   const rawCount = keywords.length;
-  keywords = keywords.slice(0, 140);                              // cap the Claude prompt
+  keywords = keywords.slice(0, 90);                               // cap the Claude prompt (keep output bounded)
   if (!keywords.length) return { clusters: [], counts: { raw: 0, used: 0, clusters: 0 }, cost, note: 'No new keywords found for those seeds (all may already be covered).' };
 
   // 2. Cluster + score with Claude (forced tool call).
@@ -99,7 +99,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': AKEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: MODEL, max_tokens: 4500,
+      model: MODEL, max_tokens: 8000,
       tools: [TOOL], tool_choice: { type: 'tool', name: 'emit_keyword_plan' },
       messages: [{ role: 'user', content: buildPrompt(b, keywords, covered) }],
     }),
@@ -108,6 +108,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
   const data = await res.json();
   const tu = (data.content || []).find(x => x.type === 'tool_use');
   if (!tu) throw new Error('No tool_use in Claude response');
+  const _debug = { stop_reason: data.stop_reason, raw_clusters: (tu.input.clusters || []).length };
 
   // Attach live metrics back to each cluster from the keyword the model chose.
   const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
@@ -137,7 +138,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
     })
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
 
-  return { clusters, counts: { raw: rawCount, used: keywords.length, clusters: clusters.length }, cost: Math.round(cost * 10000) / 10000 };
+  return { clusters, counts: { raw: rawCount, used: keywords.length, clusters: clusters.length }, cost: Math.round(cost * 10000) / 10000, _debug };
 }
 
 export const handler = async (event) => {
