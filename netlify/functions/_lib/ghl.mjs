@@ -22,6 +22,24 @@ export function publicUrl(brand, slug) {
   return 'https://' + BRANDS[brand].postUrl.replace('[slug]', slug);
 }
 
+export function slugify(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'post';
+}
+
+// Is a urlSlug already taken on this blog? Returns true/false, or null if the check
+// endpoint is unavailable (caller decides how cautious to be).
+export async function slugExists({ brand, slug, pit }) {
+  const b = BRANDS[brand];
+  const u = `${GHL}/blogs/posts/url-slug-exists?locationId=${LOC}&urlSlug=${encodeURIComponent(slug)}&blogId=${b.blogId}`;
+  try {
+    const res = await fetch(u, { headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' } });
+    if (!res.ok) return null;
+    const d = await res.json().catch(() => ({}));
+    return !!(d.exists ?? d.exist ?? (d.data && d.data.exists));
+  } catch { return null; }
+}
+
 // Create a blog post in GHL. status DRAFT (default) or PUBLISHED.
 // GHL only sets the body at CREATE time (PUT can't change rawHTML) — so the body must be final here.
 export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT', publishedAt, imageUrl, imageAltText }) {

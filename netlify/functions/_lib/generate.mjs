@@ -44,19 +44,23 @@ function toolFor(brand) {
   return t;
 }
 
-function buildBrief(post, brand, liveLinks) {
+function buildBrief(post, brand, liveLinks, clusterLinks) {
   const b = BRANDS[brand];
   const supp = post.supplementary_keywords || '';
   const all = liveLinks || [];
   const list = all.slice(0, 40)
     .map(p => `- ${p.title} -> ${p.url}`).join('\n') || '(none available)';
 
-  // Cluster-aware linking: if this post belongs to a topic cluster, the LIVE pillar and
-  // sibling posts in the same cluster are mandatory/preferred internal links.
+  // Cluster-aware linking: if this post belongs to a topic cluster, the pillar and sibling
+  // posts in the same cluster are mandatory/preferred internal links. clusterLinks (reserved
+  // URLs, passed during a full cluster launch) take priority over only-live candidates.
   let clusterBlock = '';
   const cluster = post.cluster && String(post.cluster).trim();
   if (cluster) {
-    const same = all.filter(p => p.cluster && p.cluster.trim().toLowerCase() === cluster.toLowerCase());
+    const pool = (clusterLinks && clusterLinks.length)
+      ? clusterLinks.filter(p => p.url && p.url !== post._selfUrl)
+      : all.filter(p => p.cluster && p.cluster.trim().toLowerCase() === cluster.toLowerCase());
+    const same = pool;
     const pillar = same.find(p => p.is_pillar);
     const siblings = same.filter(p => !p.is_pillar);
     const lines = [];
@@ -85,14 +89,14 @@ ${list}${clusterBlock}
 Write the complete post now and return it via the emit_blog_package tool.`;
 }
 
-export async function generateDraft({ post, brand, liveLinks, anthropicKey, model = MODEL }) {
+export async function generateDraft({ post, brand, liveLinks, clusterLinks, anthropicKey, model = MODEL }) {
   const body = {
     model,
     max_tokens: 8000,
     system: systemPrompt(brand),
     tools: [toolFor(brand)],
     tool_choice: { type: 'tool', name: 'emit_blog_package' },
-    messages: [{ role: 'user', content: buildBrief(post, brand, liveLinks) }],
+    messages: [{ role: 'user', content: buildBrief(post, brand, liveLinks, clusterLinks) }],
   };
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
