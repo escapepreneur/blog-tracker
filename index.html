@@ -307,7 +307,6 @@ input[type=file]{width:100%}
     <nav class="sb-nav">
       <button class="nav-i a-esc" onclick="switchTab('dashboard')"><span style="width:18px;text-align:center">◈</span>Dashboard</button>
       <button class="nav-i" onclick="switchTab('posts')"><span style="width:18px;text-align:center">≡</span>Posts</button>
-      <button class="nav-i" onclick="switchTab('pipeline')"><span style="width:18px;text-align:center">▶</span>Pipeline</button>
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
       <button class="nav-i" onclick="switchTab('planning')"><span style="width:18px;text-align:center">📋</span>Planning</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
@@ -338,7 +337,7 @@ input[type=file]{width:100%}
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div class="sh" style="margin:0">Pipeline — next up</div>
-              <button class="btn btn-xs" onclick="switchTab('pipeline')" style="font-size:10px">Full pipeline →</button>
+              <button class="btn btn-xs" onclick="switchTab('calendar')" style="font-size:10px">Calendar →</button>
             </div>
             <div id="nextup-list"></div>
           </div>
@@ -372,14 +371,6 @@ input[type=file]{width:100%}
     </div>
 
     <!-- PIPELINE -->
-    <div id="pane-pipeline" class="pane">
-      <div class="ph">
-        <div><div class="pt">Pipeline</div><div class="ps">All posts with a proposed date — ordered by date, excluding scheduled and live</div></div>
-      </div>
-      <div class="pb">
-        <div id="pipeline-list"></div>
-      </div>
-    </div>
 
     <!-- PLANNING (Karen) -->
     <div id="pane-planning" class="pane">
@@ -510,6 +501,7 @@ input[type=file]{width:100%}
           </div>
           <div id="cal-grid"></div>
         </div>
+        <div style="margin-top:16px"><div class="sh" style="margin-bottom:10px">Upcoming — posts with a proposed date</div><div id="pipeline-list"></div></div>
       </div>
     </div>
     <!-- INSIGHTS -->

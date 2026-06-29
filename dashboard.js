@@ -207,7 +207,7 @@ function switchTab(name,filter){
   if(name==='ideas')renderIdeas();
   if(name==='research')renderResearch();
   if(name==='keywords')initKeywordsTab();
-  if(name==='pipeline')renderPipeline();  if(name==='planning'){renderPlanning();}
+  if(name==='planning'){renderPlanning();}
   if(name==='tracking')renderTracking();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -215,7 +215,7 @@ function switchTab(name,filter){
     const yr=document.getElementById('cal-year');
     if(mo)mo.value=now.getMonth();
     if(yr)yr.value=now.getFullYear();
-    renderCalendar();
+    renderCalendar();renderPipeline(); // Pipeline list folded into the Calendar pane
   },50)}
 }
 function goToNotIndexed(){
@@ -230,7 +230,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','pipeline','links','planning','calendar','tracking','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','links','planning','calendar','tracking','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
