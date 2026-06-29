@@ -67,7 +67,7 @@ const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
 let sfilt='live',curPost=null,curSocId=null;
-let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[];
+let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[],_seedSuggestions=[];
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
@@ -199,10 +199,11 @@ function refreshActivePane(){
     case 'research':renderResearch();break;
     case 'insights':renderOpportunities();break;
     case 'planning':renderPlanning();break;
-    case 'keywords':{ // results are brand-specific — clear the previous brand's run
-      _kwClusters=[];
+    case 'keywords':{ // results + seed suggestions are brand-specific — clear the previous brand's run
+      _kwClusters=[];_seedSuggestions=[];
       const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
       const s=document.getElementById('kw-research-status');if(s)s.innerHTML='';
+      const sg=document.getElementById('kw-seed-suggestions');if(sg)sg.innerHTML='';
       break;}
     case 'calendar':renderCalendar();renderPipeline();break;
   }
@@ -2066,6 +2067,47 @@ async function addOpportunityKeyword(i){
 // KEYWORD RESEARCH (Keywords tab): seeds -> DataForSEO expand -> Claude cluster/score.
 const _kwErr=(m)=>`<div class="card" style="padding:1rem;color:var(--red-t);background:#fff5f5;border-color:#f3c0c0">${esc(m)}</div>`;
 const _kwUUID=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)});
+async function suggestSeeds(){
+  const theme=((document.getElementById('kw-seed-theme')||{}).value||'').trim();
+  const btn=document.getElementById('kw-suggest-btn');if(btn)btn.disabled=true;
+  const box=document.getElementById('kw-seed-suggestions');
+  if(box)box.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:8px 2px"><div class="spinner"></div>Thinking up seed words…</div>';
+  const covered=[...new Set(bp().flatMap(p=>[p.title,p.primary_keyword]).filter(Boolean))].slice(0,120);
+  let j;
+  try{const r=await fetch('/.netlify/functions/suggest-seeds',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({blog:activeBlog,theme,covered})});j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
+  catch(e){if(box)box.innerHTML=_kwErr('Could not suggest seeds: '+esc(String(e&&e.message||e)));if(btn)btn.disabled=false;return;}
+  if(btn)btn.disabled=false;
+  renderSeedSuggestions(j.seeds||[]);
+}
+function renderSeedSuggestions(seeds){
+  _seedSuggestions=seeds||[];
+  const box=document.getElementById('kw-seed-suggestions');if(!box)return;
+  if(!_seedSuggestions.length){box.innerHTML='<div class="empty" style="padding:.5rem">No suggestions — try a different focus.</div>';return;}
+  const groups={};_seedSuggestions.forEach((s,i)=>{const g=s.category||'Other';(groups[g]=groups[g]||[]).push(i)});
+  let html='<div class="card" style="padding:12px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700">Suggested seeds — click to add</div><button class="btn btn-xs btn-ghost" onclick="addAllSeeds()">+ Add all</button></div>';
+  for(const g in groups){
+    html+=`<div style="margin-bottom:8px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:4px">${esc(g)}</div>`;
+    html+=groups[g].map(i=>`<button class="btn btn-xs" id="seedchip-${i}" onclick="addSeed(${i})" style="margin:2px 4px 2px 0">+ ${esc(_seedSuggestions[i].term)}</button>`).join('');
+    html+='</div>';
+  }
+  html+='</div>';box.innerHTML=html;
+}
+function _addSeedTerm(term){
+  const ta=document.getElementById('kw-seeds');if(!ta)return false;
+  const cur=ta.value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(cur.some(x=>x.toLowerCase()===term.toLowerCase()))return false;
+  cur.push(term);ta.value=cur.join('\n');return true;
+}
+function addSeed(i){
+  const s=_seedSuggestions[i];if(!s)return;
+  _addSeedTerm(s.term);
+  const b=document.getElementById('seedchip-'+i);if(b){b.disabled=true;b.style.opacity='.5';b.textContent='✓ '+s.term;}
+}
+function addAllSeeds(){
+  let n=0;
+  _seedSuggestions.forEach((s,i)=>{if(_addSeedTerm(s.term)){n++;const b=document.getElementById('seedchip-'+i);if(b){b.disabled=true;b.style.opacity='.5';}}});
+  toast(n?('Added '+n+' seed'+(n===1?'':'s')):'Already added');
+}
 async function researchKeywords(){
   const ta=document.getElementById('kw-seeds');if(!ta)return;
   const seeds=(ta.value||'').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,8);
