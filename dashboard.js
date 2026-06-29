@@ -2054,6 +2054,8 @@ async function researchKeywords(){
   const seeds=(ta.value||'').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,8);
   if(!seeds.length){toast('Add at least one seed keyword');return;}
   const broaden=!!(document.getElementById('kw-broaden')||{}).checked;
+  const minVolEl=document.getElementById('kw-minvol');
+  const minVolume=minVolEl&&minVolEl.value!==''?Math.max(0,parseInt(minVolEl.value,10)||0):100;
   const runId=_kwUUID();
   const btn=document.getElementById('kw-research-btn');if(btn)btn.disabled=true;
   const status=document.getElementById('kw-research-status');
@@ -2062,7 +2064,7 @@ async function researchKeywords(){
   const{error:insErr}=await sb.from('keyword_runs').insert({id:runId,blog:activeBlog,seeds,broaden,status:'working'});
   if(insErr){if(status)status.innerHTML=_kwErr('Could not start: '+insErr.message);if(btn)btn.disabled=false;return;}
   let httpStatus;
-  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden})});httpStatus=r.status;}
+  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden,min_volume:minVolume})});httpStatus=r.status;}
   catch(e){httpStatus='err';}
   if(httpStatus!==202&&httpStatus!==200){if(status)status.innerHTML=_kwErr('Could not start research (status '+httpStatus+'). Try again in a moment.');if(btn)btn.disabled=false;return;}
   const start=Date.now();
@@ -2106,7 +2108,7 @@ function renderClusters(out){
   const fresh=_kwClusters.filter(c=>!c.overlaps_existing);
   const cnt=(out&&out.counts)||{};
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
-      <div style="font-size:12px;color:var(--text2)">${_kwClusters.length} topic ${_kwClusters.length===1?'idea':'ideas'}${cnt.raw?` · ${cnt.raw} keywords analysed`:''}${out.cost?` · $${out.cost}`:''}</div>
+      <div style="font-size:12px;color:var(--text2)">${_kwClusters.length} topic ${_kwClusters.length===1?'idea':'ideas'}${cnt.aboveMin!=null?` · ${cnt.aboveMin} keyword${cnt.aboveMin===1?'':'s'} at ${out.minVolume??100}+/mo${cnt.raw?` (of ${cnt.raw})`:''}`:(cnt.raw?` · ${cnt.raw} keywords analysed`:'')}${out.cost?` · $${out.cost}`:''}</div>
       ${fresh.length?`<button class="btn btn-p btn-sm" onclick="addAllClusters()">+ Add all ${fresh.length} new ${fresh.length===1?'idea':'ideas'}</button>`:''}
     </div>`+_kwClusters.map((c,i)=>_clusterCard(c,i)).join('');
 }

@@ -69,9 +69,10 @@ ${cov}
 Return the plan via the emit_keyword_plan tool.`;
 }
 
-async function runPipeline(blog, seeds, broaden, covered) {
+async function runPipeline(blog, seeds, broaden, covered, minVolume) {
   const b = BRANDS[blog];
   const coveredNorm = new Set(covered.map(norm));
+  const minVol = Number.isFinite(minVolume) ? minVolume : 100;
 
   // 1. Expand seeds. Suggestions per seed (precise) + optional broad ideas across all seeds.
   let cost = 0;
@@ -91,8 +92,10 @@ async function runPipeline(blog, seeds, broaden, covered) {
   }
   let keywords = [...byKw.values()].sort((a, c) => (c.volume || 0) - (a.volume || 0));
   const rawCount = keywords.length;
+  keywords = keywords.filter(k => (k.volume || 0) >= minVol);     // honour the minimum-volume threshold
+  const aboveMin = keywords.length;
   keywords = keywords.slice(0, 90);                               // cap the Claude prompt (keep output bounded)
-  if (!keywords.length) return { clusters: [], counts: { raw: 0, used: 0, clusters: 0 }, cost, note: 'No new keywords found for those seeds (all may already be covered).' };
+  if (!keywords.length) return { clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, cost, note: `No new keywords at ${minVol}+ searches/mo for those seeds. Try broader seeds or lower the minimum.` };
 
   // 2. Cluster + score with Claude (forced tool call).
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -137,7 +140,7 @@ async function runPipeline(blog, seeds, broaden, covered) {
     })
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
 
-  return { clusters, counts: { raw: rawCount, used: keywords.length, clusters: clusters.length }, cost: Math.round(cost * 10000) / 10000 };
+  return { clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, cost: Math.round(cost * 10000) / 10000 };
 }
 
 export const handler = async (event) => {
@@ -169,7 +172,8 @@ export const handler = async (event) => {
     const posts = await (await fetch(`${SUPABASE_URL}/rest/v1/posts?blog=eq.${body.blog}&select=title,primary_keyword`, { headers: h })).json();
     const covered = [...new Set((posts || []).flatMap(p => [p.title, p.primary_keyword]).filter(Boolean))];
 
-    const out = await runPipeline(body.blog, seeds, !!body.broaden, covered);
+    const minVolume = Number.isFinite(+body.min_volume) ? Math.max(0, +body.min_volume) : 100;
+    const out = await runPipeline(body.blog, seeds, !!body.broaden, covered, minVolume);
     await finish({ status: 'done', result: out, cost: out.cost });
     return json(200, out);
   } catch (e) {
