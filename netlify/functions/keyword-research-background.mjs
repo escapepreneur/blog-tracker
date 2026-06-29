@@ -69,78 +69,165 @@ ${cov}
 Return the plan via the emit_keyword_plan tool.`;
 }
 
-async function runPipeline(blog, seeds, broaden, covered, minVolume) {
-  const b = BRANDS[blog];
-  const coveredNorm = new Set(covered.map(norm));
-  const minVol = Number.isFinite(minVolume) ? minVolume : 100;
+const CLUSTER_TOOL = {
+  name: 'emit_content_cluster',
+  description: 'Design a topic cluster: one comprehensive pillar post + several supporting posts that all link up to it.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      cluster_name: { type: 'string', description: 'Short label for the whole cluster (1-3 words, e.g. "GoHighLevel", "Email Marketing").' },
+      pillar: {
+        type: 'object',
+        description: 'The single comprehensive hub post for the whole topic — broad, authoritative, the page everything else links to.',
+        properties: {
+          suggested_title: { type: 'string', description: 'H1 for the pillar — broad and definitive (e.g. "The Complete Guide to ...").' },
+          primary_keyword: { type: 'string', description: 'The broad head keyword for the pillar — MUST be copied exactly from the supplied list.' },
+          supporting_keywords: { type: 'array', items: { type: 'string' }, description: 'Other broad keywords the pillar covers (exact strings from the list).' },
+          angle: { type: 'string', description: 'One sentence: the pillar\'s angle for this brand reader.' },
+          intent: { type: 'string', enum: ['informational', 'commercial', 'transactional', 'navigational'] },
+        },
+        required: ['suggested_title', 'primary_keyword', 'supporting_keywords', 'angle', 'intent'],
+      },
+      supporting: {
+        type: 'array',
+        description: '6-12 supporting posts, each targeting a DISTINCT sub-topic of the pillar (a specific keyword from the list). Each will link up to the pillar.',
+        items: {
+          type: 'object',
+          properties: {
+            topic: { type: 'string', description: 'Short label (3-6 words).' },
+            suggested_title: { type: 'string', description: 'H1 for this supporting post, in the brand voice.' },
+            primary_keyword: { type: 'string', description: 'The sub-topic keyword — MUST be copied exactly from the supplied list.' },
+            supporting_keywords: { type: 'array', items: { type: 'string' } },
+            angle: { type: 'string', description: 'One sentence angle for this reader.' },
+            intent: { type: 'string', enum: ['informational', 'commercial', 'transactional', 'navigational'] },
+            opportunity: { type: 'integer', description: '0-100 (volume + low difficulty + brand fit).' },
+            overlaps_existing: { type: 'string', description: 'Existing post title if this duplicates one, else "".' },
+          },
+          required: ['topic', 'suggested_title', 'primary_keyword', 'supporting_keywords', 'angle', 'intent', 'opportunity', 'overlaps_existing'],
+        },
+      },
+    },
+    required: ['cluster_name', 'pillar', 'supporting'],
+  },
+};
 
-  // 1. Expand seeds. Suggestions per seed (precise) + optional broad ideas across all seeds.
+function buildClusterPrompt(b, topic, keywords, covered) {
+  const list = keywords.map((k, i) =>
+    `${i + 1}. "${k.keyword}" — vol ${k.volume ?? '?'}/mo, difficulty ${k.difficulty ?? '?'}/100`
+  ).join('\n');
+  const cov = covered.length ? covered.map(t => `- ${t}`).join('\n') : '(none provided)';
+  return `You are planning a TOPIC CLUSTER for ${b.name} around: "${topic}".
+
+READER: ${b.reader}
+POSITIONING: ${b.positioning}
+
+A topic cluster = ONE comprehensive PILLAR post on the broad topic, plus 6-12 SUPPORTING posts each covering a specific sub-topic, all linking up to the pillar. This builds topical authority.
+
+Design the cluster from the keywords below:
+- Pick the PILLAR: the broadest, highest-level keyword that a definitive guide would target.
+- Pick 6-12 SUPPORTING posts, each on a DISTINCT sub-topic (a different specific keyword). No two supporting posts should target the same thing. Favour real volume + winnable difficulty + genuine fit with this reader. Flag overlaps_existing for any that duplicate a current post.
+- Use ONLY keywords from the list (exact strings) for primary_keyword.
+
+KEYWORDS (with live search volume + difficulty):
+${list}
+
+OUR EXISTING POSTS (flag overlaps, don't duplicate):
+${cov}
+
+Return the cluster via the emit_content_cluster tool.`;
+}
+
+// Expand seeds -> deduped, covered-filtered, min-volume-filtered, volume-sorted keyword list.
+async function expandKeywords(seeds, broaden, covered, minVol) {
+  const coveredNorm = new Set(covered.map(norm));
   let cost = 0;
   const calls = seeds.map(s => keywordSuggestions(s, { limit: 150 }));
   if (broaden) calls.push(keywordIdeas(seeds, { limit: 300, minVolume: 30 }));
   const results = await Promise.all(calls);
-
   const byKw = new Map();
   for (const r of results) {
     cost += r.cost || 0;
     for (const k of (r.keywords || [])) {
       const key = norm(k.keyword);
-      if (!key || coveredNorm.has(key)) continue;                 // drop already-covered
+      if (!key || coveredNorm.has(key)) continue;
       const prev = byKw.get(key);
       if (!prev || (k.volume || 0) > (prev.volume || 0)) byKw.set(key, k);
     }
   }
   let keywords = [...byKw.values()].sort((a, c) => (c.volume || 0) - (a.volume || 0));
   const rawCount = keywords.length;
-  keywords = keywords.filter(k => (k.volume || 0) >= minVol);     // honour the minimum-volume threshold
+  keywords = keywords.filter(k => (k.volume || 0) >= minVol);
   const aboveMin = keywords.length;
-  keywords = keywords.slice(0, 90);                               // cap the Claude prompt (keep output bounded)
-  if (!keywords.length) return { clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, cost, note: `No new keywords at ${minVol}+ searches/mo for those seeds. Try broader seeds or lower the minimum.` };
+  keywords = keywords.slice(0, 90);
+  return { keywords, rawCount, aboveMin, cost };
+}
 
-  // 2. Cluster + score with Claude (forced tool call).
+async function callClaudeTool(tool, prompt, maxTokens) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': AKEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: MODEL, max_tokens: 8000,
-      tools: [TOOL], tool_choice: { type: 'tool', name: 'emit_keyword_plan' },
-      messages: [{ role: 'user', content: buildPrompt(b, keywords, covered) }],
-    }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, tools: [tool], tool_choice: { type: 'tool', name: tool.name }, messages: [{ role: 'user', content: prompt }] }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();
   const tu = (data.content || []).find(x => x.type === 'tool_use');
   if (!tu) throw new Error('No tool_use in Claude response');
+  return tu.input;
+}
 
-  // Attach live metrics back to each cluster from the keyword the model chose.
+// Attach live DataForSEO metrics back onto a Claude-produced idea/post.
+function enrich(c, metric) {
+  const all = [c.primary_keyword, ...(c.supporting_keywords || [])].map(norm);
+  const ms = all.map(n => metric.get(n)).filter(Boolean);
+  const vol = ms.reduce((s, m) => s + (m.volume || 0), 0);
+  const kds = ms.map(m => m.difficulty).filter(v => v != null);
+  const pm = metric.get(norm(c.primary_keyword));
+  return {
+    topic: c.topic || c.suggested_title,
+    primary_keyword: c.primary_keyword,
+    primary_volume: pm ? pm.volume : null,
+    primary_difficulty: pm ? pm.difficulty : null,
+    supporting_keywords: (c.supporting_keywords || []).filter(k => metric.has(norm(k))),
+    total_volume: vol,
+    avg_difficulty: kds.length ? Math.round(kds.reduce((s, v) => s + v, 0) / kds.length) : null,
+    suggested_title: c.suggested_title,
+    angle: c.angle,
+    intent: c.intent,
+    opportunity: c.opportunity,
+    overlaps_existing: c.overlaps_existing || '',
+    rationale: c.rationale || '',
+  };
+}
+const round = (x) => Math.round(x * 10000) / 10000;
+
+async function runIdeas(blog, seeds, broaden, covered, minVolume) {
+  const b = BRANDS[blog];
+  const minVol = Number.isFinite(minVolume) ? minVolume : 100;
+  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol);
+  if (!keywords.length) return { mode: 'ideas', clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, minVolume: minVol, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo for those seeds. Try broader seeds or lower the minimum.` };
+  const input = await callClaudeTool(TOOL, buildPrompt(b, keywords, covered), 8000);
   const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
-  const clusters = (tu.input.clusters || [])
+  const clusters = (input.clusters || [])
     .filter(c => c.relevant !== false && c.primary_keyword)
-    .map(c => {
-      const all = [c.primary_keyword, ...(c.supporting_keywords || [])].map(norm);
-      const ms = all.map(n => metric.get(n)).filter(Boolean);
-      const vol = ms.reduce((s, m) => s + (m.volume || 0), 0);
-      const kds = ms.map(m => m.difficulty).filter(v => v != null);
-      const pm = metric.get(norm(c.primary_keyword));
-      return {
-        topic: c.topic,
-        primary_keyword: c.primary_keyword,
-        primary_volume: pm ? pm.volume : null,
-        primary_difficulty: pm ? pm.difficulty : null,
-        supporting_keywords: (c.supporting_keywords || []).filter(k => metric.has(norm(k))),
-        total_volume: vol,
-        avg_difficulty: kds.length ? Math.round(kds.reduce((s, v) => s + v, 0) / kds.length) : null,
-        suggested_title: c.suggested_title,
-        angle: c.angle,
-        intent: c.intent,
-        opportunity: c.opportunity,
-        overlaps_existing: c.overlaps_existing || '',
-        rationale: c.rationale || '',
-      };
-    })
+    .map(c => enrich(c, metric))
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
+  return { mode: 'ideas', clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, cost: round(cost) };
+}
 
-  return { clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, cost: Math.round(cost * 10000) / 10000 };
+async function runCluster(blog, seeds, broaden, covered, minVolume) {
+  const b = BRANDS[blog];
+  const minVol = Number.isFinite(minVolume) ? minVolume : 100;
+  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol);
+  if (!keywords.length) return { mode: 'cluster', pillar: null, supporting: [], counts: { raw: rawCount, aboveMin: 0, used: 0 }, minVolume: minVol, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo for that topic. Try a broader topic or lower the minimum.` };
+  const topic = seeds.join(', ');
+  const input = await callClaudeTool(CLUSTER_TOOL, buildClusterPrompt(b, topic, keywords, covered), 6000);
+  const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
+  const pillar = input.pillar && input.pillar.primary_keyword ? enrich(input.pillar, metric) : null;
+  const supporting = (input.supporting || [])
+    .filter(c => c.primary_keyword)
+    .map(c => enrich(c, metric))
+    .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
+  return { mode: 'cluster', cluster_name: input.cluster_name || seeds[0] || topic, pillar, supporting, counts: { raw: rawCount, aboveMin, used: keywords.length, supporting: supporting.length }, minVolume: minVol, cost: round(cost) };
 }
 
 export const handler = async (event) => {
@@ -173,7 +260,9 @@ export const handler = async (event) => {
     const covered = [...new Set((posts || []).flatMap(p => [p.title, p.primary_keyword]).filter(Boolean))];
 
     const minVolume = Number.isFinite(+body.min_volume) ? Math.max(0, +body.min_volume) : 100;
-    const out = await runPipeline(body.blog, seeds, !!body.broaden, covered, minVolume);
+    const out = body.mode === 'cluster'
+      ? await runCluster(body.blog, seeds, !!body.broaden, covered, minVolume)
+      : await runIdeas(body.blog, seeds, !!body.broaden, covered, minVolume);
     await finish({ status: 'done', result: out, cost: out.cost });
     return json(200, out);
   } catch (e) {
