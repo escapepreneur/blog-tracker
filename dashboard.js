@@ -1528,6 +1528,7 @@ function renderClusterView(){
         <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
           ${unpub?`<button class="btn btn-xs btn-p" onclick="launchCluster('${esc(name).replace(/'/g,"\\'")}')">⚡ Launch ${unpub}</button>`:''}
+          <button class="btn btn-xs btn-danger" onclick="deleteCluster('${esc(name).replace(/'/g,"\\'")}')" title="Remove this whole cluster">Remove</button>
         </div>
       </div>
       ${pillar?row(pillar):''}${supp.map(row).join('')}
@@ -1567,6 +1568,26 @@ async function launchCluster(name){
     }
     if(Date.now()-start>840000){clearInterval(iv);_clusterBanner('Still working — reopen Insights shortly to see the result.','working');}
   },6000);
+}
+// Remove a whole cluster: deletes every post tagged with this cluster name (same child-row
+// cleanup as bulkDeleteResearch). Warns if any are already live (they stay published on the blog).
+async function deleteCluster(name){
+  const posts=bp().filter(p=>String(p.cluster||'').trim()===name);
+  if(!posts.length)return;
+  const live=posts.filter(p=>p.status==='live').length;
+  let msg=`Remove the "${name}" cluster?\n\nThis deletes all ${posts.length} post${posts.length===1?'':'s'} in it from the tracker. This cannot be undone.`;
+  if(live)msg+=`\n\n⚠ ${live} ${live===1?'is':'are'} already LIVE — removing here deletes them from this tracker but they STAY published on your blog. Unpublish those in GHL first if you want them gone.`;
+  if(!confirm(msg))return;
+  for(const p of posts){
+    const id=p.id;
+    await sb.from('internal_links').delete().or(`source_post_id.eq.${id},dest_post_id.eq.${id}`);
+    await sb.from('gsc_positions').delete().eq('post_id',id);
+    await sb.from('post_checklist').delete().eq('post_id',id);
+    await sb.from('social_tracking').delete().eq('post_id',id);
+    await sb.from('posts').delete().eq('id',id);
+  }
+  await loadPosts();renderClusterView();renderResearch();render();
+  toast(`"${name}" cluster removed — ${posts.length} post${posts.length===1?'':'s'} deleted`);
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.
