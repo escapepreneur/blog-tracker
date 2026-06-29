@@ -2272,14 +2272,52 @@ function renderClusterView(){
     const pillar=arr.find(p=>p.is_pillar);
     const supp=arr.filter(p=>!p.is_pillar);
     const live=arr.filter(p=>p.status==='live').length;
+    const unpub=arr.filter(p=>!p.ghl_post_id).length;
     return `<div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-        <div style="font-size:13px;font-weight:700">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
-        <div style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px">
+        <div style="font-size:13px;font-weight:700;min-width:0">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
+        <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+          <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
+          ${unpub?`<button class="btn btn-xs btn-p" onclick="launchCluster('${esc(name).replace(/'/g,"\\'")}')">⚡ Launch ${unpub}</button>`:''}
+        </div>
       </div>
       ${pillar?row(pillar):''}${supp.map(row).join('')}
     </div>`;
   }).join('');
+}
+function _clusterBanner(html,kind){
+  const el=document.getElementById('cluster-launch-status');if(!el)return;
+  const bg=kind==='error'?'#fff5f5':kind==='done'?'var(--green-l)':'var(--teal-l)';
+  const bd=kind==='error'?'#f3c0c0':kind==='done'?'#bfe3c9':'#c5e6e6';
+  el.innerHTML=`<div style="background:${bg};border:1px solid ${bd};border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px">${kind==='working'?'<div class="spinner"></div>':''}<div>${html}</div></div>`;
+}
+async function launchCluster(name){
+  const posts=bp().filter(p=>String(p.cluster||'').trim()===name);
+  const unpub=posts.filter(p=>!p.ghl_post_id);
+  if(!unpub.length){toast('Every post in this cluster is already live');return;}
+  if(!confirm(`Launch the "${name}" cluster?\n\nThis GENERATES and PUBLISHES ${unpub.length} post${unpub.length===1?'':'s'} live on your blog — all at once, fully interlinked (pillar ↔ supporting).\n\nThey go live immediately. Continue?`))return;
+  const id=_kwUUID();
+  const{error}=await sb.from('cluster_launches').insert({id,blog:activeBlog,cluster:name,status:'working'});
+  if(error){toast('Could not start: '+error.message,4000);return;}
+  let st;try{const r=await fetch('/.netlify/functions/launch-cluster-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({launch_id:id,blog:activeBlog,cluster:name})});st=r.status;}catch(e){st='err';}
+  if(st!==202&&st!==200){_clusterBanner('Could not start launch (status '+st+').','error');return;}
+  _clusterBanner(`Launching <b>${esc(name)}</b> — generating ${unpub.length} posts. This takes a few minutes; you can keep working.`,'working');
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const{data}=await sb.from('cluster_launches').select('status,result,error').eq('id',id).single();
+    if(!data)return;
+    if(data.status==='done'){
+      clearInterval(iv);await loadPosts();
+      const n=(data.result&&data.result.count)||0;
+      _clusterBanner(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');
+      renderClusterView();toast('Cluster launched — '+n+' live ✓',4000);
+    }else if(data.status==='error'){
+      clearInterval(iv);_clusterBanner('⚠ '+esc(data.error||'Launch failed.'),'error');
+    }else if(data.result&&data.result.phase){
+      _clusterBanner(`Launching <b>${esc(name)}</b> — ${data.result.phase==='publishing'?'publishing posts live…':'generating '+(data.result.total||'')+' posts…'}`,'working');
+    }
+    if(Date.now()-start>840000){clearInterval(iv);_clusterBanner('Still working — reopen Insights shortly to see the result.','working');}
+  },6000);
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.
