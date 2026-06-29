@@ -188,7 +188,24 @@ function switchBlog(blog){
   document.getElementById('btn-esc').className='bsw-btn'+(blog==='esc'?' a-esc':'');
   document.getElementById('btn-nms').className='bsw-btn'+(blog==='nms'?' a-nms':'');
   sfilt='live';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===1));
-  loadLinks().then(()=>{render();updateTabs()});
+  loadLinks().then(()=>{render();updateTabs();refreshActivePane()});
+}
+// Re-render the pane the user is currently on (used when the brand toggle changes,
+// since render() only refreshes dashboard/posts — the other panes have their own renderers).
+function refreshActivePane(){
+  switch(activeTab){
+    case 'links':renderLinksPane();break;
+    case 'ideas':renderIdeas();break;
+    case 'research':renderResearch();break;
+    case 'insights':renderOpportunities();break;
+    case 'planning':renderPlanning();break;
+    case 'keywords':{ // results are brand-specific — clear the previous brand's run
+      _kwClusters=[];
+      const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
+      const s=document.getElementById('kw-research-status');if(s)s.innerHTML='';
+      break;}
+    case 'calendar':renderCalendar();renderPipeline();break;
+  }
 }
 function switchTab(name,filter){
   activeTab=name;
