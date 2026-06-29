@@ -67,7 +67,7 @@ const ALL_ITEM_IDS=CL_STEPS.flatMap(s=>s.items.map(i=>i.id));
 // STATE
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
 let sfilt='live',curPost=null,curSocId=null;
-let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[],_seedSuggestions=[];
+let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[],_seedSuggestions=[],_kwMode='ideas',_kwCluster=null,_kwActiveCluster=null;
 const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
@@ -2122,8 +2122,9 @@ async function researchKeywords(){
   if(status)status.innerHTML='<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 10px"></div>Pulling live keyword data and clustering into post ideas… this takes 30–60 seconds.</div>';
   const{error:insErr}=await sb.from('keyword_runs').insert({id:runId,blog:activeBlog,seeds,broaden,status:'working'});
   if(insErr){if(status)status.innerHTML=_kwErr('Could not start: '+insErr.message);if(btn)btn.disabled=false;return;}
+  if(status)status.innerHTML='<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 10px"></div>'+(_kwMode==='cluster'?'Building your content cluster (pillar + supporting posts)':'Pulling live keyword data and clustering into post ideas')+'… this takes 30–60 seconds.</div>';
   let httpStatus;
-  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden,min_volume:minVolume})});httpStatus=r.status;}
+  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden,min_volume:minVolume,mode:_kwMode})});httpStatus=r.status;}
   catch(e){httpStatus='err';}
   if(httpStatus!==202&&httpStatus!==200){if(status)status.innerHTML=_kwErr('Could not start research (status '+httpStatus+'). Try again in a moment.');if(btn)btn.disabled=false;return;}
   const start=Date.now();
@@ -2159,7 +2160,17 @@ function _clusterCard(c,i){
     </div>
   </div>`;
 }
+function setKwMode(m){
+  _kwMode=m;
+  const a=document.getElementById('kwmode-ideas'),b=document.getElementById('kwmode-cluster');
+  if(a)a.className='btn btn-xs'+(m==='ideas'?' btn-p':'');
+  if(b)b.className='btn btn-xs'+(m==='cluster'?' btn-p':'');
+  const rb=document.getElementById('kw-research-btn');if(rb)rb.innerHTML=(m==='cluster'?'✦ Build content cluster':'✦ Research keywords');
+  const ta=document.getElementById('kw-seeds');if(ta)ta.placeholder=(m==='cluster'?'one broad topic, e.g.\ngohighlevel':'gohighlevel\nemail marketing for coaches\nsales funnel\ncrm');
+}
 function renderClusters(out){
+  if(out&&out.mode==='cluster')return renderContentCluster(out);
+  _kwActiveCluster=null;_kwCluster=null;
   _kwClusters=(out&&out.clusters)||[];
   const status=document.getElementById('kw-research-status');if(status)status.innerHTML='';
   const el=document.getElementById('kw-research-results');if(!el)return;
@@ -2176,7 +2187,7 @@ async function addClusterIdea(i){
   const exists=bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase());
   if(exists){toast('Already in your list');return;}
   const supp=(c.supporting_keywords||[]).join(', ');
-  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,serp_notes:`Keyword research: ${(c.total_volume||c.primary_volume||'?')}/mo total, difficulty ~${c.avg_difficulty??c.primary_difficulty??'?'}, ${c.intent||''} intent. Opportunity ${c.opportunity}/100.`});
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research: ${(c.total_volume||c.primary_volume||'?')}/mo total, difficulty ~${c.avg_difficulty??c.primary_difficulty??'?'}, ${c.intent||''} intent. Opportunity ${c.opportunity}/100.`});
   if(error){toast('Add failed: '+error.message,4000);return;}
   await loadPosts();render();
   const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';
@@ -2188,10 +2199,54 @@ async function addAllClusters(){
     const c=_kwClusters[i];if(c.overlaps_existing)continue;
     if(bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase()))continue;
     const supp=(c.supporting_keywords||[]).join(', ');
-    const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
+    const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
     if(!error){added++;const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';}
   }
   await loadPosts();render();toast('Added '+added+' new '+(added===1?'idea':'ideas')+' ✓',3000);
+}
+// CONTENT CLUSTER (pillar + supporting) rendering + adding.
+function _pillarCard(p){
+  return `<div class="card" style="margin-bottom:12px;padding:14px;border-left:3px solid var(--teal)">
+    <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start">
+      <div style="min-width:0">
+        <div style="font-size:10px;font-weight:700;color:var(--teal-d);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">★ Pillar post</div>
+        <div style="font-size:15px;font-weight:700;line-height:1.3">${esc(p.suggested_title||'')}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:5px">${esc(p.angle||'')}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">${esc(p.primary_keyword||'')} · ${(p.primary_volume!=null?p.primary_volume.toLocaleString():'?')}/mo · KD ${p.primary_difficulty??'?'}</div>
+      </div>
+      <button class="btn btn-xs btn-p" id="kwpadd" onclick="addPillar()">+ Add</button>
+    </div></div>`;
+}
+function renderContentCluster(out){
+  _kwCluster=out;
+  _kwActiveCluster=out.cluster_name||null;
+  _kwClusters=(out.supporting||[]);          // reuse the idea-card path for supporting posts
+  const status=document.getElementById('kw-research-status');if(status)status.innerHTML='';
+  const el=document.getElementById('kw-research-results');if(!el)return;
+  if(!out.pillar&&!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc(out.note||'No cluster found — try a broader topic.')}</div>`;return;}
+  const fresh=_kwClusters.filter(c=>!c.overlaps_existing).length+(out.pillar?1:0);
+  const cnt=out.counts||{};
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
+      <div style="font-size:13px;font-weight:700">Cluster: ${esc(out.cluster_name||'')} <span style="font-weight:400;color:var(--text2)">· 1 pillar + ${_kwClusters.length} supporting${cnt.raw?` · ${cnt.raw} kw analysed`:''}${out.cost?` · $${out.cost}`:''}</span></div>
+      ${fresh?`<button class="btn btn-p btn-sm" onclick="addContentCluster()">+ Add whole cluster (${fresh})</button>`:''}
+    </div>`;
+  if(out.pillar)html+=_pillarCard(out.pillar);
+  html+=`<div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin:14px 2px 6px">Supporting posts — each links up to the pillar</div>`;
+  html+=_kwClusters.map((c,i)=>_clusterCard(c,i)).join('');
+  el.innerHTML=html;
+}
+async function addPillar(){
+  const p=_kwCluster&&_kwCluster.pillar;if(!p)return;
+  if(bp().find(x=>(x.primary_keyword||'').toLowerCase()===(p.primary_keyword||'').toLowerCase())){toast('Pillar already in your list');return;}
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:p.primary_keyword,title:p.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:p.primary_volume||null,total_search_volume:p.total_volume||null,supplementary_keywords:(p.supporting_keywords||[]).join(', ')||null,unique_take:p.angle||null,cluster:_kwActiveCluster||null,is_pillar:true,serp_notes:`Cluster pillar (${_kwActiveCluster||''}).`});
+  if(error){toast('Add failed: '+error.message,4000);return;}
+  await loadPosts();render();
+  const b=document.getElementById('kwpadd');if(b)b.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';
+  toast('Pillar added ✓',2500);
+}
+async function addContentCluster(){
+  await addPillar();
+  await addAllClusters();
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.

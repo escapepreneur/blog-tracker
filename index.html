@@ -547,7 +547,11 @@ input[type=file]{width:100%}
 
         <!-- FIND NEW KEYWORDS -->
         <div class="card" style="margin-bottom:14px">
-          <div style="font-size:14px;font-weight:700;margin-bottom:4px">Find new keywords</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Find new keywords</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button class="btn btn-xs btn-p" id="kwmode-ideas" onclick="setKwMode('ideas')">Post ideas</button>
+            <button class="btn btn-xs" id="kwmode-cluster" onclick="setKwMode('cluster')">Content cluster</button>
+          </div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Enter a few seed terms — topics, products, or competitor names. Short head terms work best (e.g. <b>gohighlevel</b>, <b>email marketing</b>, <b>sales funnel</b>), one per line. I pull live search volume + difficulty from DataForSEO, then Claude clusters them into post ideas scored for this brand and drops anything you've already covered.</div>
           <textarea id="kw-seeds" rows="4" style="resize:vertical;width:100%;font-size:13px;margin-bottom:8px" placeholder="gohighlevel&#10;email marketing for coaches&#10;sales funnel&#10;crm"></textarea>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
