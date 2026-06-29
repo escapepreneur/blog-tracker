@@ -2016,19 +2016,27 @@ async function renderOpportunities(){
   try{const r=await fetch('/.netlify/functions/gsc-opportunities?blog='+activeBlog);j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
   catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load opportunities: '+esc(String(e&&e.message||e))+'</div>';return;}
   _gscOpps=[...(j.striking||[]),...(j.lowCtr||[])];
+  const GRID='display:grid;grid-template-columns:minmax(0,1fr) 50px 64px 52px 132px;gap:10px;align-items:center';
+  const hdr=`<div style="${GRID};padding:0 4px 4px;border-bottom:1px solid var(--bg2)">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Keyword</div>
+      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">Pos</div>
+      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">Impr</div>
+      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">CTR</div>
+      <div></div>
+    </div>`;
   const row=(x,i)=>{
     const post=allPosts.find(p=>p.url&&x.page&&p.url.replace(/\/+$/,'')===x.page.replace(/\/+$/,''));
     const act=post?`<button class="btn btn-xs" onclick="openPost('${post.id}','draft')">Optimise</button>`:(x.page?`<a class="btn btn-xs" href="${esc(x.page)}" target="_blank" rel="noopener">Page</a>`:'');
-    return `<div style="display:grid;grid-template-columns:1fr 46px 60px 48px auto;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--bg2)">
+    return `<div style="${GRID};padding:7px 4px;border-bottom:1px solid var(--bg2)">
       <div style="min-width:0;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.query)}</div>
-      <div style="text-align:center;font-size:12px"><b>${x.position.toFixed(1)}</b><div style="font-size:9px;color:var(--text3)">pos</div></div>
-      <div style="text-align:center;font-size:12px">${x.impressions.toLocaleString()}<div style="font-size:9px;color:var(--text3)">impr</div></div>
-      <div style="text-align:center;font-size:12px">${(x.ctr*100).toFixed(1)}%<div style="font-size:9px;color:var(--text3)">ctr</div></div>
-      <div style="display:flex;gap:4px">${act}<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button></div>
+      <div style="text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${x.position.toFixed(1)}</div>
+      <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${x.impressions.toLocaleString()}</div>
+      <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${(x.ctr*100).toFixed(1)}%</div>
+      <div style="display:flex;gap:4px;justify-content:flex-end">${act}<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button></div>
     </div>`;
   };
   const n=(j.striking||[]).length;
-  const sec=(title,note,arr,off)=>arr.length?`<div style="margin-top:12px"><div class="sh">${title}</div><div style="font-size:11px;color:var(--text3);margin:2px 0 6px">${note}</div>${arr.map((x,k)=>row(x,off+k)).join('')}</div>`:'';
+  const sec=(title,note,arr,off)=>arr.length?`<div style="margin-top:14px"><div class="sh">${title}</div><div style="font-size:11px;color:var(--text3);margin:2px 0 8px">${note}</div>${hdr}${arr.map((x,k)=>row(x,off+k)).join('')}</div>`:'';
   el.innerHTML=`<div style="font-size:11px;color:var(--text3)">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed</div>`
     +sec('Striking distance — nudge to page 1','Already ranking just off the top. Optimise the post, or write a stronger one.',j.striking||[],0)
     +sec('Page 1, weak click-through','Ranking but barely clicked - usually a title/meta tweak.',j.lowCtr||[],n)
