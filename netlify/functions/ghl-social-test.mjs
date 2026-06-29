@@ -1,36 +1,29 @@
-// TEMPORARY: discover GHL Pinterest boards endpoint (oauth-style paths) + a usable userId. Removed after.
+// TEMPORARY: attempt a DRAFT Pinterest post via the PIT to learn the exact requirements
+// (userId? board? field names?). Creates a draft, captures the response, then deletes it. Removed after.
 const GHL = 'https://services.leadconnectorhq.com';
 const PIT = process.env.GHL_API_TOKEN;
 const LOC = process.env.GHL_LOCATION_ID || 'EoD3KT6IiKx0oIXjInOt';
 const json = (c, o) => ({ statusCode: c, headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
-const H = { Authorization: `Bearer ${PIT}`, Version: '2021-07-28', Accept: 'application/json' };
+const H = { Authorization: `Bearer ${PIT}`, Version: '2021-07-28', 'Content-Type': 'application/json', Accept: 'application/json' };
+const ACCT = '69e7ae9ef460db52ae19f6fc_EoD3KT6IiKx0oIXjInOt_1109785670584800857_profile'; // ESC Hub pinterest
+const IMG = 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&w=1000';
 
-const FULL = '69e7ae9ef460db52ae19f6fc_EoD3KT6IiKx0oIXjInOt_1109785670584800857_profile'; // ESC Hub pinterest acct id
-const OAUTH = '69e7ae9ef460db52ae19f6fc';
+async function tryCreate(label, payload) {
+  try {
+    const r = await fetch(`${GHL}/social-media-posting/${LOC}/posts`, { method: 'POST', headers: H, body: JSON.stringify(payload) });
+    const t = await r.text();
+    let id = null; try { const j = JSON.parse(t); id = (j.post && (j.post._id || j.post.id)) || j._id || j.id || (j.results && j.results._id); } catch {}
+    // clean up if it created something
+    if (id) { try { await fetch(`${GHL}/social-media-posting/${LOC}/posts/${id}`, { method: 'DELETE', headers: H }); } catch {} }
+    return { label, http: r.status, created_id: id, body: t.slice(0, 400) };
+  } catch (e) { return { label, error: String(e && e.message || e) }; }
+}
 
 export const handler = async () => {
-  if (!PIT) return json(200, { ok: false, note: 'no PIT' });
-  const probe = async (path) => {
-    try { const r = await fetch(GHL + path, { headers: H }); const t = await r.text(); return { path, http: r.status, body: t.slice(0, 300) }; }
-    catch (e) { return { path, error: String(e && e.message || e) }; }
-  };
-  const board_probes = [];
-  for (const p of [
-    `/social-media-posting/oauth/${LOC}/pinterest/accounts/${FULL}/boards`,
-    `/social-media-posting/oauth/${LOC}/pinterest/accounts/${OAUTH}/boards`,
-    `/social-media-posting/oauth/${LOC}/pinterest/accounts/${FULL}`,
-    `/social-media-posting/oauth/${LOC}/pinterest/accounts/${OAUTH}`,
-    `/social-media-posting/oauth/${LOC}/pinterest/boards/${FULL}`,
-    `/social-media-posting/oauth/${LOC}/pinterest/boards/${OAUTH}`,
-  ]) board_probes.push(await probe(p));
-
-  // find a userId (create-post requires one) — try users list
-  let users = null;
-  try {
-    const r = await fetch(`${GHL}/users/?locationId=${LOC}`, { headers: H });
-    const d = await r.json().catch(() => ({}));
-    users = { http: r.status, ids: (d.users || []).slice(0, 3).map(u => ({ id: u.id, name: u.name || u.email })) };
-  } catch (e) { users = { error: String(e && e.message || e) }; }
-
-  return json(200, { board_probes, users });
+  if (!PIT) return json(200, { note: 'no PIT' });
+  const base = { accountIds: [ACCT], type: 'post', status: 'draft', summary: 'TEST pin — ignore', media: [{ url: IMG }] };
+  const out = [];
+  out.push(await tryCreate('no-userId', { ...base }));
+  out.push(await tryCreate('with-pinterest-opts', { ...base, pinterestOptions: { boardId: '', link: 'https://eschub.com/blog' } }));
+  return json(200, { probes: out });
 };
