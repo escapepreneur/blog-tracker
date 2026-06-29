@@ -503,6 +503,13 @@ input[type=file]{width:100%}
         </div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Content clusters</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Your topic clusters and how complete each one is. Build new ones in Keywords; assign existing posts via the Cluster field on each post.</div></div>
+            <button class="btn btn-p btn-sm" onclick="renderClusterView()">Refresh</button>
+          </div>
+          <div id="cluster-view"><div class="empty" style="padding:1rem">Loading…</div></div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div><div style="font-size:14px;font-weight:700">Content gap finder</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Claude analyses your existing posts and finds topics you haven't covered yet</div></div>
             <button class="btn btn-p btn-sm" id="gap-btn" onclick="findContentGaps()">Find content gaps</button>
           </div>
@@ -669,6 +676,10 @@ input[type=file]{width:100%}
       <div class="fd"><label class="fl">Monthly volume</label><input type="number" id="pm-vol"></div>
     </div>
     <div style="margin-bottom:10px"><label class="fl">Supplementary keywords</label><textarea id="pm-supp" rows="2" style="resize:none" placeholder="keyword (vol/KD), keyword (vol/KD)..."></textarea></div>
+    <div class="row">
+      <div class="fd w2"><label class="fl">Topic cluster <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— group related posts for internal linking</span></label><input type="text" id="pm-cluster" placeholder="e.g. GoHighLevel"></div>
+      <div class="fd"><label class="fl">Pillar?</label><select id="pm-pillar"><option value="">No</option><option value="yes">Yes — pillar post</option></select></div>
+    </div>
     <div class="row">
       <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="pm-serp-link"></div>
       <div class="fd w2"><label class="fl">Google Doc link</label><input type="url" id="pm-doc-link" placeholder="Link to blog post Google Doc"></div>

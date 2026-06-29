@@ -197,7 +197,7 @@ function refreshActivePane(){
     case 'links':renderLinksPane();break;
     case 'ideas':renderIdeas();break;
     case 'research':renderResearch();break;
-    case 'insights':renderOpportunities();break;
+    case 'insights':renderOpportunities();renderClusterView();break;
     case 'planning':renderPlanning();break;
     case 'keywords':{ // results + seed suggestions are brand-specific — clear the previous brand's run
       _kwClusters=[];_seedSuggestions=[];
@@ -225,7 +225,7 @@ function switchTab(name,filter){
   if(name==='ideas')renderIdeas();
   if(name==='research')renderResearch();
   if(name==='keywords')initKeywordsTab();
-  if(name==='insights')renderOpportunities();
+  if(name==='insights'){renderOpportunities();renderClusterView();}
   if(name==='planning'){renderPlanning();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
@@ -1446,6 +1446,7 @@ async function openPost(id,tab){
   document.getElementById('pm-ks').value=post.ks_score!=null?post.ks_score:'';
   document.getElementById('pm-vol').value=post.search_volume||'';
   document.getElementById('pm-supp').value=post.supplementary_keywords||'';
+  {const pc=document.getElementById('pm-cluster');if(pc)pc.value=post.cluster||'';const pp=document.getElementById('pm-pillar');if(pp)pp.value=post.is_pillar?'yes':'';}
   document.getElementById('pm-serp-link').value=post.serp_notes||'';
   document.getElementById('pm-doc-link').value=post.unique_take||'';
   document.getElementById('pm-take').value='';
@@ -1493,6 +1494,8 @@ async function savePost(){
       serp_notes:document.getElementById('pm-serp-link')?.value.trim()||null,
       unique_take:document.getElementById('pm-doc-link')?.value.trim()||null,
       priority:document.getElementById('pm-priority')?.value||null,
+      cluster:document.getElementById('pm-cluster')?.value.trim()||null,
+      is_pillar:document.getElementById('pm-pillar')?.value==='yes',
     };
     const{error}=await sb.from('posts').update(u).eq('id',curPost);
     if(error)throw error;
@@ -2247,6 +2250,36 @@ async function addPillar(){
 async function addContentCluster(){
   await addPillar();
   await addAllClusters();
+}
+// CONTENT CLUSTER VIEW (Insights): existing posts grouped by their cluster tag.
+function _statusPill(s){
+  const m={idea:['#6b7280','Idea'],drafted:['#b45309','Draft'],'pending-review':['#b45309','Review'],approved:['#0891b2','Approved'],scheduled:['#0891b2','Scheduled'],live:['var(--green)','Live']};
+  const x=m[s]||['#6b7280',esc(s||'—')];
+  return `<span style="font-size:10px;font-weight:700;color:${x[0]}">${x[1]}</span>`;
+}
+function renderClusterView(){
+  const el=document.getElementById('cluster-view');if(!el)return;
+  const posts=bp().filter(p=>p.cluster&&String(p.cluster).trim());
+  if(!posts.length){el.innerHTML='<div class="empty" style="padding:1rem">No clusters yet. Build one in <b>Keywords → Content cluster</b>, or tag posts with a cluster name via the <b>Topic cluster</b> field in each post\'s details.</div>';return;}
+  const groups={};posts.forEach(p=>{const c=String(p.cluster).trim();(groups[c]=groups[c]||[]).push(p)});
+  const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  const row=(p)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg2)">
+      <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
+      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
+    </div>`;
+  el.innerHTML=names.map(name=>{
+    const arr=groups[name];
+    const pillar=arr.find(p=>p.is_pillar);
+    const supp=arr.filter(p=>!p.is_pillar);
+    const live=arr.filter(p=>p.status==='live').length;
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <div style="font-size:13px;font-weight:700">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
+        <div style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</div>
+      </div>
+      ${pillar?row(pillar):''}${supp.map(row).join('')}
+    </div>`;
+  }).join('');
 }
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.
