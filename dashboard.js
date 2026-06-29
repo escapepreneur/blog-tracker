@@ -208,7 +208,6 @@ function switchTab(name,filter){
   if(name==='research')renderResearch();
   if(name==='keywords')initKeywordsTab();
   if(name==='planning'){renderPlanning();}
-  if(name==='tracking')renderTracking();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -230,7 +229,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','planning','calendar','tracking','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','links','planning','calendar','insights','keywords'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -372,7 +371,7 @@ function renderDashboard(){
   const nlDashEl=document.getElementById('dash-needs-links');
   if(nlDashEl){
     if(!nlDash.length){nlDashEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All posts fully linked.</div>'}
-    else{nlDashEl.innerHTML=nlDash.slice(0,5).map(p=>{const lv=p.postLn>=3&&p.pageLn>=2?'green':(p.postLn>0||p.pageLn>0)?'amber':'red';return`<div class="post-row" onclick="openPost('${p.id}','links')"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><span class="flag f-${lv}">${p.postLn}/3·${p.pageLn}/2</span></div></div>`}).join('')+(nlDash.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px;cursor:pointer" onclick="switchTab('tracking')">+${nlDash.length-5} more → Tracking</div>`:'')}
+    else{nlDashEl.innerHTML=nlDash.slice(0,5).map(p=>{const lv=p.postLn>=3&&p.pageLn>=2?'green':(p.postLn>0||p.pageLn>0)?'amber':'red';return`<div class="post-row" onclick="openPost('${p.id}','links')"><div style="display:flex;align-items:center;justify-content:space-between"><div class="kw-primary" style="flex:1;min-width:0">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'')}</div><span class="flag f-${lv}">${p.postLn}/3·${p.pageLn}/2</span></div></div>`}).join('')+(nlDash.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px;cursor:pointer" onclick="switchTab('links')">+${nlDash.length-5} more → Links</div>`:'')}
   }
 
   // PINTEREST ACTION
