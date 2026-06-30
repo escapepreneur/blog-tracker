@@ -153,16 +153,23 @@ export const handler = async (event) => {
       } catch (e) { return { post: p, error: String(e && e.message || e), ok: false }; }
     });
 
+    const ok = generated.filter(g => g.ok);
     const failed = generated.filter(g => !g.ok);
-    if (failed.length) {
-      // Don't mass-publish a broken cluster — surface what failed and stop before publishing.
-      await finish({ status: 'error', error: `${failed.length} of ${toPublish.length} posts failed generation/checks — fix these before launching: ` + failed.map(f => `"${(f.post.title || f.post.primary_keyword)}"${f.error ? ` (${f.error})` : ' (must-fix issues)'}`).join('; ') });
+
+    // 5. Dry run (Prepare) ALWAYS completes — drafts are already saved and nothing publishes,
+    //    so one failing post shouldn't hide the rest. Report which need fixing; the hard gate
+    //    that blocks a broken cluster lives on the actual publish paths (below + publish_prepared).
+    if (dry_run) {
+      await finish({ status: 'done', result: { dry_run: true, cluster,
+        would_publish: ok.map(g => ({ title: g.draft.title || g.post.title, slug: g.post._slug, url: g.post._url, is_pillar: !!g.post.is_pillar, verdict: g.report.verdict, internal_links: (g.draft.internal_links || []).length })),
+        needs_fixing: failed.map(f => ({ title: f.post.title || f.post.primary_keyword, reason: f.error || ((f.report && f.report.hard || []).join('; ')) || 'must-fix issues' })),
+        ready: ok.length, total: generated.length, already_live: alreadyLive.length } });
       return json(200, {});
     }
 
-    // 5. Dry run stops here — return the plan without touching GHL.
-    if (dry_run) {
-      await finish({ status: 'done', result: { dry_run: true, cluster, would_publish: generated.map(g => ({ title: g.draft.title || g.post.title, slug: g.post._slug, url: g.post._url, is_pillar: !!g.post.is_pillar, verdict: g.report.verdict, internal_links: (g.draft.internal_links || []).length })), already_live: alreadyLive.length } });
+    // One-shot Launch: don't mass-publish a broken cluster — surface what failed and stop.
+    if (failed.length) {
+      await finish({ status: 'error', error: `${failed.length} of ${toPublish.length} posts failed generation/checks — fix these before launching: ` + failed.map(f => `"${(f.post.title || f.post.primary_keyword)}"${f.error ? ` (${f.error})` : ' (must-fix issues)'}`).join('; ') });
       return json(200, {});
     }
 

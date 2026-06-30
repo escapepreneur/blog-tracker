@@ -1530,8 +1530,8 @@ function renderClusterView(){
   const groups={};posts.forEach(p=>{const c=String(p.cluster).trim();(groups[c]=groups[c]||[]).push(p)});
   const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
   const row=(p)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg2)">
-      <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
-      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
+      <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','${_clusterDrafts[p.id]?'draft':'details'}')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
+      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${_clusterDrafts[p.id]&&_clusterDrafts[p.id].verdict==='fail'?'<span style="font-size:10px;color:#b45309;font-weight:700" title="Draft has a must-fix issue — open to see it">⚠ fix</span>':''}${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
     </div>`;
   el.innerHTML=names.map(name=>{
     const arr=groups[name];
@@ -1540,21 +1540,24 @@ function renderClusterView(){
     const live=arr.filter(p=>p.status==='live').length;
     const unpubPosts=arr.filter(p=>!p.ghl_post_id);
     const unpub=unpubPosts.length;
-    const prepared=unpubPosts.filter(p=>_clusterDrafts[p.id]).length;
-    const ready=unpub>0&&prepared===unpub; // every unpublished post has a draft ready to review
+    const drafted=unpubPosts.filter(p=>_clusterDrafts[p.id]).length;
+    const failing=unpubPosts.filter(p=>_clusterDrafts[p.id]&&_clusterDrafts[p.id].verdict==='fail').length;
+    const allDrafted=unpub>0&&drafted===unpub;
+    const ready=allDrafted&&failing===0; // all unpublished posts drafted AND passing -> safe to publish
     const en=esc(name).replace(/'/g,"\\'");
     return `<div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px">
         <div style="font-size:13px;font-weight:700;min-width:0">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
         <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
-          ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${ready?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
+          ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${allDrafted?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
           ${ready?`<button class="btn btn-xs" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="publishCluster('${en}')" title="Publish the reviewed drafts live, all at once and interlinked">Publish ${unpub} →</button>`:''}
           ${unpub?`<button class="btn btn-xs btn-ghost" onclick="launchCluster('${en}')" title="Skip review: generate and publish in one go">⚡ Launch now</button>`:''}
           <button class="btn btn-xs btn-danger" onclick="deleteCluster('${en}')" title="Remove this whole cluster">Remove</button>
         </div>
       </div>
-      ${ready?`<div style="font-size:11px;color:var(--green);margin-bottom:4px">✓ ${unpub} draft${unpub===1?'':'s'} ready — open each post's Draft tab to review, then Publish</div>`:''}
+      ${ready?`<div style="font-size:11px;color:var(--green);margin-bottom:4px">✓ ${unpub} draft${unpub===1?'':'s'} ready — open each post's Draft tab to review, then Publish</div>`
+        :allDrafted&&failing?`<div style="font-size:11px;color:#b45309;margin-bottom:4px">⚠ ${drafted-failing} of ${unpub} ready · ${failing} need fixing before you can publish — open the ⚠ post(s) below, then Re-prepare</div>`:''}
       ${pillar?row(pillar):''}${supp.map(row).join('')}
     </div>`;
   }).join('');
@@ -1592,7 +1595,10 @@ async function prepareCluster(name){
   if(!confirm(`Prepare the "${name}" cluster?\n\nThis writes all ${unpub.length} post${unpub.length===1?'':'s'} as drafts, fully interlinked (pillar ↔ supporting), so you can review every one before anything goes live. Nothing is published yet.\n\nTakes a few minutes; you can keep working. Continue?`))return;
   _startClusterJob({name,payload:{dry_run:true},
     working:`Preparing <b>${esc(name)}</b> — writing ${unpub.length} interlinked drafts. A few minutes; nothing goes live.`,
-    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=(res.would_publish||[]).length||unpub.length;ui.bn(`✓ Prepared <b>${esc(name)}</b> — ${n} draft${n===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');toast('Cluster prepared — review then publish ✓',4000);}});
+    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;
+      const ready=(res.ready!=null?res.ready:(res.would_publish||[]).length);const nf=res.needs_fixing||[];
+      if(nf.length){ui.bn(`Prepared <b>${esc(name)}</b> — ${ready} ready, ${nf.length} need fixing: ${nf.map(f=>esc(f.title)).join(', ')}. Open the ⚠ post's <b>Draft</b> tab, then <b>Re-prepare</b>.`,'error');toast(`Prepared — ${nf.length} need fixing`,4500);}
+      else{ui.bn(`✓ Prepared <b>${esc(name)}</b> — ${ready} draft${ready===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');toast('Cluster prepared — review then publish ✓',4000);}}});
 }
 // Step 2: publish the reviewed drafts, all at once, to their reserved URLs (links stay intact).
 async function publishCluster(name){

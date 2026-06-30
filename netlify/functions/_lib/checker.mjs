@@ -18,6 +18,20 @@ function occurrences(haystack, term) {
 function phraseHits(haystack, term) {
   return (haystack.toLowerCase().split(term.toLowerCase()).length - 1);
 }
+// Loose keyword presence: do all the keyword's significant tokens appear (plural/article tolerant)?
+// Lets a natural title like "Best Places ... Digital Nomad" satisfy "best place for digital nomad"
+// instead of demanding the awkward exact phrase verbatim.
+const KW_STOP = new Set(['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with']);
+function kwTokens(s) {
+  return (String(s || '').toLowerCase().match(/[a-z0-9]+/g) || [])
+    .filter(w => !KW_STOP.has(w))
+    .map(w => w.replace(/ies$/, 'y').replace(/([a-z])s$/, '$1')); // crude singularise (places->place)
+}
+function keywordPresent(haystack, kw) {
+  const kt = kwTokens(kw); if (!kt.length) return false;
+  const hs = new Set(kwTokens(haystack));
+  return kt.every(t => hs.has(t));
+}
 function getH2s(html) { return [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/gis)].map(m => stripTags(m[1])); }
 function getLinks(html) {
   return [...html.matchAll(/<a\s[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis)].map(m => ({ href: m[1], anchor: stripTags(m[2]) }));
@@ -85,9 +99,9 @@ export function runChecks({ brand, post, draft }) {
 
   // 7. Keyword placement
   if (kw) {
-    if (title.toLowerCase().includes(kwLow)) PASS('Keyword in H1 title.'); else HARD(`Primary keyword "${kw}" not in the H1 title.`);
-    if (firstWords(textLow, 100).includes(kwLow)) PASS('Keyword in first 100 words.'); else WARN(`Keyword not in first 100 words.`);
-    const inH2 = getH2s(html).some(h => h.toLowerCase().includes(kwLow));
+    if (keywordPresent(title, kw)) PASS('Keyword in H1 title.'); else HARD(`Primary keyword "${kw}" not in the H1 title.`);
+    if (keywordPresent(firstWords(textLow, 100), kw)) PASS('Keyword in first 100 words.'); else WARN(`Keyword not in first 100 words.`);
+    const inH2 = getH2s(html).some(h => keywordPresent(h, kw));
     inH2 ? PASS('Keyword in an H2.') : WARN('Keyword not in any H2 subheading.');
     const kwN = phraseHits(textLow, kwLow);
     if (kwN < 3) WARN(`Keyword used ${kwN}× — aim for 3-5.`);
@@ -102,10 +116,10 @@ export function runChecks({ brand, post, draft }) {
   // 9. Meta title / description
   const mt = (draft.meta_title || '').length;
   if (mt < 50 || mt > 60) WARN(`Meta title ${mt} chars (need 50-60).`); else PASS('Meta title length OK.');
-  if (!(draft.meta_title || '').toLowerCase().includes(kwLow)) WARN('Keyword not in meta title.');
+  if (!keywordPresent(draft.meta_title || '', kw)) WARN('Keyword not in meta title.');
   const md = (draft.meta_description || '').length;
   if (md < 150 || md > 160) WARN(`Meta description ${md} chars (need 150-160).`); else PASS('Meta description length OK.');
-  if (!(draft.meta_description || '').toLowerCase().includes(kwLow)) WARN('Keyword not in meta description.');
+  if (!keywordPresent(draft.meta_description || '', kw)) WARN('Keyword not in meta description.');
 
   // 10. Slug
   const slug = draft.slug || '';
