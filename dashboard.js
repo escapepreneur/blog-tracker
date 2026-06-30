@@ -66,7 +66,12 @@ async function initApp(){
   try{
     sb=supabase.createClient(url,key);
     document.getElementById('main-app').style.display='flex';
+    const savedBlog=localStorage.getItem('cd_blog');if(savedBlog==='esc'||savedBlog==='nms')activeBlog=savedBlog; // remember brand across reloads
     await loadAll();
+    // reflect the restored brand in the switcher, and reopen the tab the user was on
+    document.getElementById('btn-esc').className='bsw-btn'+(activeBlog==='esc'?' a-esc':'');
+    document.getElementById('btn-nms').className='bsw-btn'+(activeBlog==='nms'?' a-nms':'');
+    const savedTab=localStorage.getItem('cd_tab');if(savedTab&&document.getElementById('pane-'+savedTab))switchTab(savedTab);
   }catch(e){
     console.error('initApp error:',e);
     document.getElementById('con-screen').style.display='flex';
@@ -117,6 +122,8 @@ async function loadLinks(){
 // BLOG/TAB
 function switchBlog(blog){
   activeBlog=blog;
+  try{localStorage.setItem('cd_blog',blog);}catch(e){}
+  const cb=document.getElementById('cluster-launch-status');if(cb)cb.innerHTML=''; // drop any other-brand cluster banner
   document.getElementById('btn-esc').className='bsw-btn'+(blog==='esc'?' a-esc':'');
   document.getElementById('btn-nms').className='bsw-btn'+(blog==='nms'?' a-nms':'');
   sfilt='live';document.querySelectorAll('.fchip').forEach((b,i)=>b.classList.toggle('on',i===1));
@@ -140,6 +147,7 @@ function refreshActivePane(){
 }
 function switchTab(name,filter){
   activeTab=name;
+  try{if(name)localStorage.setItem('cd_tab',name);}catch(e){}
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
   document.getElementById('pane-'+name).classList.add('on');
   updateTabs();
@@ -1560,19 +1568,21 @@ function _clusterBanner(html,kind){
 // Shared runner for the three cluster actions. payload picks the backend mode;
 // working = banner text while it runs; onDone(result) fires on success.
 async function _startClusterJob({name,payload,working,onDone}){
+  const jobBlog=activeBlog;                                                   // the brand this job belongs to
+  const bn=(html,kind)=>{if(activeBlog===jobBlog)_clusterBanner(html,kind);}; // only paint on the matching brand
   const id=_kwUUID();
-  const{error}=await sb.from('cluster_launches').insert({id,blog:activeBlog,cluster:name,status:'working'});
+  const{error}=await sb.from('cluster_launches').insert({id,blog:jobBlog,cluster:name,status:'working'});
   if(error){toast('Could not start: '+error.message,4000);return;}
-  let st;try{const r=await fetch('/.netlify/functions/launch-cluster-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({launch_id:id,blog:activeBlog,cluster:name,...payload})});st=r.status;}catch(e){st='err';}
-  if(st!==202&&st!==200){_clusterBanner('Could not start (status '+st+').','error');return;}
-  _clusterBanner(working,'working');
+  let st;try{const r=await fetch('/.netlify/functions/launch-cluster-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({launch_id:id,blog:jobBlog,cluster:name,...payload})});st=r.status;}catch(e){st='err';}
+  if(st!==202&&st!==200){bn('Could not start (status '+st+').','error');return;}
+  bn(working,'working');
   const start=Date.now();
   const iv=setInterval(async()=>{
     const{data}=await sb.from('cluster_launches').select('status,result,error').eq('id',id).single();
     if(!data)return;
-    if(data.status==='done'){clearInterval(iv);await loadPosts();onDone(data.result||{});}
-    else if(data.status==='error'){clearInterval(iv);_clusterBanner('⚠ '+esc(data.error||'Failed.'),'error');}
-    if(Date.now()-start>840000){clearInterval(iv);_clusterBanner('Still working — refresh shortly to see the result.','working');}
+    if(data.status==='done'){clearInterval(iv);await loadPosts();onDone(data.result||{},{bn,same:activeBlog===jobBlog});}
+    else if(data.status==='error'){clearInterval(iv);bn('⚠ '+esc(data.error||'Failed.'),'error');}
+    if(Date.now()-start>840000){clearInterval(iv);bn('Still working — refresh shortly to see the result.','working');}
   },6000);
 }
 // Step 1 of the reviewed launch: generate every post as an interlinked DRAFT (nothing goes live).
@@ -1582,7 +1592,7 @@ async function prepareCluster(name){
   if(!confirm(`Prepare the "${name}" cluster?\n\nThis writes all ${unpub.length} post${unpub.length===1?'':'s'} as drafts, fully interlinked (pillar ↔ supporting), so you can review every one before anything goes live. Nothing is published yet.\n\nTakes a few minutes; you can keep working. Continue?`))return;
   _startClusterJob({name,payload:{dry_run:true},
     working:`Preparing <b>${esc(name)}</b> — writing ${unpub.length} interlinked drafts. A few minutes; nothing goes live.`,
-    onDone:(res)=>{const n=(res.would_publish||[]).length||unpub.length;_clusterBanner(`✓ Prepared <b>${esc(name)}</b> — ${n} draft${n===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');renderClusters();toast('Cluster prepared — review then publish ✓',4000);}});
+    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=(res.would_publish||[]).length||unpub.length;ui.bn(`✓ Prepared <b>${esc(name)}</b> — ${n} draft${n===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');toast('Cluster prepared — review then publish ✓',4000);}});
 }
 // Step 2: publish the reviewed drafts, all at once, to their reserved URLs (links stay intact).
 async function publishCluster(name){
@@ -1591,7 +1601,7 @@ async function publishCluster(name){
   if(!confirm(`Publish the "${name}" cluster?\n\nThis takes the ${unpub.length} reviewed draft${unpub.length===1?'':'s'} and publishes them live — all at once, fully interlinked. Continue?`))return;
   _startClusterJob({name,payload:{publish_prepared:true},
     working:`Publishing <b>${esc(name)}</b> — ${unpub.length} reviewed post${unpub.length===1?'':'s'} going live…`,
-    onDone:(res)=>{const n=res.count||0;_clusterBanner(`✓ Published <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');renderClusters();toast('Cluster published — '+n+' live ✓',4000);}});
+    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Published <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster published — '+n+' live ✓',4000);}});
 }
 // One-shot: generate AND publish in a single pass, skipping the review gate (checker still blocks).
 async function launchCluster(name){
@@ -1600,7 +1610,7 @@ async function launchCluster(name){
   if(!confirm(`Launch the "${name}" cluster now?\n\nThis GENERATES and PUBLISHES ${unpub.length} post${unpub.length===1?'':'s'} live in one go — fully interlinked, with no review stop. They go live immediately.\n\n(Prefer to check them first? Use "Prepare for review" instead.) Continue?`))return;
   _startClusterJob({name,payload:{},
     working:`Launching <b>${esc(name)}</b> — generating ${unpub.length} posts. A few minutes; you can keep working.`,
-    onDone:(res)=>{const n=res.count||0;_clusterBanner(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');renderClusters();toast('Cluster launched — '+n+' live ✓',4000);}});
+    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster launched — '+n+' live ✓',4000);}});
 }
 // Remove a whole cluster: deletes every post tagged with this cluster name (same child-row
 // cleanup as bulkDeleteResearch). Warns if any are already live (they stay published on the blog).
