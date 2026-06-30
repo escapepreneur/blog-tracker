@@ -1804,6 +1804,23 @@ async function aiEditRun(instruction){
     else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out — try again',4000);}
   },6000);
 }
+// Run the editorial pass on the current draft (background fn + poll for the result).
+async function runEditorialReview(){
+  const pid=curPost;
+  const before=await loadDraft(pid);const prev=before&&before.editorial?before.editorial.checked_at:null;
+  const box=document.getElementById('pm-editorial');
+  if(box)box.innerHTML='<div style="font-size:12px;color:var(--text2);padding:2px 0">Editorial review running… about a minute. You can keep working and come back.</div>';
+  let status;
+  try{const res=await fetch('/.netlify/functions/editorial-review-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid})});status=res.status;}catch(e){status='err';}
+  if(status!==202&&status!==200){if(curPost===pid)renderDraftTab();toast('Could not start editorial review ('+status+')',4000);return;}
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const d=await loadDraft(pid);
+    const ts=d&&d.editorial?d.editorial.checked_at:null;
+    if(ts&&ts!==prev){clearInterval(iv);if(curPost===pid){_curDraft=d;renderDraftTab();}toast('Editorial review ready ✓',3000);}
+    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Editorial review timed out — try again',4000);}
+  },5000);
+}
 function _draftRow(label,value,copyKey){
   return `<div style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">${label}</label>${copyKey?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('${copyKey}')">Copy</button>`:''}</div>
@@ -1813,6 +1830,39 @@ function _draftRow(label,value,copyKey){
 function _reportBlock(title,items,color){
   if(!items||!items.length)return'';
   return `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.04em">${title}</div><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`;
+}
+function _editorialBadge(o){
+  const m={strong:['Strong','var(--green-l)','var(--green)','#b8dfc6'],minor:['Minor tweaks','var(--amber-l)','var(--amber-t)','#f0d8a0'],needs_work:['Needs work','var(--red-l)','var(--red-t)','#f0c8c8']};
+  const[l,bg,fg,bd]=m[o]||m.minor;
+  return `<span style="display:inline-block;padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;background:${bg};color:${fg};border:1px solid ${bd}">${l}</span>`;
+}
+// Editorial review block: Claude's read on voice/audience/substance/CTA + broken-link flags.
+function _editorialBlock(d){
+  const e=d.editorial;
+  if(!e)return `<div id="pm-editorial" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">Editorial review</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:9px">A Claude read for what the checks can't see — voice, audience fit, substance, the right CTA, and links that won't resolve.</div>
+    <button class="btn btn-p btn-sm" onclick="runEditorialReview()">Run editorial review</button>
+    <span style="font-size:11px;color:var(--text3);margin-left:8px">about a minute</span>
+  </div>`;
+  const sevColor={high:'var(--red-t)',medium:'var(--amber-t)',low:'var(--text3)'},sevRank={high:0,medium:1,low:2};
+  const issues=[...(e.issues||[])].sort((a,b)=>(sevRank[a.severity]??3)-(sevRank[b.severity]??3));
+  const issueHtml=issues.length?issues.map(i=>`<div style="margin-bottom:7px;padding-left:9px;border-left:2px solid ${sevColor[i.severity]||'var(--text3)'}">
+      <div style="font-size:12px;color:var(--text)"><b style="text-transform:uppercase;font-size:10px;color:${sevColor[i.severity]||'var(--text3)'}">${esc(i.severity||'')} · ${esc(i.area||'')}</b><br>${esc(i.detail||'')}</div>
+      ${i.fix?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Fix: ${esc(i.fix)}</div>`:''}
+    </div>`).join(''):'<div style="font-size:12px;color:var(--green)">No issues raised.</div>';
+  const strengths=(e.strengths||[]).length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--text3);cursor:pointer">What's working (${e.strengths.length})</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${e.strengths.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></details>`:'';
+  return `<div id="pm-editorial" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">Editorial review</span>
+      ${_editorialBadge(e.overall)}
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:10px" onclick="runEditorialReview()">Re-run</button>
+    </div>
+    <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:8px">${esc(e.summary||'')}</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px"><b>Voice:</b> ${e.voice_ok?'✓':'⚠'} ${esc(e.voice_note||'')}<br><b>Audience:</b> ${e.audience_ok?'✓':'⚠'} ${esc(e.audience_note||'')}</div>
+    ${issueHtml}
+    ${strengths}
+  </div>`;
 }
 function _draftViewHtml(d){
   const r=d.check_report||{},a=d.assets||{};
@@ -1842,6 +1892,7 @@ function _draftViewHtml(d){
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
+  ${_editorialBlock(d)}
   ${a.featured_image_search?`<div id="feat-area" style="margin-bottom:14px">
     <label class="fl">Featured image</label>
     <div id="feat-preview">${a.featured_image_url
