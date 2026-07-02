@@ -11,8 +11,9 @@ export const handler = async () => {
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
   const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
 
-  const rows = await (await rest(`posts?status=eq.live&pinterest_posted=eq.false&blog=eq.esc&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster&limit=1`)).json();
-  if (!rows || !rows.length) return json(200, { note: 'no eligible ESC post (live, pin not yet posted)' });
+  const target = 'https://eschub.com/post/how-to-create-lead-magnet';
+  const rows = await (await rest(`posts?url=eq.${encodeURIComponent(target)}&select=id,blog,title,primary_keyword,url,cluster,pinterest_posted&limit=1`)).json();
+  if (!rows || !rows.length) return json(200, { note: 'lead-magnet post not found' });
   const post = rows[0];
   const [d] = await (await rest(`post_drafts?post_id=eq.${post.id}&select=assets,meta_description`)).json();
   if (!d || !d.assets || !d.assets.pin_image_url) return json(200, { note: 'that post has no rendered pin', post: post.title });
