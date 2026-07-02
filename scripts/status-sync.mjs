@@ -10,7 +10,7 @@
 import { publishBlogPost } from '../netlify/functions/_lib/ghl.mjs';
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
-import { postPinsForPost, blotatoConfigured } from '../netlify/functions/_lib/blotato.mjs';
+import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -95,13 +95,14 @@ async function verifyLive(url) {
   // Pinterest auto-posting: live posts with a rendered pin that haven't been pinned yet ->
   // pin to their topic board + brand blog board via Blotato, then mark pinterest_posted.
   let pinned = 0;
-  if (LIVE && blotatoConfigured()) {
+  const pinUserId = (LIVE && PIT) ? await getGhlUserId(PIT) : null;
+  if (LIVE && PIT && pinUserId) {
     const rows = await (await rest(`posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster`)).json();
     for (const p of (Array.isArray(rows) ? rows : [])) {
       const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
       if (!d || !d.assets || !d.assets.pin_image_url) continue; // pin not rendered yet — try again next run
       try {
-        const res = await postPinsForPost({ brand: p.blog, post: p, draft: d });
+        const res = await postPinsForPost({ pit: PIT, userId: pinUserId, brand: p.blog, post: p, draft: d });
         const ok = res.posted && res.posted.some(x => !x.error);
         if (ok) {
           await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ pinterest_posted: true }) });
