@@ -2,6 +2,7 @@
 // API host services.leadconnectorhq.com, Version 2021-07-28, Bearer PIT.
 import { BRANDS } from './brands.mjs';
 import { embedBodyImages } from './embedimages.mjs';
+import { affiliateLinkify } from './affiliate.mjs';
 
 const GHL = 'https://services.leadconnectorhq.com';
 const LOC = process.env.GHL_LOCATION_ID || 'EoD3KT6IiKx0oIXjInOt';
@@ -45,7 +46,7 @@ export async function slugExists({ brand, slug, pit }) {
 export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT', publishedAt, imageUrl, imageAltText }) {
   const b = BRANDS[brand];
   const title = (draft.assets && draft.assets.title) || post.title || post.primary_keyword;
-  let rawHTML = embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images);
+  let rawHTML = affiliateLinkify(embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images));
   // Embed the Pinterest pin near the end (a "save this" graphic). Body is final at create
   // time, so it must be baked in here. Inline styles only — GHL strips classes.
   const pinUrl = draft.assets && draft.assets.pin_image_url;
