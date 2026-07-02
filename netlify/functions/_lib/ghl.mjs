@@ -52,7 +52,7 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
   const pinUrl = draft.assets && draft.assets.pin_image_url;
   if (pinUrl) {
     const alt = String(title).replace(/"/g, '&quot;');
-    rawHTML += `<p style="text-align:center;margin:36px 0 4px"><img src="${pinUrl}" alt="${alt}" style="display:block;margin:0 auto;max-width:600px;width:100%;height:auto;border-radius:10px"></p>`;
+    rawHTML += `<div style="max-width:300px;margin:32px auto;text-align:center"><img src="${pinUrl}" alt="${alt}" style="display:block;width:100%;height:auto;border-radius:10px"></div>`;
   }
   const payload = {
     title,
