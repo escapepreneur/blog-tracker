@@ -16,7 +16,7 @@ export const handler = async (event) => {
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
-  const { post_id, date, publish } = body;
+  const { post_id, date, publish, override } = body;
   if (!post_id) return json(400, { error: 'post_id required' });
   const today = new Date().toISOString().slice(0, 10);
   // A scheduled post goes live on its date, so reject a past date — but "publish now"
@@ -34,7 +34,7 @@ export const handler = async (event) => {
     if (post.ghl_post_id) return json(409, { error: 'already sent to ESC Hub' });
     const [draft] = await (await rest(`post_drafts?post_id=eq.${post_id}&select=*`)).json();
     if (!draft) return json(400, { error: 'no draft to schedule yet' });
-    if (draft.check_report && draft.check_report.verdict === 'fail') return json(400, { error: 'draft has must-fix issues' });
+    if (!override && draft.check_report && draft.check_report.verdict === 'fail') return json(400, { error: 'draft has must-fix issues' });
 
     const r = await createBlogPost({
       brand: post.blog, post, draft, pit: PIT, status: publish ? 'PUBLISHED' : 'DRAFT',

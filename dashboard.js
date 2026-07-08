@@ -1728,16 +1728,17 @@ async function regenSlotImages(i){
   }catch(e){toast('Regenerate error: '+e.message,4000)}
   finally{const b=document.getElementById('bregen-'+i);if(b){b.disabled=false;b.textContent='Regenerate';}}
 }
-async function scheduleNow(){
+async function scheduleNow(override){
   const p=gp(curPost);if(!p)return;
   const brand=(BM[p.blog]||{}).name||'the blog';
   const date=p.proposed_date||p.scheduled_date;
   if(!date){toast('Set a proposed date in the Details tab first');return}
   if(date<localToday()){toast('That date ('+fd(date)+') is in the past — update the date in the Details tab before scheduling.',5000);return}
-  if(!confirm('Schedule "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' for '+fd(date)+'?\n\nIt is created now and goes live automatically on that date.'))return;
+  const warn=override?'\n\n⚠ This has a flagged check — you are scheduling it anyway.':'';
+  if(!confirm('Schedule "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' for '+fd(date)+'?\n\nIt is created now and goes live automatically on that date.'+warn))return;
   toast('Scheduling…',3000);
   try{
-    const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,date})});
+    const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,date,override:!!override})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Schedule failed: '+(d.error||('HTTP '+res.status)),4000);return}
     await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
@@ -1774,13 +1775,14 @@ async function resetSent(){
     toast('Reset — you can publish or schedule again',3000);
   }catch(e){toast('Reset failed: '+e.message,4000)}
 }
-async function publishNow(){
+async function publishNow(override){
   const p=gp(curPost);if(!p)return;
   const brand=(BM[p.blog]||{}).name||'the blog';
-  if(!confirm('Publish "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' NOW?\n\nIt goes live immediately.'))return;
+  const warn=override?'\n\n⚠ This has a flagged check — you are publishing it anyway.':'';
+  if(!confirm('Publish "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' NOW?\n\nIt goes live immediately.'+warn))return;
   toast('Publishing…',3000);
   try{
-    const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,publish:true})});
+    const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,publish:true,override:!!override})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Publish failed: '+(d.error||('HTTP '+res.status)),4000);return}
     await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
@@ -1927,7 +1929,11 @@ function _draftViewHtml(d){
     ${post.ghl_post_id
       ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>${post.url?`<div style="margin-top:4px"><a href="${esc(post.url)}" target="_blank" style="font-size:11px;color:var(--text2)">${esc(post.url)}</a></div>`:''}<button class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:8px" onclick="resetSent()">Reset — re-publish / deleted in GHL</button>`
       : r.verdict==='fail'
-        ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above before publishing.</div>`
+        ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above — or if you've reviewed it and it's fine, override the check:</div>
+           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+             ${futureDate?`<button class="btn btn-ghost btn-sm" onclick="scheduleNow(true)">Schedule anyway →</button>`:''}
+             <button class="btn btn-ghost btn-sm" onclick="publishNow(true)">Publish anyway</button>
+           </div>`
         : `<div style="display:flex;gap:8px;flex-wrap:wrap">
             ${futureDate?`<button class="btn btn-p" onclick="scheduleNow()">Schedule for ${fd(tdate)} →</button>`:''}
             <button class="btn ${futureDate?'btn-ghost':'btn-p'}" onclick="publishNow()">Publish now</button>

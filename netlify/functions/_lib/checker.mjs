@@ -71,8 +71,13 @@ export function runChecks({ brand, post, draft }) {
   else if (lmLinks.length > 2) WARN(`${lmLinks.length} lead-magnet links — keep it to one contextual mention.`);
   else PASS(`Lead-magnet link present (${lmLinks.length}).`);
 
-  // 4. Voice / person (hard for ESC first-person, warn for NMS)
-  const narrativeText = text.replace(/["“”][^"“”]*["“”]/g, ' '); // ignore quoted/illustrative spans
+  // 4. Voice / person (hard for ESC first-person, warn for NMS).
+  // Only AUTHOR narrative counts. Ignore quoted/illustrative spans AND questions —
+  // FAQ / reader-voice questions are legitimately first person ("Do I lose my subscribers?",
+  // "Can I move my list?") and must not trip the second-person rule.
+  const narrativeText = text
+    .replace(/["“”][^"“”]*["“”]/g, ' ')   // quoted spans
+    .replace(/[^.?!]*\?/g, ' ');          // question clauses (FAQ + reader-voice)
   const firstPersonHits = occurrences(narrativeText, 'I') + occurrences(narrativeText, 'my') + occurrences(narrativeText, 'me');
   if (b.person === 'second') {
     if (firstPersonHits > 2) HARD(`Reads first-person (I/me/my ×${firstPersonHits}) — ESC Hub posts must be second person (you/your).`);
