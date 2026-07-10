@@ -42,7 +42,7 @@ async function processOne(row) {
   // Pinterest pin (1000x1500, same bg + title) — stored for in-body embed + Pinterest posting.
   if (!a.pin_image_url) {
     try {
-      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg, brand });
+      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline: a.featured_tagline || '', brand, seed: row.post_id });
       const pinUp = await uploadMedia({ buffer: pinJpeg, filename: `pin-${row.post_id}.jpg`, pit: PIT });
       assets.pin_image_url = pinUp.url;
       console.log('  pin ✓', row.post_id, '->', pinUp.url);
