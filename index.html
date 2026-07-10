@@ -311,6 +311,7 @@ input[type=file]{width:100%}
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Planning</button>
+      <button class="nav-i" onclick="switchTab('ideas')"><span style="width:18px;text-align:center">💡</span>Ideas</button>
     </nav>
     <div class="sb-btm"><button onclick="showSettings()">⚙ Settings</button></div>
   </aside>
@@ -504,6 +505,19 @@ input[type=file]{width:100%}
             <button class="btn btn-sm" onclick="copySnapshot()">Copy to clipboard</button>
           </div>
         </div>
+      </div>
+    </div>
+    <!-- IDEAS / REQUESTS -->
+    <div id="pane-ideas" class="pane">
+      <div class="ph"><div><div class="pt">Ideas &amp; requests</div><div class="ps">Drop ideas or changes you want for this tool as you work — Claude reads this board directly and actions them.</div></div></div>
+      <div class="pb">
+        <div class="card" style="margin-bottom:14px">
+          <label class="fl">New idea / request</label>
+          <textarea id="idea-input" rows="3" style="resize:vertical;width:100%;font-size:13px;margin:6px 0 8px" placeholder="e.g. Add a filter for posts not optimised in 60 days · Flag posts live but not indexed · Show a monthly clicks trend on the dashboard"></textarea>
+          <button class="btn btn-p" onclick="addRequest()">Add to board</button>
+        </div>
+        <div id="ideas-open"><div class="empty" style="padding:1rem">Loading…</div></div>
+        <div id="ideas-done" style="margin-top:18px"></div>
       </div>
     </div>
     <!-- KEYWORDS -->

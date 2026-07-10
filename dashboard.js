@@ -162,6 +162,7 @@ function switchTab(name,filter){
   if(name==='links')renderLinksPane();
   if(name==='keywords'){initKeywordsTab();renderClusters();renderResearch();}
   if(name==='insights'){renderOpportunities();renderRecentOptimizations();}
+  if(name==='ideas')renderRequests();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -183,7 +184,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','calendar','insights','keywords'].forEach((n,i)=>{
+  ['dashboard','posts','links','calendar','insights','keywords','ideas'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -1431,6 +1432,43 @@ async function renderOpportunities(){
     +sec('Page 2–3, real demand','Big search volume but ranking too far back to get clicks. High-reward targets — refresh the post or build authority.',j.growing||[],nS+nL)
     +((!(j.striking||[]).length&&!(j.lowCtr||[]).length&&!(j.growing||[]).length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
 }
+// ── IDEAS / REQUESTS BOARD (Ideas tab) ── Karen drops tool ideas/requests here as she
+// works; Claude reads the `requests` table directly (Supabase) and actions them.
+async function renderRequests(){
+  const openEl=document.getElementById('ideas-open'),doneEl=document.getElementById('ideas-done');
+  if(!openEl)return;
+  const{data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
+  if(error){openEl.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load: '+esc(error.message)+'</div>';if(doneEl)doneEl.innerHTML='';return;}
+  const rows=data||[];
+  const open=rows.filter(r=>r.status!=='done'),done=rows.filter(r=>r.status==='done');
+  const card=(r)=>`<div class="card" style="padding:11px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+      <button class="btn btn-xs" title="Mark done" onclick="toggleRequestDone('${r.id}',true)" style="flex:none">✓</button>
+      <div style="flex:1;min-width:0;font-size:13px;white-space:pre-wrap;word-break:break-word">${esc(r.text)}</div>
+      <div style="flex:none;font-size:10px;color:var(--text3);white-space:nowrap">${fd((r.created_at||'').slice(0,10))}</div>
+      <button class="btn btn-danger btn-xs" title="Delete" onclick="delRequest('${r.id}')" style="flex:none">✕</button>
+    </div>`;
+  openEl.innerHTML=open.length?`<div class="sh">Open (${open.length})</div>`+open.map(card).join(''):'<div class="empty" style="padding:1rem">No open ideas yet. Add one above — I’ll pick it up next time we work on the tool.</div>';
+  if(doneEl){
+    doneEl.innerHTML=done.length?`<div class="sh">Done (${done.length})</div>`+done.map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--bg2);opacity:.6">
+        <button class="btn btn-xs btn-ghost" title="Reopen" onclick="toggleRequestDone('${r.id}',false)" style="flex:none">↺</button>
+        <div style="flex:1;min-width:0;font-size:12px;text-decoration:line-through;white-space:pre-wrap;word-break:break-word">${esc(r.text)}</div>
+        <button class="btn btn-danger btn-xs" onclick="delRequest('${r.id}')" style="flex:none">✕</button>
+      </div>`).join(''):'';
+  }
+}
+async function addRequest(){
+  const ta=document.getElementById('idea-input');const text=(ta&&ta.value||'').trim();
+  if(!text){if(ta)ta.focus();return;}
+  const{error}=await sb.from('requests').insert({text});
+  if(error){toast('Add failed: '+error.message,4000);return;}
+  if(ta)ta.value='';renderRequests();toast('Added to the ideas board ✓');
+}
+async function toggleRequestDone(id,done){
+  await sb.from('requests').update({status:done?'done':'open',done_at:done?new Date().toISOString():null}).eq('id',id);
+  renderRequests();
+}
+async function delRequest(id){if(!confirm('Delete this idea?'))return;await sb.from('requests').delete().eq('id',id);renderRequests();}
+
 // Recently-optimized results (Insights): posts with a logged optimization + the lift since.
 async function renderRecentOptimizations(){
   const el=document.getElementById('opt-recent');if(!el)return;
