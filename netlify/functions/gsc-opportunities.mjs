@@ -21,10 +21,28 @@ export const handler = async (event) => {
 
   try {
     const rows = await searchAnalytics({ siteUrl: b.gscProperty, startDate: ymd(start), endDate: ymd(end), dimensions: ['query', 'page'], rowLimit: 5000 });
-    const items = rows.map(r => ({
+    const raw = rows.map(r => ({
       query: r.keys[0], page: r.keys[1],
       clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position,
     })).filter(x => x.query && !/^https?:/.test(x.query)); // drop any odd rows
+
+    // GSC reports in-page anchor links (…/post/x#uuid — heading/TOC jump-links) as
+    // separate "pages", so one post's data for a keyword fragments across many rows.
+    // Strip the #fragment and merge by query+page so each shows once with combined
+    // impressions + an impression-weighted position.
+    const agg = new Map();
+    for (const r of raw) {
+      const page = (r.page || '').split('#')[0];
+      const key = r.query + '\n' + page;
+      const a = agg.get(key) || { query: r.query, page, clicks: 0, impressions: 0, _posw: 0 };
+      a.clicks += r.clicks; a.impressions += r.impressions; a._posw += (r.position || 0) * r.impressions;
+      agg.set(key, a);
+    }
+    const items = [...agg.values()].map(a => ({
+      query: a.query, page: a.page, clicks: a.clicks, impressions: a.impressions,
+      ctr: a.impressions ? a.clicks / a.impressions : 0,
+      position: a.impressions ? a._posw / a.impressions : 0,
+    }));
 
     const striking = items
       .filter(x => x.position >= 4.5 && x.position <= 20 && x.impressions >= 25)

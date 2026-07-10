@@ -43,15 +43,24 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     try { rows = await searchAnalytics({ siteUrl: prop, startDate: ymd(start), endDate: ymd(end), dimensions: ['page'], rowLimit: 2000 }); }
     catch (e) { console.error(`  [${blog}] GSC error: ${e.message}`); continue; }
 
-    const inserts = [];
+    // GSC lists in-page anchor links (…/post/x#uuid) as separate pages; strip the
+    // #fragment and merge so a post's snapshot includes all its impressions.
+    const byPage = new Map();
     for (const r of (rows || [])) {
-      const pid = byUrl.get(norm(r.keys[0]));
+      const page = norm((r.keys[0] || '').split('#')[0]);
+      const a = byPage.get(page) || { clicks: 0, impressions: 0, posw: 0 };
+      a.clicks += r.clicks; a.impressions += r.impressions; a.posw += (r.position || 0) * r.impressions;
+      byPage.set(page, a);
+    }
+    const inserts = [];
+    for (const [page, a] of byPage) {
+      const pid = byUrl.get(page);
       if (!pid || recentSet.has(pid)) continue;
-      recentSet.add(pid); // guard against a page appearing twice
+      recentSet.add(pid); // one row per post per run
       inserts.push({
         post_id: pid, recorded_date: today,
-        position: Math.round(r.position * 10) / 10,
-        impressions: r.impressions, clicks: r.clicks,
+        position: a.impressions ? Math.round((a.posw / a.impressions) * 10) / 10 : null,
+        impressions: a.impressions, clicks: a.clicks,
         notes: 'GSC-auto',
       });
     }
