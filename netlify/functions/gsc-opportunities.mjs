@@ -38,11 +38,23 @@ export const handler = async (event) => {
       a.clicks += r.clicks; a.impressions += r.impressions; a._posw += (r.position || 0) * r.impressions;
       agg.set(key, a);
     }
-    const items = [...agg.values()].map(a => ({
+    const merged = [...agg.values()].map(a => ({
       query: a.query, page: a.page, clicks: a.clicks, impressions: a.impressions,
       ctr: a.impressions ? a.clicks / a.impressions : 0,
       position: a.impressions ? a._posw / a.impressions : 0,
     }));
+
+    // Drop brand + navigational queries — someone searching your brand name already finds
+    // you; they aren't content opportunities and they clutter the list across many pages.
+    const brandRx = { esc: /esc\s*hub|eschub/i, nms: /escapepreneur|no\s*more\s*somedays/i }[blog];
+    const navRx = /^(login|log ?in|sign ?in|sign ?up|app|dashboard|pricing login)$/i;
+    const content = merged.filter(x => !(brandRx && brandRx.test(x.query)) && !navRx.test((x.query || '').trim()));
+
+    // One row per keyword: keep its best-ranking (highest-impression) page, so a keyword
+    // that ranks on several pages shows once instead of repeating.
+    const best = new Map();
+    for (const x of content) { const p = best.get(x.query); if (!p || x.impressions > p.impressions) best.set(x.query, x); }
+    const items = [...best.values()];
 
     // Assign each keyword to exactly ONE bucket so it never shows in two sections.
     // Priority: page-1 weak-CTR (clearest fix) > striking (just off page 1) > page 2-3.
@@ -59,7 +71,7 @@ export const handler = async (event) => {
 
     return json(200, {
       blog, range: { start: ymd(start), end: ymd(end) },
-      counts: { rows: items.length, striking: striking.length, lowCtr: lowCtr.length, growing: growing.length },
+      counts: { rows: merged.length, striking: striking.length, lowCtr: lowCtr.length, growing: growing.length },
       striking, lowCtr, growing,
     });
   } catch (e) {
