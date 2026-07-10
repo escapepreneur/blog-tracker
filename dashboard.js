@@ -827,7 +827,7 @@ async function openPost(id,tab){
   const reviewBtn=document.getElementById('review-post-btn');
   if(reviewBtn)reviewBtn.style.display=(post.status==='live'&&post.url)?'inline-flex':'none';
   document.getElementById('post-modal').classList.add('on');
-  switchPTab(tab||'details');
+  switchPTab(tab||'draft');
 }
 async function savePost(){
   if(!curPost)return;
