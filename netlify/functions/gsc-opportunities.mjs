@@ -44,19 +44,18 @@ export const handler = async (event) => {
       position: a.impressions ? a._posw / a.impressions : 0,
     }));
 
-    const striking = items
-      .filter(x => x.position >= 4.5 && x.position <= 20 && x.impressions >= 25)
-      .sort((a, b2) => b2.impressions - a.impressions).slice(0, 40);
-
-    const lowCtr = items
-      .filter(x => x.position <= 10 && x.impressions >= 150 && x.ctr < 0.02)
-      .sort((a, b2) => b2.impressions - a.impressions).slice(0, 25);
-
-    // page 2-3, high demand: ranking too far back to get clicks, but real search volume
-    // exists — these are the big-lift/big-reward targets (invisible under the old pos<=20 cap).
-    const growing = items
-      .filter(x => x.position > 20 && x.position <= 50 && x.impressions >= 100)
-      .sort((a, b2) => b2.impressions - a.impressions).slice(0, 25);
+    // Assign each keyword to exactly ONE bucket so it never shows in two sections.
+    // Priority: page-1 weak-CTR (clearest fix) > striking (just off page 1) > page 2-3.
+    //   lowCtr   - pos <=10, >=150 impr, <2% CTR      -> title/meta tweak
+    //   striking - pos 4.5-20, >=25 impr              -> nudge to page 1
+    //   growing  - pos 20-50, >=100 impr              -> big-lift page 2-3 (was hidden by the old pos<=20 cap)
+    const byImpr = [...items].sort((a, b2) => b2.impressions - a.impressions);
+    const striking = [], lowCtr = [], growing = [];
+    for (const x of byImpr) {
+      if (x.position <= 10 && x.impressions >= 150 && x.ctr < 0.02) { if (lowCtr.length < 25) lowCtr.push(x); }
+      else if (x.position >= 4.5 && x.position <= 20 && x.impressions >= 25) { if (striking.length < 40) striking.push(x); }
+      else if (x.position > 20 && x.position <= 50 && x.impressions >= 100) { if (growing.length < 25) growing.push(x); }
+    }
 
     return json(200, {
       blog, range: { start: ymd(start), end: ymd(end) },
