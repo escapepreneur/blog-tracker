@@ -1412,12 +1412,15 @@ async function renderOpportunities(){
   const row=(x,i)=>{
     const post=allPosts.find(p=>p.url&&x.page&&p.url.replace(/\/+$/,'')===x.page.replace(/\/+$/,''));
     const act=post?`<button class="btn btn-xs" onclick="openPost('${post.id}','draft')">Optimise</button>`:(x.page?`<a class="btn btn-xs" href="${esc(x.page)}" target="_blank" rel="noopener">Page</a>`:'');
+    // + Idea only when there's NO tracked post for this keyword — if a post already ranks
+    // for it, the move is to Optimise that post, not spin up a duplicate targeting the same term.
+    const idea=post?'':`<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button>`;
     return `<div style="${GRID};padding:7px 4px;border-bottom:1px solid var(--bg2)">
       <div style="min-width:0;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.query)}</div>
       <div style="text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${x.position.toFixed(1)}</div>
       <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${x.impressions.toLocaleString()}</div>
       <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${(x.ctr*100).toFixed(1)}%</div>
-      <div style="display:flex;gap:4px;justify-content:flex-end">${act}<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button></div>
+      <div style="display:flex;gap:4px;justify-content:flex-end">${act}${idea}</div>
     </div>`;
   };
   const nS=(j.striking||[]).length,nL=(j.lowCtr||[]).length;
