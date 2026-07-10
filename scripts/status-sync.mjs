@@ -77,19 +77,35 @@ async function verifyLive(url) {
     if (LIVE) await setLive(p, goLive);
     flipped++;
   }
-  // Indexing-status tracking: flip live posts to indexed=yes once Search Console confirms.
-  let indexedFlipped = 0;
+  // Indexing tracking + self-healing:
+  //  - flip live posts to indexed=yes once Search Console confirms;
+  //  - for posts still not indexed after a couple of days, verify the page is actually
+  //    serving (200) then RE-REQUEST indexing. Catches the publish-day 404 (Google
+  //    crawled before the page was live and cached the 404) + nudges anything the first
+  //    request didn't take. Capped at 30 days — past that, re-nudging isn't the problem.
+  let indexedFlipped = 0, reRequested = 0;
   if (LIVE && getServiceAccount()) {
-    const livePosts = await (await rest(`posts?status=eq.live&indexed=neq.yes&url=not.is.null&select=id,blog,url,primary_keyword`)).json();
+    const livePosts = await (await rest(`posts?status=eq.live&indexed=neq.yes&url=not.is.null&select=id,blog,url,primary_keyword,published_date,scheduled_date`)).json();
     for (const p of (Array.isArray(livePosts) ? livePosts : [])) {
       const prop = BRANDS[p.blog] && BRANDS[p.blog].gscProperty;
       if (!prop) continue;
       try {
         const st = await inspectIndexed(prop, p.url);
-        if (st === 'yes') { await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'yes' }) }); indexedFlipped++; }
+        if (st === 'yes') {
+          await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'yes' }) });
+          indexedFlipped++;
+          continue;
+        }
+        // still not indexed — re-nudge if it's been live 2-30 days and the page is up
+        const liveDate = p.published_date || p.scheduled_date;
+        const ageDays = liveDate ? Math.floor((Date.parse(today) - Date.parse(liveDate)) / 86400000) : null;
+        if (ageDays != null && ageDays >= 2 && ageDays <= 30) {
+          const code = await verifyLive(p.url);
+          if (code === 200) { await requestIndexing(p.url); reRequested++; console.log(`  RE-INDEX  [${p.blog}] ${p.primary_keyword || p.url} (live ${ageDays}d, not yet indexed)`); }
+        }
       } catch (e) { /* per-post best-effort */ }
     }
-    console.log(`[status-sync] indexing: ${indexedFlipped} post(s) flipped to indexed=yes`);
+    console.log(`[status-sync] indexing: ${indexedFlipped} flipped to yes, ${reRequested} re-requested`);
   }
 
   // Pinterest auto-posting: live posts with a rendered pin that haven't been pinned yet ->
