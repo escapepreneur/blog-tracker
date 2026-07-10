@@ -4,6 +4,12 @@
 [build]
   publish = "."
 
+[build.environment]
+  # DATAFORSEO_LOGIN is Karen's public email (also the reminder-recipient default in
+  # scripts/content-reminder.mjs), NOT a secret — exempt it so Netlify's secrets scanner
+  # doesn't false-positive on the literal and fail the build. All real keys stay scanned.
+  SECRETS_SCAN_OMIT_KEYS = "DATAFORSEO_LOGIN"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
