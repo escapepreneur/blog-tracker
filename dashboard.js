@@ -1394,43 +1394,69 @@ async function loadDraft(postId){
   try{const{data}=await sb.from('post_drafts').select('*').eq('post_id',postId).maybeSingle();return data||null;}
   catch(e){return null;}
 }
-// Search Console opportunities (Insights tab): striking-distance + low-CTR queries.
+// Search Console opportunities (Insights tab): grouped BY POST — each post card lists the
+// keywords it's ranking for (near page 1 / low CTR / page 2-3), with one Optimise button.
+// Untracked ranking pages group separately with a "+ Idea" per keyword.
 async function renderOpportunities(){
   const el=document.getElementById('gsc-opps');if(!el)return;
   el.innerHTML='<div class="empty" style="padding:1rem">Loading from Search Console…</div>';
   let j;
   try{const r=await fetch('/.netlify/functions/gsc-opportunities?blog='+activeBlog);j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
   catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load opportunities: '+esc(String(e&&e.message||e))+'</div>';return;}
-  _gscOpps=[...(j.striking||[]),...(j.lowCtr||[]),...(j.growing||[])];
-  const GRID='display:grid;grid-template-columns:minmax(0,1fr) 50px 64px 52px 132px;gap:10px;align-items:center';
-  const hdr=`<div style="${GRID};padding:0 4px 4px;border-bottom:1px solid var(--bg2)">
-      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Keyword</div>
-      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">Pos</div>
-      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">Impr</div>
-      <div style="font-size:9px;color:var(--text3);text-align:right;text-transform:uppercase">CTR</div>
-      <div></div>
-    </div>`;
-  const row=(x,i)=>{
-    const post=allPosts.find(p=>p.url&&x.page&&p.url.replace(/\/+$/,'')===x.page.replace(/\/+$/,''));
-    const act=post?`<button class="btn btn-xs" onclick="openPost('${post.id}','draft')">Optimise</button>`:(x.page?`<a class="btn btn-xs" href="${esc(x.page)}" target="_blank" rel="noopener">Page</a>`:'');
-    // + Idea only when there's NO tracked post for this keyword — if a post already ranks
-    // for it, the move is to Optimise that post, not spin up a duplicate targeting the same term.
-    const idea=post?'':`<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button>`;
-    return `<div style="${GRID};padding:7px 4px;border-bottom:1px solid var(--bg2)">
-      <div style="min-width:0;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.query)}</div>
+  const S=j.striking||[],L=j.lowCtr||[],G=j.growing||[];
+  _gscOpps=[...S,...L,...G];
+  // annotate each keyword with its bucket + original index (for + Idea)
+  const ann=_gscOpps.map((x,i)=>({...x,_i:i,_bucket:i<S.length?'striking':i<S.length+L.length?'lowctr':'growing'}));
+  // group keywords by the page they rank on
+  const gmap=new Map();
+  ann.forEach(x=>{const k=(x.page||'').replace(/\/+$/,'');if(!gmap.has(k))gmap.set(k,[]);gmap.get(k).push(x);});
+  const postGroups=[],otherGroups=[];
+  for(const [page,items] of gmap){
+    const post=allPosts.find(p=>p.url&&p.url.replace(/\/+$/,'')===page);
+    const totImpr=items.reduce((s,x)=>s+x.impressions,0);
+    const bestPos=Math.min(...items.map(x=>x.position));
+    (post?postGroups:otherGroups).push({page,items,post,totImpr,bestPos});
+  }
+  postGroups.sort((a,b)=>b.totImpr-a.totImpr);
+  otherGroups.sort((a,b)=>b.totImpr-a.totImpr);
+  const tag=(b)=>{const m={striking:['near page 1','#1a4d8f','var(--blue-l)'],lowctr:['low CTR','#8a5a00','#fff7e6'],growing:['page 2–3','var(--text2)','var(--bg2)']}[b];return `<span style="font-size:10px;font-weight:600;color:${m[1]};background:${m[2]};border-radius:20px;padding:2px 8px;white-space:nowrap">${m[0]}</span>`;};
+  const KG='display:grid;grid-template-columns:minmax(0,1fr) 42px 56px 44px 88px;gap:8px;align-items:center';
+  const kwRow=(x,showIdea)=>`<div style="${KG};padding:6px 2px;border-bottom:1px solid var(--bg2)">
+      <div style="min-width:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.query)}</div>
       <div style="text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${x.position.toFixed(1)}</div>
       <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${x.impressions.toLocaleString()}</div>
       <div style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums">${(x.ctr*100).toFixed(1)}%</div>
-      <div style="display:flex;gap:4px;justify-content:flex-end">${act}${idea}</div>
+      <div style="text-align:right">${showIdea?`<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${x._i})">+ Idea</button>`:tag(x._bucket)}</div>
+    </div>`;
+  const kHdr=`<div style="${KG};padding:0 2px 3px;border-bottom:1px solid var(--bg2)"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Keyword</div><div style="font-size:9px;color:var(--text3);text-align:right">POS</div><div style="font-size:9px;color:var(--text3);text-align:right">IMPR</div><div style="font-size:9px;color:var(--text3);text-align:right">CTR</div><div></div></div>`;
+  const postCard=(g)=>{
+    const p=g.post,title=p.title||p.primary_keyword||g.page.replace(/^https?:\/\/[^/]+/,'');
+    const items=g.items.slice().sort((a,b)=>b.impressions-a.impressions);
+    return `<div class="card" style="padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d</div>
+        </div>
+        <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','draft')">Optimise</button>
+      </div>
+      ${kHdr}${items.map(x=>kwRow(x,false)).join('')}
     </div>`;
   };
-  const nS=(j.striking||[]).length,nL=(j.lowCtr||[]).length;
-  const sec=(title,note,arr,off)=>arr.length?`<div style="margin-top:14px"><div class="sh">${title}</div><div style="font-size:11px;color:var(--text3);margin:2px 0 8px">${note}</div>${hdr}${arr.map((x,k)=>row(x,off+k)).join('')}</div>`:'';
-  el.innerHTML=`<div style="font-size:11px;color:var(--text3)">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed</div>`
-    +sec('Striking distance — nudge to page 1','Already ranking just off the top. Optimise the post, or write a stronger one.',j.striking||[],0)
-    +sec('Page 1, weak click-through','Ranking but barely clicked - usually a title/meta tweak.',j.lowCtr||[],nS)
-    +sec('Page 2–3, real demand','Big search volume but ranking too far back to get clicks. High-reward targets — refresh the post or build authority.',j.growing||[],nS+nL)
-    +((!(j.striking||[]).length&&!(j.lowCtr||[]).length&&!(j.growing||[]).length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
+  const otherCard=(g)=>{
+    const items=g.items.slice().sort((a,b)=>b.impressions-a.impressions);
+    return `<div class="card" style="padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+        <a href="${esc(g.page)}" target="_blank" rel="noopener" style="min-width:0;font-size:12px;font-weight:600;color:var(--teal-d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.page.replace(/^https?:\/\//,''))}</a>
+        <span style="font-size:10px;color:var(--text3);flex:none">not a tracked post</span>
+      </div>
+      ${kHdr}${items.map(x=>kwRow(x,true)).join('')}
+    </div>`;
+  };
+  el.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed · <span style="color:#1a4d8f;font-weight:600">near page 1</span> · <span style="color:#8a5a00;font-weight:600">low CTR</span> · <span style="color:var(--text2);font-weight:600">page 2–3</span></div>`
+    +(postGroups.length?`<div class="sh" style="margin-top:12px">Your posts with ranking opportunities</div><div style="font-size:11px;color:var(--text3);margin:2px 0 10px">Each post and the keywords it's close on. Optimise the post to lift them together.</div>${postGroups.map(postCard).join('')}`:'')
+    +(otherGroups.length?`<div class="sh" style="margin-top:16px">Other ranking pages — a dedicated post could win these</div><div style="font-size:11px;color:var(--text3);margin:2px 0 10px">Keywords ranking on pages that aren't blog posts. Add one as an idea to target it properly.</div>${otherGroups.map(otherCard).join('')}`:'')
+    +((!postGroups.length&&!otherGroups.length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
 }
 // ── IDEAS / REQUESTS BOARD (Ideas tab) ── Karen drops tool ideas/requests here as she
 // works; Claude reads the `requests` table directly (Supabase) and actions them.
