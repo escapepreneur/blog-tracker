@@ -134,7 +134,7 @@ function switchBlog(blog){
 function refreshActivePane(){
   switch(activeTab){
     case 'links':renderLinksPane();break;
-    case 'insights':renderOpportunities();break;
+    case 'insights':renderOpportunities();renderRecentOptimizations();break;
     case 'keywords':{ // research results + seed suggestions are brand-specific — clear the previous brand's run; refresh clusters + idea backlog
       _kwClusters=[];_seedSuggestions=[];
       const r=document.getElementById('kw-research-results');if(r)r.innerHTML='';
@@ -161,7 +161,7 @@ function switchTab(name,filter){
   }
   if(name==='links')renderLinksPane();
   if(name==='keywords'){initKeywordsTab();renderClusters();renderResearch();}
-  if(name==='insights'){renderOpportunities();}
+  if(name==='insights'){renderOpportunities();renderRecentOptimizations();}
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -197,7 +197,7 @@ function switchPTab(name){
     document.getElementById('pm-'+n).classList.toggle('on',n===name);
     document.getElementById('ptab-'+n).classList.toggle('on',n===name);
   });
-  if(name==='gsc')renderGscHistory();
+  if(name==='gsc')renderRankingsTab();
   if(name==='links')renderModalLinks();
   if(name==='draft')renderDraftTab();
 }
@@ -900,11 +900,13 @@ async function renderGscHistory(){
   if(!curPost)return;
   const{data}=await sb.from('gsc_positions').select('*').eq('post_id',curPost).order('recorded_date',{ascending:false});
   const rows=data||[];
-  if(!rows.length){document.getElementById('gsc-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">No rankings yet.</td></tr>`;return}
+  if(!rows.length){document.getElementById('gsc-tbody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text3)">No rankings yet — the weekly auto-snapshot will fill this in.</td></tr>`;return}
   document.getElementById('gsc-tbody').innerHTML=rows.map((r,i)=>{const pv=rows[i+1];let ch='—';if(pv&&r.position&&pv.position){const d=pv.position-r.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'—'}
-  const src=r.notes?.startsWith('SerpRobot')?'SerpRobot':r.notes?.startsWith('GSC')?'GSC':'Manual';
-  const srcColor=src==='SerpRobot'?'var(--teal-d)':src==='GSC'?'var(--blue)':'var(--text3)';
-  return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
+  const n=r.notes||'';
+  const src=n.includes('GSC-auto')?'Auto':n.startsWith('SerpRobot')?'SerpRobot':n.startsWith('GSC')?'GSC':'Manual';
+  const srcColor=src==='Auto'?'var(--green)':src==='SerpRobot'?'var(--teal-d)':src==='GSC'?'var(--blue)':'var(--text3)';
+  const ctr=(r.impressions&&r.clicks!=null)?((r.clicks/r.impressions)*100).toFixed(1)+'%':'—';
+  return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ctr}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
 }
 async function saveGsc(){
   const e={post_id:curPost,recorded_date:document.getElementById('gsc-date').value||localToday(),position:parseFloat(document.getElementById('gsc-pos').value)||null,impressions:parseInt(document.getElementById('gsc-impr').value)||null,clicks:parseInt(document.getElementById('gsc-clicks').value)||null,notes:document.getElementById('gsc-notes').value.trim()||null};
@@ -914,6 +916,115 @@ async function saveGsc(){
   hideAddGsc();renderGscHistory();renderDashRankings();toast('Ranking saved');
 }
 async function delGsc(id){await sb.from('gsc_positions').delete().eq('id',id);renderGscHistory()}
+
+// ── OPTIMIZATION PANEL (Rankings tab): live metrics + health + optimization log ──
+let _gscMetrics=null;
+async function renderRankingsTab(){
+  await renderGscMetrics();   // sets _gscMetrics (used by the log's before/after)
+  await renderOptLog();
+  renderGscHistory();
+}
+function _statTile(label,val,sub){return`<div style="flex:1;min-width:0;background:var(--bg2);border-radius:var(--r2);padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">${label}</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${sub}</div>`:''}</div>`}
+function _chip(text,tone){const c={amber:['#8a5a00','#fff7e6','#f2d9a0'],blue:['#1a4d8f','var(--blue-l)','#b8ccf0'],green:['#1c6b3a','#e9f7ee','#b6e0c4'],grey:['var(--text2)','var(--bg2)','var(--border)']}[tone||'grey'];return`<span style="display:inline-block;font-size:11px;font-weight:600;color:${c[0]};background:${c[1]};border:1px solid ${c[2]};border-radius:20px;padding:3px 10px;margin:0 6px 6px 0">${text}</span>`}
+function _healthFlags(page,post){
+  const f=[];
+  if(!page||!page.impressions){f.push(_chip('No search impressions yet — give it time / check indexing','grey'));}
+  else{
+    const pos=page.position,ctr=page.ctr||0,impr=page.impressions;
+    if(pos<=5&&ctr>=0.03)f.push(_chip('✓ Performing well','green'));
+    if(pos<=10&&ctr<0.02&&impr>=50)f.push(_chip('Page 1 but low CTR — sharpen title/meta','amber'));
+    if(pos>10&&pos<=20)f.push(_chip('Just off page 1 — push it up','blue'));
+    if(pos>20&&pos<=50&&impr>=50)f.push(_chip('Page 2–3 with real demand — needs a lift','blue'));
+    if(pos>50&&impr>=50)f.push(_chip('Ranking far back — big rewrite or new post','grey'));
+  }
+  if(post&&post.indexed&&post.indexed!=='yes')f.push(_chip('Not confirmed indexed','amber'));
+  return f.length?f.join(''):_chip('No flags','grey');
+}
+async function renderGscMetrics(){
+  _gscMetrics=null;
+  const el=document.getElementById('pm-gsc-metrics');if(!el)return;
+  const post=allPosts.find(p=>p.id===curPost);
+  if(!post||!post.url){el.innerHTML='<div class="empty" style="padding:1rem">No live URL yet — publish this post to start tracking Search Console results.</div>';return}
+  el.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:.5rem"><div class="spinner"></div>Loading Search Console data…</div>';
+  let j;
+  try{const r=await fetch('/.netlify/functions/gsc-metrics?blog='+encodeURIComponent(post.blog||activeBlog)+'&url='+encodeURIComponent(post.url));j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
+  catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load metrics: '+esc(String(e&&e.message||e))+'</div>';return;}
+  _gscMetrics=j;
+  const p=j.page;
+  const tiles=p?`<div style="display:flex;gap:8px;margin-bottom:10px">
+      ${_statTile('Position',p.position.toFixed(1))}
+      ${_statTile('Impressions',p.impressions.toLocaleString())}
+      ${_statTile('Clicks',p.clicks.toLocaleString())}
+      ${_statTile('CTR',(p.ctr*100).toFixed(2)+'%')}
+    </div>`:'<div class="empty" style="padding:.75rem;margin-bottom:10px">No Search Console impressions in the last 90 days.</div>';
+  const q=(j.queries||[]).slice(0,6);
+  const qList=q.length?`<div style="margin-top:6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:4px">Top queries</div>${q.map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--bg2)"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.query)}</span><span style="color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums">pos ${x.position.toFixed(1)} · ${x.impressions.toLocaleString()} impr · ${(x.ctr*100).toFixed(1)}%</span></div>`).join('')}</div>`:'';
+  el.innerHTML=`<div class="card" style="padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700">Search Console — last 90 days</div>
+      <div style="font-size:10px;color:var(--text3)">${j.range?esc(j.range.start+' → '+j.range.end):''}</div>
+    </div>
+    ${tiles}
+    <div>${_healthFlags(p,post)}</div>
+    ${qList}
+  </div>`;
+}
+function showOptForm(){const f=document.getElementById('opt-form');if(f){f.style.display='block';const d=document.getElementById('opt-date');if(d&&!d.value)d.value=localToday();}}
+function hideOptForm(){const f=document.getElementById('opt-form');if(f)f.style.display='none';}
+async function saveOptimization(){
+  if(!curPost)return;
+  const post=allPosts.find(p=>p.id===curPost);
+  const kind=(document.getElementById('opt-kind')||{}).value||'other';
+  const opt_date=(document.getElementById('opt-date')||{}).value||localToday();
+  const note=((document.getElementById('opt-note')||{}).value||'').trim()||null;
+  const pg=_gscMetrics&&_gscMetrics.page;
+  const baseline=pg?{position:pg.position,impressions:pg.impressions,clicks:pg.clicks,ctr:pg.ctr,window:'90d',captured:localToday()}:null;
+  const{error}=await sb.from('optimizations').insert({post_id:curPost,blog:post?post.blog:activeBlog,opt_date,kind,note,baseline});
+  if(error){toast('Save failed: '+error.message,4000);return;}
+  // drop a marker on the position history so the "before" point is visible on the trend
+  if(baseline)await sb.from('gsc_positions').insert({post_id:curPost,recorded_date:opt_date,position:baseline.position,impressions:baseline.impressions,clicks:baseline.clicks,notes:'optimization: '+kind+(note?' — '+note:'')});
+  ['opt-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  hideOptForm();renderOptLog();renderGscHistory();toast('Optimization logged ✓');
+}
+async function delOpt(id){if(!confirm('Delete this optimization log entry?'))return;await sb.from('optimizations').delete().eq('id',id);renderOptLog();}
+function _optKindLabel(k){return{'title-meta':'Title / meta','content':'Content','links':'Internal links','featured':'Featured image','keywords':'Keyword targeting','other':'Other'}[k]||k;}
+function _delta(before,after,lowerBetter){
+  if(before==null||after==null)return '<span style="color:var(--text3)">—</span>';
+  const d=after-before;const good=lowerBetter?d<0:d>0;
+  if(Math.abs(d)<(lowerBetter?0.1:0.0005))return '<span style="color:var(--text3)">no change</span>';
+  const arrow=good?'▲':'▼';const col=good?'var(--green)':'var(--red-t)';
+  return `<span style="color:${col};font-weight:700">${arrow} ${lowerBetter?Math.abs(d).toFixed(1):''}</span>`;
+}
+async function renderOptLog(){
+  const el=document.getElementById('pm-opt-list');if(!el||!curPost)return;
+  const{data}=await sb.from('optimizations').select('*').eq('post_id',curPost).order('opt_date',{ascending:false});
+  const rows=data||[];
+  if(!rows.length){el.innerHTML='<div class="empty" style="padding:.75rem">No optimizations logged yet. When you improve this post, log it here to measure the lift.</div>';return;}
+  const cur=_gscMetrics&&_gscMetrics.page;
+  el.innerHTML=rows.map(o=>{
+    const b=o.baseline||{};
+    const beforeTxt=b.position!=null?`pos ${(+b.position).toFixed(1)} · ${(+b.impressions||0).toLocaleString()} impr · ${((+b.ctr||0)*100).toFixed(1)}% CTR`:'no baseline captured';
+    let afterBlock='';
+    if(cur&&b.position!=null){
+      afterBlock=`<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-top:6px">
+        <span>Position ${(+b.position).toFixed(1)} → <b>${cur.position.toFixed(1)}</b> ${_delta(+b.position,cur.position,true)}</span>
+        <span>Clicks ${(+b.clicks||0).toLocaleString()} → <b>${cur.clicks.toLocaleString()}</b> ${_delta(+b.clicks||0,cur.clicks,false)}</span>
+        <span>CTR ${((+b.ctr||0)*100).toFixed(1)}% → <b>${(cur.ctr*100).toFixed(1)}%</b> ${_delta(+b.ctr||0,cur.ctr,false)}</span>
+      </div>`;
+    }
+    return`<div class="card" style="padding:11px 13px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:12px;font-weight:700">${esc(_optKindLabel(o.kind))} <span style="color:var(--text3);font-weight:400">· ${fd(o.opt_date)}</span></div>
+          ${o.note?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${esc(o.note)}</div>`:''}
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Before: ${beforeTxt}</div>
+          ${afterBlock}
+        </div>
+        <button class="btn btn-danger btn-xs" onclick="delOpt('${o.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 // GSC IMPORT
 async function handleGscFile(event){
@@ -1289,7 +1400,7 @@ async function renderOpportunities(){
   let j;
   try{const r=await fetch('/.netlify/functions/gsc-opportunities?blog='+activeBlog);j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
   catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load opportunities: '+esc(String(e&&e.message||e))+'</div>';return;}
-  _gscOpps=[...(j.striking||[]),...(j.lowCtr||[])];
+  _gscOpps=[...(j.striking||[]),...(j.lowCtr||[]),...(j.growing||[])];
   const GRID='display:grid;grid-template-columns:minmax(0,1fr) 50px 64px 52px 132px;gap:10px;align-items:center';
   const hdr=`<div style="${GRID};padding:0 4px 4px;border-bottom:1px solid var(--bg2)">
       <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Keyword</div>
@@ -1309,12 +1420,41 @@ async function renderOpportunities(){
       <div style="display:flex;gap:4px;justify-content:flex-end">${act}<button class="btn btn-xs btn-ghost" onclick="addOpportunityKeyword(${i})">+ Idea</button></div>
     </div>`;
   };
-  const n=(j.striking||[]).length;
+  const nS=(j.striking||[]).length,nL=(j.lowCtr||[]).length;
   const sec=(title,note,arr,off)=>arr.length?`<div style="margin-top:14px"><div class="sh">${title}</div><div style="font-size:11px;color:var(--text3);margin:2px 0 8px">${note}</div>${hdr}${arr.map((x,k)=>row(x,off+k)).join('')}</div>`:'';
   el.innerHTML=`<div style="font-size:11px;color:var(--text3)">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed</div>`
     +sec('Striking distance — nudge to page 1','Already ranking just off the top. Optimise the post, or write a stronger one.',j.striking||[],0)
-    +sec('Page 1, weak click-through','Ranking but barely clicked - usually a title/meta tweak.',j.lowCtr||[],n)
-    +((!(j.striking||[]).length&&!(j.lowCtr||[]).length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
+    +sec('Page 1, weak click-through','Ranking but barely clicked - usually a title/meta tweak.',j.lowCtr||[],nS)
+    +sec('Page 2–3, real demand','Big search volume but ranking too far back to get clicks. High-reward targets — refresh the post or build authority.',j.growing||[],nS+nL)
+    +((!(j.striking||[]).length&&!(j.lowCtr||[]).length&&!(j.growing||[]).length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
+}
+// Recently-optimized results (Insights): posts with a logged optimization + the lift since.
+async function renderRecentOptimizations(){
+  const el=document.getElementById('opt-recent');if(!el)return;
+  const{data,error}=await sb.from('optimizations').select('*,posts(title,url,primary_keyword)').eq('blog',activeBlog).order('opt_date',{ascending:false}).limit(15);
+  if(error){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load: '+esc(error.message)+'</div>';return;}
+  const rows=data||[];
+  if(!rows.length){el.innerHTML='<div class="empty" style="padding:1rem">No optimizations logged yet. Open a post → Rankings → “Log optimization”.</div>';return;}
+  const ids=[...new Set(rows.map(o=>o.post_id))];
+  const{data:snaps}=await sb.from('gsc_positions').select('post_id,recorded_date,position,impressions,clicks,notes').in('post_id',ids).order('recorded_date',{ascending:false});
+  const latest={};(snaps||[]).forEach(s=>{if(!latest[s.post_id]&&(s.notes||'').includes('GSC-auto'))latest[s.post_id]=s;});
+  el.innerHTML=rows.map(o=>{
+    const b=o.baseline||{};const post=o.posts||{};
+    const title=post.title||post.primary_keyword||'(untitled)';
+    const after=latest[o.post_id];
+    const hasAfter=after&&b.position!=null&&after.recorded_date>o.opt_date;
+    let lift='<span style="color:var(--text3);font-size:11px">awaiting next weekly snapshot</span>';
+    if(hasAfter){
+      lift=`<span style="font-size:11px">pos ${(+b.position).toFixed(1)} → <b>${(+after.position).toFixed(1)}</b> ${_delta(+b.position,+after.position,true)}</span>`;
+    }
+    return`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--bg2)">
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><a href="#" onclick="openPost('${o.post_id}','gsc');return false" style="color:var(--text);text-decoration:none">${esc(title)}</a></div>
+        <div style="font-size:10px;color:var(--text3)">${esc(_optKindLabel(o.kind))} · ${fd(o.opt_date)}${o.note?' · '+esc(o.note):''}</div>
+      </div>
+      <div style="text-align:right;white-space:nowrap">${lift}</div>
+    </div>`;
+  }).join('');
 }
 async function addOpportunityKeyword(i){
   const x=_gscOpps[i];if(!x)return;

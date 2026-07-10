@@ -34,10 +34,16 @@ export const handler = async (event) => {
       .filter(x => x.position <= 10 && x.impressions >= 150 && x.ctr < 0.02)
       .sort((a, b2) => b2.impressions - a.impressions).slice(0, 25);
 
+    // page 2-3, high demand: ranking too far back to get clicks, but real search volume
+    // exists — these are the big-lift/big-reward targets (invisible under the old pos<=20 cap).
+    const growing = items
+      .filter(x => x.position > 20 && x.position <= 50 && x.impressions >= 100)
+      .sort((a, b2) => b2.impressions - a.impressions).slice(0, 25);
+
     return json(200, {
       blog, range: { start: ymd(start), end: ymd(end) },
-      counts: { rows: items.length, striking: striking.length, lowCtr: lowCtr.length },
-      striking, lowCtr,
+      counts: { rows: items.length, striking: striking.length, lowCtr: lowCtr.length, growing: growing.length },
+      striking, lowCtr, growing,
     });
   } catch (e) {
     return json(502, { error: String(e && e.message || e) });

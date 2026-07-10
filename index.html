@@ -465,6 +465,12 @@ input[type=file]{width:100%}
         </div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Recently optimized</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Posts you've improved — and whether the numbers have moved since. Open a post's Rankings tab to log an optimization.</div></div>
+          </div>
+          <div id="opt-recent"><div class="empty" style="padding:1rem">Loading…</div></div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div><div style="font-size:14px;font-weight:700">Content gap finder</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Claude analyses your existing posts and finds topics you haven't covered yet</div></div>
             <button class="btn btn-p btn-sm" id="gap-btn" onclick="findContentGaps()">Find content gaps</button>
           </div>
@@ -718,12 +724,38 @@ input[type=file]{width:100%}
   </div>
   <!-- RANKINGS -->
   <div id="pm-gsc" class="pane">
-    <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:12px;font-size:11px;color:#1a4d8f;line-height:1.7">
-      <strong>How to get GSC data:</strong> Go to <a href="https://search.google.com/search-console" target="_blank" style="color:#1a6bbf;font-weight:600">search.google.com/search-console</a> → Select your property → Search results → <strong>Pages tab</strong> → set date range (last 28 days) → <strong>Export → Download CSV</strong> → Settings → Import GSC data → upload the file.
+    <!-- live Search Console metrics + health flags for this post -->
+    <div id="pm-gsc-metrics" style="margin-bottom:16px"><div class="empty" style="padding:1rem">Loading Search Console data…</div></div>
+
+    <!-- optimization log: what was changed + before/after lift -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="sh" style="margin:0">Optimization log</div>
+      <button class="btn btn-p btn-sm" onclick="showOptForm()">+ Log optimization</button>
     </div>
+    <div id="opt-form" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:12px;margin-bottom:12px;border:1px solid var(--border)">
+      <div class="row">
+        <div class="fd"><label class="fl">What did you change?</label>
+          <select id="opt-kind">
+            <option value="title-meta">Title / meta description</option>
+            <option value="content">Content (rewrite / expand / refresh)</option>
+            <option value="links">Internal links</option>
+            <option value="featured">Featured image</option>
+            <option value="keywords">Keyword targeting</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="fd"><label class="fl">Date</label><input type="date" id="opt-date"></div>
+      </div>
+      <div style="margin-bottom:8px"><label class="fl">Note (optional) — what exactly did you do?</label><input type="text" id="opt-note" placeholder="e.g. Rewrote title to lead with 'FG Funnels Review 2026' + sharper meta"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">The current Search Console numbers are captured as the "before" so the lift can be measured automatically.</div>
+      <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveOptimization()">Save optimization</button><button class="btn btn-sm" onclick="hideOptForm()">Cancel</button></div>
+    </div>
+    <div id="pm-opt-list" style="margin-bottom:18px"></div>
+
+    <!-- position history (auto weekly + manual) -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="sh" style="margin:0">Position history</div>
-      <button class="btn btn-p btn-sm" onclick="showAddGsc()">+ Add entry</button>
+      <button class="btn btn-sm" onclick="showAddGsc()">+ Add manually</button>
     </div>
     <div id="gsc-form" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:12px;margin-bottom:12px;border:1px solid var(--border)">
       <div class="row">
@@ -735,7 +767,8 @@ input[type=file]{width:100%}
       <div style="margin-bottom:8px"><label class="fl">Notes</label><input type="text" id="gsc-notes"></div>
       <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveGsc()">Save</button><button class="btn btn-sm" onclick="hideAddGsc()">Cancel</button></div>
     </div>
-    <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>Change</th><th>Source</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
+    <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Change</th><th>Source</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">Rankings now update automatically each week from Search Console — no CSV needed. Use "Add manually" only for a one-off backfill.</div>
   </div>
   <!-- LINKS -->
   <div id="pm-links" class="pane">

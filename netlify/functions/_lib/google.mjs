@@ -50,13 +50,16 @@ export async function requestIndexing(url, sa) {
 
 // Pull Search Console performance rows (query data). Returns an array of rows
 // [{keys:[...], clicks, impressions, ctr, position}] or [] (no key / error).
-export async function searchAnalytics({ siteUrl, startDate, endDate, dimensions = ['query'], rowLimit = 5000, sa }) {
+export async function searchAnalytics({ siteUrl, startDate, endDate, dimensions = ['query'], rowLimit = 5000, filters, sa }) {
   sa = sa || getServiceAccount();
   if (!sa) return [];
   const token = await getAccessToken(sa, 'https://www.googleapis.com/auth/webmasters.readonly');
+  const body = { startDate, endDate, dimensions, rowLimit, dataState: 'all' };
+  // filters: [{dimension,operator,expression}] -> a single AND filter group
+  if (Array.isArray(filters) && filters.length) body.dimensionFilterGroups = [{ groupType: 'and', filters }];
   const res = await fetch(`https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`, {
     method: 'POST', headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ startDate, endDate, dimensions, rowLimit, dataState: 'all' }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`searchAnalytics ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json().catch(() => ({}));
