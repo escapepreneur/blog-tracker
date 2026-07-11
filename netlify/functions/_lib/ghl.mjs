@@ -118,14 +118,18 @@ export async function getBlogPostDetail({ ghlPostId, pit }) {
 export async function getBlogPostBySlug({ brand, slug, pit }) {
   const b = BRANDS[brand];
   const want = String(slug || '').replace(/^\/+|\/+$/g, '').toLowerCase();
-  for (let offset = 0; offset < 800; offset += 50) {
-    const r = await fetch(`${GHL}/blogs/posts/all?locationId=${LOC}&blogId=${b.blogId}&limit=50&offset=${offset}`, { headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' } });
-    if (!r.ok) throw new Error(`GHL bySlug ${r.status}: ${(await r.text()).slice(0, 150)}`);
-    const d = await r.json().catch(() => ({}));
-    const list = d.blogs || d.data || [];
-    const m = list.find(p => String(p.urlSlug || '').toLowerCase() === want);
-    if (m) return m;
-    if (list.length < 50) break;
+  // GHL's list endpoint needs a status filter; live posts are PUBLISHED (fall back to
+  // the other statuses so we can also find scheduled/draft posts if ever needed).
+  for (const status of ['PUBLISHED', 'SCHEDULED', 'DRAFT']) {
+    for (let offset = 0; offset < 1000; offset += 50) {
+      const r = await fetch(`${GHL}/blogs/posts/all?locationId=${LOC}&blogId=${b.blogId}&status=${status}&limit=50&offset=${offset}`, { headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' } });
+      if (!r.ok) throw new Error(`GHL bySlug ${r.status}: ${(await r.text()).slice(0, 150)}`);
+      const d = await r.json().catch(() => ({}));
+      const list = d.blogs || d.data || [];
+      const m = list.find(p => String(p.urlSlug || '').toLowerCase() === want);
+      if (m) return m;
+      if (list.length < 50) break;
+    }
   }
   return null;
 }
