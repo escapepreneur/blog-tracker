@@ -922,9 +922,76 @@ async function delGsc(id){await sb.from('gsc_positions').delete().eq('id',id);re
 let _gscMetrics=null;
 async function renderRankingsTab(){
   await renderGscMetrics();   // sets _gscMetrics (used by the log's before/after)
+  await renderOptimizeSection();
   await renderOptLog();
   renderGscHistory();
 }
+// ── TITLE/META OPTIMISER (Rankings tab) ── proposes a stronger title+meta for a live post
+// using the keywords it ranks for, one-click apply to the live GHL post in place.
+function _beforeAfter(label,before,after){
+  return `<div style="margin-bottom:10px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:3px">${label}</div>
+    <div style="font-size:12px;color:var(--text3);text-decoration:line-through;margin-bottom:2px">${esc(before||'(none)')}</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(after||'')}</div>
+  </div>`;
+}
+async function renderOptimizeSection(){
+  const el=document.getElementById('pm-optimize');if(!el||!curPost)return;
+  const post=allPosts.find(p=>p.id===curPost);
+  if(!post||!post.url||post.status!=='live'){el.innerHTML='';return;} // live posts with a URL only
+  const{data}=await sb.from('optimization_proposals').select('*').eq('post_id',curPost).eq('status','proposed').order('created_at',{ascending:false}).limit(1);
+  const prop=(data||[])[0];
+  const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
+  if(!prop){
+    el.innerHTML=`<div class="card" style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="min-width:0"><div style="font-size:13px;font-weight:700">Optimise title &amp; meta</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Rewrite this post's title + meta description around the keywords it already ranks for, to win more clicks. The article body isn't touched.</div></div>
+        <button class="${bBtn}" style="flex:none" id="opt-run-btn" onclick="optimizeNow()">✨ Optimise</button>
+      </div>
+      <div id="opt-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>`;
+    return;
+  }
+  const kw=(prop.keywords||[]).slice(0,6).map(k=>esc(k.query)).join(', ');
+  el.innerHTML=`<div class="card" style="padding:14px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Proposed optimisation</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${prop.rationale?esc(prop.rationale):''}</div>
+    ${_beforeAfter('Title',prop.before_title,prop.after_title)}
+    ${_beforeAfter('Meta description',prop.before_meta,prop.after_meta)}
+    ${kw?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Targeting: ${kw}</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="${bBtn}" id="opt-apply-btn" onclick="applyOptimization()">Apply to live post →</button>
+      <button class="btn btn-sm" onclick="optimizeNow()">Regenerate</button>
+      <button class="btn btn-danger btn-sm" onclick="dismissOptimization('${prop.id}')">Dismiss</button>
+    </div>
+    <div id="opt-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+  </div>`;
+}
+async function optimizeNow(){
+  if(!curPost)return;
+  const st=document.getElementById('opt-status');
+  const btn=document.getElementById('opt-run-btn')||document.getElementById('opt-apply-btn');if(btn)btn.disabled=true;
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Reading the live post + its ranking keywords, writing a better title/meta… (~30–60s)</div>';
+  try{await fetch('/.netlify/functions/optimize-post-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const{data}=await sb.from('optimization_proposals').select('id').eq('post_id',curPost).eq('status','proposed').order('created_at',{ascending:false}).limit(1);
+    if((data||[]).length){renderOptimizeSection();return;}
+    if(Date.now()-t0>100000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';if(btn)btn.disabled=false;return;}
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
+}
+async function applyOptimization(){
+  if(!curPost)return;
+  if(!confirm('Apply the new title + meta description to the live post now?'))return;
+  const st=document.getElementById('opt-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Updating the live post…</div>';
+  try{const r=await fetch('/.netlify/functions/apply-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+    toast('Live post updated ✓',3000);await loadPosts();renderOptimizeSection();renderOptLog();
+  }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Apply failed: '+esc(String(e&&e.message||e))+'</span>';}
+}
+async function dismissOptimization(id){await sb.from('optimization_proposals').update({status:'dismissed'}).eq('id',id);renderOptimizeSection();}
 function _statTile(label,val,sub){return`<div style="flex:1;min-width:0;background:var(--bg2);border-radius:var(--r2);padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">${label}</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${sub}</div>`:''}</div>`}
 function _chip(text,tone){const c={amber:['#8a5a00','#fff7e6','#f2d9a0'],blue:['#1a4d8f','var(--blue-l)','#b8ccf0'],green:['#1c6b3a','#e9f7ee','#b6e0c4'],grey:['var(--text2)','var(--bg2)','var(--border)']}[tone||'grey'];return`<span style="display:inline-block;font-size:11px;font-weight:600;color:${c[0]};background:${c[1]};border:1px solid ${c[2]};border-radius:20px;padding:3px 10px;margin:0 6px 6px 0">${text}</span>`}
 function _healthFlags(page,post){
@@ -1438,7 +1505,7 @@ async function renderOpportunities(){
           <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d</div>
         </div>
-        <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','draft')">Optimise</button>
+        <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">Optimise</button>
       </div>
       ${kHdr}${items.map(x=>kwRow(x,false)).join('')}
     </div>`;

@@ -105,6 +105,58 @@ export async function updatePostImage({ ghlPostId, pit, brand, status = 'PUBLISH
   return true;
 }
 
+// Read a post's full detail incl. rawHTML (needs blog READ scope). GET /blogs/posts/{id}.
+export async function getBlogPostDetail({ ghlPostId, pit }) {
+  const r = await fetch(`${GHL}/blogs/posts/${ghlPostId}?locationId=${LOC}`, { headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' } });
+  if (!r.ok) throw new Error(`GHL detail ${r.status}: ${(await r.text()).slice(0, 150)}`);
+  const d = await r.json().catch(() => ({}));
+  return d.blogPost || d.data || d;
+}
+
+// Find a post by urlSlug on the brand's blog (for imported posts with no stored id).
+// Returns the post object (incl. _id) or null. Needs blog READ scope.
+export async function getBlogPostBySlug({ brand, slug, pit }) {
+  const b = BRANDS[brand];
+  const want = String(slug || '').replace(/^\/+|\/+$/g, '').toLowerCase();
+  for (let offset = 0; offset < 800; offset += 50) {
+    const r = await fetch(`${GHL}/blogs/posts/all?locationId=${LOC}&blogId=${b.blogId}&limit=50&offset=${offset}`, { headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28' } });
+    if (!r.ok) throw new Error(`GHL bySlug ${r.status}: ${(await r.text()).slice(0, 150)}`);
+    const d = await r.json().catch(() => ({}));
+    const list = d.blogs || d.data || [];
+    const m = list.find(p => String(p.urlSlug || '').toLowerCase() === want);
+    if (m) return m;
+    if (list.length < 50) break;
+  }
+  return null;
+}
+
+// Update TITLE + META DESCRIPTION on an existing post, in place. GHL's PUT can change
+// title/description/imageUrl but IGNORES rawHTML (body is locked at create) — verified
+// 2026-07-10. Sends the full current object with the new title/description so nothing
+// else is wiped. `current` = the object from getBlogPostDetail.
+export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, title, description }) {
+  const b = BRANDS[brand];
+  const payload = {
+    title: title != null ? title : current.title,
+    locationId: LOC, blogId: b.blogId,
+    rawHTML: current.rawHTML || '',            // ignored by GHL; included to keep the payload complete
+    status: current.status || 'PUBLISHED',
+    urlSlug: current.urlSlug,
+    description: description != null ? description : current.description,
+    imageUrl: current.imageUrl || '',
+    imageAltText: current.imageAltText || '',
+    categories: (current.categories || []).map(c => c._id || c.id || c),
+    author: current.author || b.authorId,
+    publishedAt: current.publishedAt || new Date().toISOString(),
+  };
+  const r = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
+    method: 'PUT', headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(`GHL update ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return true;
+}
+
 // Upload an image buffer to the GHL media library -> { fileId, url }.
 export async function uploadMedia({ buffer, filename = 'featured.jpg', contentType = 'image/jpeg', pit }) {
   const fd = new FormData();
