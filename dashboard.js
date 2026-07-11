@@ -923,6 +923,7 @@ let _gscMetrics=null;
 async function renderRankingsTab(){
   await renderGscMetrics();   // sets _gscMetrics (used by the log's before/after)
   await renderOptimizeSection();
+  await renderBodySection();
   await renderOptLog();
   renderGscHistory();
 }
@@ -1037,6 +1038,100 @@ async function applyOptimization(){
   }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Apply failed: '+esc(String(e&&e.message||e))+'</span>';}
 }
 async function dismissOptimization(id){await sb.from('optimization_proposals').update({status:'dismissed'}).eq('id',id);renderOptimizeSection();}
+
+// ── ARTICLE BODY IMPROVER (Rankings tab) ── keyword-coverage audit + additive section,
+// then the guided safe republish (temp publish → Sienna deletes old → swap onto real URL).
+async function renderBodySection(){
+  const el=document.getElementById('pm-body');if(!el||!curPost)return;
+  const post=allPosts.find(p=>p.id===curPost);
+  if(!post||!post.url||post.status!=='live'){el.innerHTML='';return;}
+  const{data}=await sb.from('body_proposals').select('*').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1);
+  const p=(data||[])[0];
+  const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
+  const dom=activeBlog==='nms'?'escapepreneur.com':'eschub.com';
+  if(!p||p.phase==='done'){
+    el.innerHTML=`<div class="card" style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="min-width:0"><div style="font-size:13px;font-weight:700">Improve the article</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">See which ranking keywords the article is missing and add a section covering them. Keeps the existing content; republishes on the same URL.</div></div>
+        <button class="${bBtn}" style="flex:none" onclick="improveBodyNow()">Analyse &amp; improve</button>
+      </div>
+      ${p&&p.phase==='done'?'<div style="font-size:12px;color:var(--green);margin-top:8px">✓ Last improvement is live.</div>':''}
+      <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>`;
+    return;
+  }
+  if(p.phase==='proposed'){
+    const cov=(p.covered||[]).length,miss=(p.missing||[]);
+    const chips=miss.slice(0,12).map(k=>`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`).join('');
+    const hasAdd=!!(p.added_html&&p.added_html.trim());
+    el.innerHTML=`<div class="card" style="padding:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">Article improvement</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Missing:':' Nothing missing 🎉'}</div>
+      ${miss.length?`<div style="margin-bottom:10px">${chips}</div>`:''}
+      ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">${esc(p.summary||'')}</div>
+        <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview the section to add</summary><div style="margin-top:8px;font-size:13px;line-height:1.6;max-height:340px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px">${p.added_html}</div></details>`:''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
+        <button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>
+        <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button>
+      </div>
+      <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>`;
+    return;
+  }
+  if(p.phase==='temp_published'){
+    const tempUrl='https://'+dom+'/post/'+(p.temp_slug||'');
+    el.innerHTML=`<div class="card" style="padding:14px;border-color:var(--teal)">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">Improved version is live — finish the swap</div>
+      ${p.note?`<div style="font-size:12px;color:var(--amber-t);background:#fff7e6;border:1px solid #f2d9a0;border-radius:8px;padding:6px 10px;margin-bottom:8px">${esc(p.note)}</div>`:''}
+      <ol style="font-size:12px;color:var(--text2);line-height:1.7;margin:0 0 10px;padding-left:18px">
+        <li><b>Review it:</b> <a href="${esc(tempUrl)}" target="_blank" rel="noopener" style="color:var(--teal-d);font-weight:600">open the new version</a> (temporary URL).</li>
+        <li><b>Delete the OLD post</b> at <code>/${esc(p.real_slug)}</code> in GHL — Sites → Blogs → <b>delete</b> (not archive).</li>
+        <li>Then click <b>Finish swap</b>: it moves the new version onto the real URL.</li>
+      </ol>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="${bBtn}" onclick="bodySwap()">Finish swap →</button>
+        <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Cancel</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">If the old post isn't fully deleted, Finish swap stops and tells you — nothing breaks.</div>
+      <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>`;
+    return;
+  }
+}
+async function improveBodyNow(){
+  if(!curPost)return;
+  const st=document.getElementById('body-status');
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Reading the article + its ranking keywords, drafting the missing coverage… (~60s)</div>';
+  const before=((await sb.from('body_proposals').select('created_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+  try{await fetch('/.netlify/functions/improve-body-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
+}
+async function bodyPublish(){
+  if(!curPost)return;
+  if(!confirm('Publish the improved version to a temporary URL for review? (Your live post is untouched until you finish the swap.)'))return;
+  const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Publishing the improved version…</div>';
+  try{const r=await fetch('/.netlify/functions/improve-body-publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+    renderBodySection();
+  }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Publish failed: '+esc(String(e&&e.message||e))+'</span>';}
+}
+async function bodySwap(){
+  if(!curPost)return;
+  if(!confirm('Have you deleted the old post in GHL? This moves the new version onto the real URL.'))return;
+  const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Swapping onto the real URL…</div>';
+  try{const r=await fetch('/.netlify/functions/improve-body-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+    toast('Improved article is live on the same URL ✓',3500);await loadPosts();renderBodySection();renderOptLog();
+  }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">'+esc(String(e&&e.message||e))+'</span>';}
+}
+async function dismissBody(id){if(!confirm('Dismiss this improvement? (If a temp version was published, delete it in GHL.)'))return;await sb.from('body_proposals').update({phase:'done'}).eq('id',id);renderBodySection();}
 function _statTile(label,val,sub){return`<div style="flex:1;min-width:0;background:var(--bg2);border-radius:var(--r2);padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">${label}</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${sub}</div>`:''}</div>`}
 function _chip(text,tone){const c={amber:['#8a5a00','#fff7e6','#f2d9a0'],blue:['#1a4d8f','var(--blue-l)','#b8ccf0'],green:['#1c6b3a','#e9f7ee','#b6e0c4'],grey:['var(--text2)','var(--bg2)','var(--border)']}[tone||'grey'];return`<span style="display:inline-block;font-size:11px;font-weight:600;color:${c[0]};background:${c[1]};border:1px solid ${c[2]};border-radius:20px;padding:3px 10px;margin:0 6px 6px 0">${text}</span>`}
 function _healthFlags(page,post){

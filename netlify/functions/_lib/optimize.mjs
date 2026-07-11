@@ -17,6 +17,64 @@ const TOOL = {
   },
 };
 
+// Which ranking keywords are already in the article text, and which are missing.
+// Token-based + morphology-tolerant (mirrors the checker's matching).
+const STOP = new Set(['a', 'an', 'the', 'for', 'of', 'to', 'in', 'on', 'and', 'or', 'your', 'my', 'as', 'at', 'with', 'is', 'are', 'do', 'does', 'how', 'what', 'why', 'vs']);
+const kwTokens = (kw) => String(kw || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+  .filter(w => w && !STOP.has(w)).map(w => w.replace(/(?:es|s)$/i, ''));
+export function keywordCoverage(bodyText, keywords) {
+  const hay = String(bodyText || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+  const covered = [], missing = [];
+  for (const k of (keywords || [])) {
+    const toks = kwTokens(k.query);
+    const present = toks.length && toks.every(t => t.length < 3 || hay.includes(t));
+    (present ? covered : missing).push(k);
+  }
+  return { covered, missing };
+}
+
+const ADD_TOOL = {
+  name: 'emit_addition',
+  description: 'Return a new HTML section to APPEND to an existing, already-ranking blog post so it covers the search terms it is missing. Do not rewrite existing content.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      added_html: { type: 'string', description: 'Clean HTML to append at the end of the article. Use <h2>/<h3>/<p> and, for FAQs, a question-style <h2> + <h3> question + <p> answer per item. No inline styles, no <script>, no class attributes (the blog theme styles it). Should read as a natural, valuable addition (e.g. an FAQ or a clear definition section), in the brand voice, honest to the article.' },
+      summary: { type: 'string', description: '1 sentence: what section you added and which terms it covers.' },
+    },
+    required: ['added_html', 'summary'],
+  },
+};
+
+// Generate an additive section covering the missing keywords, matching the article + brand.
+export async function improveBodyAdditive({ brand, title, currentHtml, missing, anthropicKey, model = MODEL }) {
+  const miss = (missing || []).slice(0, 15).map(k => `- "${k.query}"${k.impressions ? ` (${k.impressions} impr/90d)` : ''}`).join('\n');
+  const plain = String(currentHtml || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 5000);
+  const user = `This is a LIVE ${BRANDS[brand].name} blog post that already ranks in Google. Its title is "${title || ''}". People find it searching terms it does not yet clearly cover. Write a NEW section to APPEND to the end of the article that naturally covers those terms — do NOT rewrite or repeat the existing content.
+
+TERMS TO COVER (searchers reach the post via these but the article under-serves them):
+${miss || '(none)'}
+
+EXISTING ARTICLE (for context/voice — do not repeat it):
+${plain}
+
+Prefer a genuinely useful FAQ (question-style H2, then H3 question + P answer per item) or a clear definition section — whatever best answers those searches. Keep it concise, honest, on brand, and non-repetitive. Return via emit_addition.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model, max_tokens: 2500, system: systemPrompt(brand),
+      tools: [ADD_TOOL], tool_choice: { type: 'tool', name: 'emit_addition' },
+      messages: [{ role: 'user', content: user }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
 const REVIEW_TOOL = {
   name: 'emit_review',
   description: 'Review a proposed SEO title + meta description and judge whether it will earn the click.',

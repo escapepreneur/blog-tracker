@@ -138,14 +138,14 @@ export async function getBlogPostBySlug({ brand, slug, pit }) {
 // title/description/imageUrl but IGNORES rawHTML (body is locked at create) — verified
 // 2026-07-10. Sends the full current object with the new title/description so nothing
 // else is wiped. `current` = the object from getBlogPostDetail.
-export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, title, description }) {
+export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, title, description, urlSlug }) {
   const b = BRANDS[brand];
   const payload = {
     title: title != null ? title : current.title,
     locationId: LOC, blogId: b.blogId,
     rawHTML: current.rawHTML || '',            // ignored by GHL; included to keep the payload complete
     status: current.status || 'PUBLISHED',
-    urlSlug: current.urlSlug,
+    urlSlug: urlSlug != null ? urlSlug : current.urlSlug,
     description: description != null ? description : current.description,
     imageUrl: current.imageUrl || '',
     imageAltText: current.imageAltText || '',
@@ -159,6 +159,26 @@ export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, titl
   });
   if (!r.ok) throw new Error(`GHL update ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return true;
+}
+
+// Create a post from explicit fields (rawHTML used as-is — no draft processing). Used to
+// republish an improved body. Returns { id, urlSlug }.
+export async function createPostRaw({ brand, pit, title, rawHTML, description, urlSlug, imageUrl, imageAltText, categories, author, status = 'PUBLISHED', publishedAt }) {
+  const b = BRANDS[brand];
+  const payload = {
+    title, locationId: LOC, blogId: b.blogId, rawHTML, status, urlSlug,
+    description: description || '', imageUrl: imageUrl || '', imageAltText: imageAltText || title || '',
+    categories: (categories || []).map(c => c._id || c.id || c).filter(Boolean),
+    author: author || b.authorId, publishedAt: publishedAt || new Date().toISOString(),
+  };
+  const r = await fetch(`${GHL}/blogs/posts`, {
+    method: 'POST', headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`GHL createRaw ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  const p = d.blogPost || d.data || d;
+  return { id: p._id || p.id, urlSlug: p.urlSlug };
 }
 
 // Upload an image buffer to the GHL media library -> { fileId, url }.
