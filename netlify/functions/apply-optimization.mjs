@@ -17,7 +17,7 @@ export const handler = async (event) => {
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
-  const { post_id } = body;
+  const { post_id, title: editedTitle, meta: editedMeta } = body;
   if (!post_id) return json(400, { error: 'post_id required' });
 
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
@@ -31,12 +31,17 @@ export const handler = async (event) => {
     const ghlId = prop.ghl_post_id;
     if (!ghlId) return json(400, { error: 'proposal has no GHL post id' });
 
+    // use Karen's edited values if provided, else the AI proposal
+    const finalTitle = (editedTitle != null && String(editedTitle).trim()) ? String(editedTitle).trim() : prop.after_title;
+    const finalMeta = (editedMeta != null && String(editedMeta).trim()) ? String(editedMeta).trim() : prop.after_meta;
+
     // fresh current object (full-object PUT so nothing gets wiped), then update title+meta
     const current = await getBlogPostDetail({ ghlPostId: ghlId, pit: PIT });
-    await updateBlogPost({ ghlPostId: ghlId, brand, pit: PIT, current, title: prop.after_title, description: prop.after_meta });
+    await updateBlogPost({ ghlPostId: ghlId, brand, pit: PIT, current, title: finalTitle, description: finalMeta });
 
-    // keep the tracker title in sync
-    await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ title: prop.after_title }) });
+    // keep the tracker title in sync + record what was actually applied on the proposal
+    await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ title: finalTitle }) });
+    await rest(`optimization_proposals?id=eq.${prop.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ after_title: finalTitle, after_meta: finalMeta }) });
 
     // capture a "before" baseline for the optimization log (best-effort)
     let baseline = null;
@@ -54,7 +59,7 @@ export const handler = async (event) => {
 
     await rest('optimizations', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
       post_id, blog: brand, opt_date: ymd(new Date()), kind: 'title-meta',
-      note: `Title/meta optimised → "${prop.after_title}"`, baseline,
+      note: `Title/meta optimised → "${finalTitle}"`, baseline,
     }) });
 
     // re-request indexing so Google re-crawls the new title/meta
@@ -62,7 +67,7 @@ export const handler = async (event) => {
 
     await rest(`optimization_proposals?id=eq.${prop.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'applied', applied_at: new Date().toISOString() }) });
 
-    return json(200, { ok: true, title: prop.after_title });
+    return json(200, { ok: true, title: finalTitle });
   } catch (e) {
     return json(500, { error: String(e && e.message || e) });
   }

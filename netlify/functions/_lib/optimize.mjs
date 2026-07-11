@@ -17,6 +17,45 @@ const TOOL = {
   },
 };
 
+const REVIEW_TOOL = {
+  name: 'emit_review',
+  description: 'Review a proposed SEO title + meta description and judge whether it will earn the click.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      verdict: { type: 'string', enum: ['strong', 'ok', 'weak'], description: 'strong = ship it; ok = works, minor nits; weak = needs work.' },
+      notes: { type: 'array', items: { type: 'string' }, description: '1-4 short, specific notes (length problems, missing top keyword, clarity, brand voice, click-worthiness). Empty array if it is strong with nothing to flag.' },
+    },
+    required: ['verdict', 'notes'],
+  },
+};
+
+// Review a (possibly human-edited) title + meta. Fast model, sync-friendly.
+export async function reviewTitleMeta({ brand, title, meta, keywords, anthropicKey, model = 'claude-sonnet-5' }) {
+  const kw = (keywords || []).slice(0, 10).map(k => `"${k.query}"`).join(', ');
+  const user = `Review this proposed SEO title + meta description for a ${BRANDS[brand].name} blog post that already ranks in Google but is under-clicked. Judge whether it earns the click and matches search intent.
+
+TITLE (${(title || '').length} chars): ${title || ''}
+META DESCRIPTION (${(meta || '').length} chars): ${meta || ''}
+TOP KEYWORDS IT RANKS FOR: ${kw || '(none)'}
+
+Guidance: title ideally <=60 chars (over ~70 truncates in Google), meta 150-160 chars, leads with what searchers actually type, works in the top keyword(s), honest to the article, on brand, compelling. Return emit_review with a verdict and short specific notes (empty notes if it's strong).`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model, max_tokens: 700, system: systemPrompt(brand),
+      tools: [REVIEW_TOOL], tool_choice: { type: 'tool', name: 'emit_review' },
+      messages: [{ role: 'user', content: user }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
 export async function optimizeTitleMeta({ brand, currentTitle, currentMeta, articleText, keywords, anthropicKey, model = MODEL }) {
   const kw = (keywords || []).slice(0, 15)
     .map(k => `- "${k.query}" — pos ${(+k.position).toFixed(1)}, ${k.impressions} impr/90d, ${(k.ctr * 100).toFixed(1)}% CTR`).join('\n');

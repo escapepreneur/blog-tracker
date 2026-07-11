@@ -953,20 +953,61 @@ async function renderOptimizeSection(){
     </div>`;
     return;
   }
-  const kw=(prop.keywords||[]).slice(0,6).map(k=>esc(k.query)).join(', ');
+  const kwStr=(prop.keywords||[]).slice(0,8).map(k=>esc(k.query)).join(', ');
   el.innerHTML=`<div class="card" style="padding:14px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Proposed optimisation</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${prop.rationale?esc(prop.rationale):''}</div>
-    ${_beforeAfter('Title',prop.before_title,prop.after_title)}
-    ${_beforeAfter('Meta description',prop.before_meta,prop.after_meta)}
-    ${kw?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Targeting: ${kw}</div>`:''}
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Proposed optimisation — edit anything before applying</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${prop.rationale?esc(prop.rationale):''}</div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">Current title</div>
+      <div style="font-size:12px;color:var(--text3);text-decoration:line-through;margin:2px 0 6px">${esc(prop.before_title||'(none)')}</div>
+      <label class="fl">New title</label>
+      <input id="opt-title-edit" oninput="updateOptCounters()" style="width:100%;font-size:13px;font-weight:600">
+      <div id="opt-title-count" style="font-size:10px;color:var(--text3);margin-top:3px"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">Current meta</div>
+      <div style="font-size:12px;color:var(--text3);text-decoration:line-through;margin:2px 0 6px">${esc(prop.before_meta||'(none)')}</div>
+      <label class="fl">New meta description</label>
+      <textarea id="opt-meta-edit" rows="3" oninput="updateOptCounters()" style="width:100%;font-size:13px;resize:vertical"></textarea>
+      <div id="opt-meta-count" style="font-size:10px;color:var(--text3);margin-top:3px"></div>
+    </div>
+    ${kwStr?`<div style="font-size:11px;color:var(--text3);margin-top:8px">Keywords to work in: ${kwStr}</div>`:''}
+    <div id="opt-review" style="margin-top:10px"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="${bBtn}" id="opt-apply-btn" onclick="applyOptimization()">Apply to live post →</button>
+      <button class="btn btn-sm" onclick="reviewMyVersion()">🔍 Review my version</button>
       <button class="btn btn-sm" onclick="optimizeNow()">Regenerate</button>
       <button class="btn btn-danger btn-sm" onclick="dismissOptimization('${prop.id}')">Dismiss</button>
     </div>
     <div id="opt-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
   </div>`;
+  // set field values via .value (avoids HTML-escaping issues with quotes in title/meta)
+  const ti=document.getElementById('opt-title-edit');if(ti)ti.value=prop.after_title||'';
+  const me=document.getElementById('opt-meta-edit');if(me)me.value=prop.after_meta||'';
+  updateOptCounters();
+}
+function updateOptCounters(){
+  const t=((document.getElementById('opt-title-edit')||{}).value)||'';
+  const m=((document.getElementById('opt-meta-edit')||{}).value)||'';
+  const tc=document.getElementById('opt-title-count'),mc=document.getElementById('opt-meta-count');
+  if(tc){const n=t.length,col=n<=60?'var(--green)':n<=70?'var(--amber-t)':'var(--red-t)';tc.innerHTML=`<span style="color:${col};font-weight:600">${n} chars</span> · aim ≤60 (over ~70 truncates in Google)`;}
+  if(mc){const n=m.length,col=(n>=140&&n<=160)?'var(--green)':(n>=120&&n<=165)?'var(--amber-t)':'var(--red-t)';mc.innerHTML=`<span style="color:${col};font-weight:600">${n} chars</span> · aim 150–160`;}
+}
+async function reviewMyVersion(){
+  if(!curPost)return;
+  const t=((document.getElementById('opt-title-edit')||{}).value||'').trim();
+  const m=((document.getElementById('opt-meta-edit')||{}).value||'').trim();
+  const rv=document.getElementById('opt-review');if(!t){if(rv)rv.innerHTML='<span style="font-size:12px;color:var(--red-t)">Add a title first.</span>';return;}
+  if(rv)rv.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Reviewing your version…</div>';
+  try{const r=await fetch('/.netlify/functions/review-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,title:t,meta:m})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+    const map={strong:['✓ Strong — good to apply','#1c6b3a','#e9f7ee','#b6e0c4'],ok:['Looks OK — minor notes','#8a5a00','#fff7e6','#f2d9a0'],weak:['Needs work','#b3261e','#fdecec','#f3c0c0']};
+    const c=map[j.verdict]||map.ok;
+    const notes=(j.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('');
+    rv.innerHTML=`<div style="border:1px solid ${c[3]};background:${c[2]};border-radius:8px;padding:8px 10px">
+      <div style="font-size:12px;font-weight:700;color:${c[1]}">${c[0]}</div>
+      ${notes?`<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.5">${notes}</ul>`:'<div style="font-size:12px;color:var(--text2);margin-top:2px">Nothing flagged.</div>'}
+    </div>`;
+  }catch(e){if(rv)rv.innerHTML='<span style="font-size:12px;color:var(--red-t)">Review failed: '+esc(String(e&&e.message||e))+'</span>';}
 }
 async function optimizeNow(){
   if(!curPost)return;
@@ -985,9 +1026,12 @@ async function optimizeNow(){
 }
 async function applyOptimization(){
   if(!curPost)return;
-  if(!confirm('Apply the new title + meta description to the live post now?'))return;
+  const t=((document.getElementById('opt-title-edit')||{}).value||'').trim();
+  const m=((document.getElementById('opt-meta-edit')||{}).value||'').trim();
+  if(!t){alert('Title cannot be empty.');return;}
+  if(!confirm('Apply this title + meta description to the live post now?'))return;
   const st=document.getElementById('opt-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Updating the live post…</div>';
-  try{const r=await fetch('/.netlify/functions/apply-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+  try{const r=await fetch('/.netlify/functions/apply-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,title:t,meta:m})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
     toast('Live post updated ✓',3000);await loadPosts();renderOptimizeSection();renderOptLog();
   }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Apply failed: '+esc(String(e&&e.message||e))+'</span>';}
 }
