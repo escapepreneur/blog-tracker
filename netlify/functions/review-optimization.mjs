@@ -23,7 +23,11 @@ export const handler = async (event) => {
     if (!post) return json(404, { error: 'post not found' });
     const [prop] = await (await rest(`optimization_proposals?post_id=eq.${post_id}&status=eq.proposed&order=created_at.desc&limit=1&select=keywords`)).json();
     const review = await reviewTitleMeta({ brand: post.blog, title, meta, keywords: (prop && prop.keywords) || [], anthropicKey: AKEY });
-    return json(200, { ok: true, ...review });
+    // normalise notes to an array of strings (the model occasionally returns a single string/object)
+    const rawNotes = review && review.notes;
+    const notes = Array.isArray(rawNotes) ? rawNotes.map(n => typeof n === 'string' ? n : JSON.stringify(n))
+      : (rawNotes ? [typeof rawNotes === 'string' ? rawNotes : JSON.stringify(rawNotes)] : []);
+    return json(200, { ok: true, verdict: (review && review.verdict) || 'ok', notes });
   } catch (e) {
     return json(500, { error: String(e && e.message || e) });
   }

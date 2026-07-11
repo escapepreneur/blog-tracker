@@ -1002,7 +1002,8 @@ async function reviewMyVersion(){
   try{const r=await fetch('/.netlify/functions/review-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,title:t,meta:m})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
     const map={strong:['✓ Strong — good to apply','#1c6b3a','#e9f7ee','#b6e0c4'],ok:['Looks OK — minor notes','#8a5a00','#fff7e6','#f2d9a0'],weak:['Needs work','#b3261e','#fdecec','#f3c0c0']};
     const c=map[j.verdict]||map.ok;
-    const notes=(j.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('');
+    const notesArr=Array.isArray(j.notes)?j.notes:(j.notes?[j.notes]:[]);
+    const notes=notesArr.map(n=>`<li>${esc(typeof n==='string'?n:JSON.stringify(n))}</li>`).join('');
     rv.innerHTML=`<div style="border:1px solid ${c[3]};background:${c[2]};border-radius:8px;padding:8px 10px">
       <div style="font-size:12px;font-weight:700;color:${c[1]}">${c[0]}</div>
       ${notes?`<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.5">${notes}</ul>`:'<div style="font-size:12px;color:var(--text2);margin-top:2px">Nothing flagged.</div>'}
