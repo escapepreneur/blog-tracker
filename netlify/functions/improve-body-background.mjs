@@ -3,7 +3,7 @@
 // generate an ADDITIVE section to append. Saves a body_proposals row (phase 'proposed').
 // Nothing is published. The dashboard polls body_proposals.
 import { getBlogPostDetail, getBlogPostBySlug } from './_lib/ghl.mjs';
-import { improveBodyAdditive, keywordCoverage } from './_lib/optimize.mjs';
+import { keywordCoverage } from './_lib/optimize.mjs';
 import { BRANDS } from './_lib/brands.mjs';
 import { searchAnalytics, getServiceAccount } from './_lib/google.mjs';
 
@@ -52,18 +52,12 @@ export const handler = async (event) => {
     }
     const { covered, missing } = keywordCoverage(stripTags(detail.rawHTML), keywords);
 
-    let added_html = '', summary = 'Already covers all its ranking keywords — no additions needed.';
-    if (missing.length) {
-      const gen = await improveBodyAdditive({ brand, title: detail.title, currentHtml: detail.rawHTML, missing, anthropicKey: AKEY });
-      added_html = gen.added_html || '';
-      summary = gen.summary || 'Added a section covering the missing keywords.';
-    }
-    const new_html = added_html ? (detail.rawHTML || '') + '\n' + added_html : (detail.rawHTML || '');
-
+    // Coverage only — no section generated yet. Sienna picks which missing keywords to
+    // target, then the generate step writes the section for just those. (phase 'analysed')
     await rest(`body_proposals?post_id=eq.${post_id}&phase=neq.temp_published`, { method: 'DELETE', headers: { ...h, Prefer: 'return=minimal' } });
     await rest('body_proposals', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
       post_id, blog: brand, ghl_post_id: ghlId, real_slug: realSlug,
-      covered, missing, added_html, new_html, summary, phase: 'proposed',
+      covered, missing, added_html: '', new_html: '', summary: '', phase: 'analysed',
     }) });
     return json(200, { ok: true, missing: missing.length });
   } catch (e) { return json(500, { error: String(e && e.message || e) }); }

@@ -1061,6 +1061,15 @@ async function renderBodySection(){
     </div>`;
     return;
   }
+  if(p.phase==='analysed'){
+    const cov=(p.covered||[]).length,miss=(p.missing||[]);
+    if(!miss.length){
+      el.innerHTML=`<div class="card" style="padding:14px"><div style="font-size:13px;font-weight:700">Improve the article</div><div style="font-size:12px;color:var(--green);margin-top:6px">🎉 All ${cov} ranking keywords are already covered in the article — nothing to add.</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button><button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button></div></div>`;
+      return;
+    }
+    _bodyPicker(p,el,bBtn);
+    return;
+  }
   if(p.phase==='proposed'){
     const cov=(p.covered||[]).length,miss=(p.missing||[]);
     const chips=miss.slice(0,12).map(k=>`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`).join('');
@@ -1073,6 +1082,7 @@ async function renderBodySection(){
         <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview the section to add</summary><div style="margin-top:8px;font-size:13px;line-height:1.6;max-height:340px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px">${p.added_html}</div></details>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
+        <button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button>
         <button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>
         <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button>
       </div>
@@ -1109,7 +1119,7 @@ async function improveBodyNow(){
   const t0=Date.now();
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
-    if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
+    if(cur&&cur.phase==='analysed'&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
     if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
     setTimeout(poll,6000);
   };
@@ -1132,6 +1142,53 @@ async function bodySwap(){
   }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">'+esc(String(e&&e.message||e))+'</span>';}
 }
 async function dismissBody(id){if(!confirm('Dismiss this improvement? (If a temp version was published, delete it in GHL.)'))return;await sb.from('body_proposals').update({phase:'done'}).eq('id',id);renderBodySection();}
+let _bodyMissing=[];
+function _bodyPicker(p,el,bBtn){
+  const cov=(p.covered||[]).length,miss=(p.missing||[]);
+  _bodyMissing=miss;
+  const rows=miss.map((k,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--bg2);cursor:pointer">
+      <input type="checkbox" class="bodykw" data-i="${i}" checked style="width:auto;margin:0">
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.query)}</span>
+      <span style="font-size:11px;color:var(--text3);white-space:nowrap">pos ${(+k.position).toFixed(1)} · ${(k.impressions||0).toLocaleString()} impr</span>
+    </label>`).join('');
+  el.innerHTML=`<div class="card" style="padding:14px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Improve the article</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${cov} of ${cov+miss.length} ranking keywords already in the article. Tick the missing ones worth targeting — untick anything off-topic:</div>
+    <div style="margin-bottom:10px">${rows}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="${bBtn}" onclick="bodyGenerate()">Generate section for selected →</button>
+      <button class="btn btn-xs btn-ghost" onclick="_bodyToggleAll(true)">All</button>
+      <button class="btn btn-xs btn-ghost" onclick="_bodyToggleAll(false)">None</button>
+      <button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>
+      <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button>
+    </div>
+    <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+  </div>`;
+}
+function _bodyToggleAll(v){document.querySelectorAll('.bodykw').forEach(c=>{c.checked=v;});}
+async function bodyGenerate(){
+  if(!curPost)return;
+  const sel=[...document.querySelectorAll('.bodykw:checked')].map(c=>_bodyMissing[+c.getAttribute('data-i')]).filter(Boolean);
+  if(!sel.length){alert('Tick at least one keyword to target.');return;}
+  const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Writing a section for '+sel.length+' keyword'+(sel.length>1?'s':'')+'… (~60s)</div>';
+  const before=((await sb.from('body_proposals').select('updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+  const beforeU=before&&before.updated_at;
+  try{await fetch('/.netlify/functions/generate-body-section',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,keywords:sel})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const cur=((await sb.from('body_proposals').select('phase,updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    if(cur&&cur.phase==='proposed'&&cur.updated_at!==beforeU){renderBodySection();return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
+}
+async function bodyRepick(){
+  if(!curPost)return;
+  const{data}=await sb.from('body_proposals').select('*').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1);
+  const p=(data||[])[0];const el=document.getElementById('pm-body');
+  if(p&&el)_bodyPicker(p,el,'btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm');
+}
 function _statTile(label,val,sub){return`<div style="flex:1;min-width:0;background:var(--bg2);border-radius:var(--r2);padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">${label}</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${sub}</div>`:''}</div>`}
 function _chip(text,tone){const c={amber:['#8a5a00','#fff7e6','#f2d9a0'],blue:['#1a4d8f','var(--blue-l)','#b8ccf0'],green:['#1c6b3a','#e9f7ee','#b6e0c4'],grey:['var(--text2)','var(--bg2)','var(--border)']}[tone||'grey'];return`<span style="display:inline-block;font-size:11px;font-weight:600;color:${c[0]};background:${c[1]};border:1px solid ${c[2]};border-radius:20px;padding:3px 10px;margin:0 6px 6px 0">${text}</span>`}
 function _healthFlags(page,post){
