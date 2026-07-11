@@ -20,7 +20,7 @@ async function detail(id) {
     try {
       const r = await fetch(u, { headers: H() });
       const d = await r.json().catch(() => ({}));
-      if (r.ok) return { url: u.replace(GHL, ''), status: r.status, rawHTML: bodyOf(d), keys: Object.keys(d.blogPost || d.data || d || {}).slice(0, 20) };
+      if (r.ok) { const p = d.blogPost || d.data || d; return { status: r.status, rawHTML: bodyOf(d), title: p.title, description: p.description }; }
     } catch {}
   }
   return { status: 'none-worked' };
@@ -45,8 +45,12 @@ export const handler = async () => {
     out.detail_after = await detail(id);
     await fetch(`${GHL}/blogs/posts/${id}`, { method: 'PUT', headers: H(), body: JSON.stringify({ ...up, status: 'ARCHIVED' }) });
     out.id = id; out.slug = slug;
-    out.VERDICT = /MARKER-BBB/.test(out.detail_after.rawHTML || '') ? 'IN-PLACE BODY UPDATE WORKS ✓'
-      : (out.detail_after.rawHTML ? 'body did NOT change (PUT ignored rawHTML)' : 'could not read body back to confirm');
+    const a = out.detail_after || {};
+    out.VERDICT = {
+      body: /MARKER-BBB/.test(a.rawHTML || '') ? 'UPDATES ✓' : 'LOCKED (ignored)',
+      title: a.title === 'ZZ Writetest UPDATED' ? 'UPDATES ✓' : 'LOCKED (ignored)',
+      meta: a.description === 'writetest updated' ? 'UPDATES ✓' : 'LOCKED (ignored)',
+    };
     return j(200, out);
   } catch (e) { return j(500, { error: String(e && e.message || e), out }); }
 };
