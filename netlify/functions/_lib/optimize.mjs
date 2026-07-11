@@ -75,6 +75,50 @@ Prefer a genuinely useful FAQ (question-style H2, then H3 question + P answer pe
   return tu.input;
 }
 
+// Refine the current title + meta per a plain-English instruction. Fast model for snappy iteration.
+export async function refineTitleMeta({ brand, currentTitle, currentMeta, instruction, keywords, anthropicKey, model = 'claude-sonnet-5' }) {
+  const kw = (keywords || []).slice(0, 12).map(k => `"${k.query}"`).join(', ');
+  const user = `Here is the current SEO title + meta description for a LIVE ${BRANDS[brand].name} blog post that already ranks but is under-clicked. Apply the instruction and return the revised pair.
+
+CURRENT TITLE: ${currentTitle || ''}
+CURRENT META DESCRIPTION: ${currentMeta || ''}
+KEYWORDS IT RANKS FOR: ${kw || '(none)'}
+
+INSTRUCTION: ${instruction}
+
+Apply the instruction. Keep it solid SEO/CTR: title ideally <=60 chars leading with the main term, meta 150-160 chars covering the main keyword(s), honest, on brand, compelling. Return via emit_title_meta.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 1500, system: systemPrompt(brand), tools: [TOOL], tool_choice: { type: 'tool', name: 'emit_title_meta' }, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
+// Refine the additive body section per a plain-English instruction.
+export async function refineBodySection({ brand, title, currentSection, instruction, anthropicKey, model = MODEL }) {
+  const user = `Here is an HTML section that will be APPENDED to a LIVE ${BRANDS[brand].name} blog post titled "${title || ''}". Apply the instruction and return the revised section.
+
+CURRENT SECTION HTML:
+${currentSection || ''}
+
+INSTRUCTION: ${instruction}
+
+Apply the instruction. Keep clean HTML (<h2>/<h3>/<p>, FAQ style where useful), no inline styles, no <script>, no class attributes, on brand, honest, non-repetitive. Return via emit_addition.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 2500, system: systemPrompt(brand), tools: [ADD_TOOL], tool_choice: { type: 'tool', name: 'emit_addition' }, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
 const REVIEW_TOOL = {
   name: 'emit_review',
   description: 'Review a proposed SEO title + meta description and judge whether it will earn the click.',

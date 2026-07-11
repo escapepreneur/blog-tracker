@@ -973,6 +973,10 @@ async function renderOptimizeSection(){
       <div id="opt-meta-count" style="font-size:10px;color:var(--text3);margin-top:3px"></div>
     </div>
     ${kwStr?`<div style="font-size:11px;color:var(--text3);margin-top:8px">Keywords to work in: ${kwStr}</div>`:''}
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <input id="opt-instruction" placeholder="Tell it what to change — e.g. lead with the definition, drop 'Explained Simply', shorten the meta" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();optimizeRefine();}">
+      <button class="btn btn-sm" onclick="optimizeRefine()">Ask</button>
+    </div>
     <div id="opt-review" style="margin-top:10px"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="${bBtn}" id="opt-apply-btn" onclick="applyOptimization()">Apply to live post →</button>
@@ -1038,6 +1042,19 @@ async function applyOptimization(){
   }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Apply failed: '+esc(String(e&&e.message||e))+'</span>';}
 }
 async function dismissOptimization(id){await sb.from('optimization_proposals').update({status:'dismissed'}).eq('id',id);renderOptimizeSection();}
+async function optimizeRefine(){
+  if(!curPost)return;
+  const ib=document.getElementById('opt-instruction');const instr=(ib&&ib.value||'').trim();if(!instr)return;
+  const t=((document.getElementById('opt-title-edit')||{}).value||'').trim();
+  const m=((document.getElementById('opt-meta-edit')||{}).value||'').trim();
+  const rv=document.getElementById('opt-review');if(rv)rv.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Revising…</div>';
+  try{const r=await fetch('/.netlify/functions/refine-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction:instr,title:t,meta:m})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+    const ti=document.getElementById('opt-title-edit');if(ti)ti.value=j.title||t;
+    const me=document.getElementById('opt-meta-edit');if(me)me.value=j.meta_description||m;
+    if(ib)ib.value='';updateOptCounters();
+    if(rv)rv.innerHTML='<div style="font-size:12px;color:var(--green)">Updated ✓ — tweak by hand, ask for another change, or Review.</div>';
+  }catch(e){if(rv)rv.innerHTML='<span style="font-size:12px;color:var(--red-t)">Change failed: '+esc(String(e&&e.message||e))+'</span>';}
+}
 
 // ── ARTICLE BODY IMPROVER (Rankings tab) ── keyword-coverage audit + additive section,
 // then the guided safe republish (temp publish → Sienna deletes old → swap onto real URL).
@@ -1082,6 +1099,10 @@ async function renderBodySection(){
         <label class="fl">Section to add — edit the HTML if you like</label>
         <textarea id="body-add-edit" rows="10" oninput="_bodyPreview()" style="width:100%;font-size:12px;font-family:monospace;line-height:1.5;resize:vertical;margin-bottom:6px"></textarea>
         <details open style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview</summary><div id="body-add-preview" style="margin-top:8px;font-size:13px;line-height:1.6;max-height:340px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px"></div></details>`:''}
+      ${hasAdd?`<div style="display:flex;gap:6px;margin-bottom:10px">
+        <input id="body-instruction" placeholder="Tell it what to change — e.g. make it shorter, add a question about pricing, less formal" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();bodyRefine();}">
+        <button class="btn btn-sm" onclick="bodyRefine()">Ask</button>
+      </div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
         <button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button>
@@ -1172,6 +1193,24 @@ function _bodyPicker(p,el,bBtn){
 }
 function _bodyToggleAll(v){document.querySelectorAll('.bodykw').forEach(c=>{c.checked=v;});}
 function _bodyPreview(){const ta=document.getElementById('body-add-edit'),pv=document.getElementById('body-add-preview');if(ta&&pv)pv.innerHTML=ta.value;}
+async function bodyRefine(){
+  if(!curPost)return;
+  const ib=document.getElementById('body-instruction');const instr=(ib&&ib.value||'').trim();if(!instr)return;
+  const ta=document.getElementById('body-add-edit');const cur=(ta&&ta.value||'').trim();if(!cur)return;
+  await sb.from('body_proposals').update({added_html:cur}).eq('post_id',curPost).eq('phase','proposed'); // refine what she sees
+  const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Revising the section… (~30s)</div>';
+  const before=((await sb.from('body_proposals').select('updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+  const beforeU=before&&before.updated_at;
+  try{await fetch('/.netlify/functions/refine-body-section',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction:instr,added_html:cur})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const c=((await sb.from('body_proposals').select('updated_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    if(c&&c.phase==='proposed'&&c.updated_at!==beforeU){renderBodySection();return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
+}
 async function bodyGenerate(){
   if(!curPost)return;
   const sel=[...document.querySelectorAll('.bodykw:checked')].map(c=>_bodyMissing[+c.getAttribute('data-i')]).filter(Boolean);
