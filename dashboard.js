@@ -1078,8 +1078,10 @@ async function renderBodySection(){
       <div style="font-size:13px;font-weight:700;margin-bottom:6px">Article improvement</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Missing:':' Nothing missing 🎉'}</div>
       ${miss.length?`<div style="margin-bottom:10px">${chips}</div>`:''}
-      ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">${esc(p.summary||'')}</div>
-        <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview the section to add</summary><div style="margin-top:8px;font-size:13px;line-height:1.6;max-height:340px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px">${p.added_html}</div></details>`:''}
+      ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${esc(p.summary||'')}</div>
+        <label class="fl">Section to add — edit the HTML if you like</label>
+        <textarea id="body-add-edit" rows="10" oninput="_bodyPreview()" style="width:100%;font-size:12px;font-family:monospace;line-height:1.5;resize:vertical;margin-bottom:6px"></textarea>
+        <details open style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview</summary><div id="body-add-preview" style="margin-top:8px;font-size:13px;line-height:1.6;max-height:340px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px"></div></details>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
         <button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button>
@@ -1088,6 +1090,7 @@ async function renderBodySection(){
       </div>
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
     </div>`;
+    {const ta=document.getElementById('body-add-edit');if(ta){ta.value=p.added_html||'';_bodyPreview();}}
     return;
   }
   if(p.phase==='temp_published'){
@@ -1127,6 +1130,8 @@ async function improveBodyNow(){
 }
 async function bodyPublish(){
   if(!curPost)return;
+  const ta=document.getElementById('body-add-edit');
+  if(ta){const v=ta.value.trim();if(!v){alert('The section is empty — nothing to add.');return;}await sb.from('body_proposals').update({added_html:v}).eq('post_id',curPost).eq('phase','proposed');}
   if(!confirm('Publish the improved version to a temporary URL for review? (Your live post is untouched until you finish the swap.)'))return;
   const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Publishing the improved version…</div>';
   try{const r=await fetch('/.netlify/functions/improve-body-publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
@@ -1166,6 +1171,7 @@ function _bodyPicker(p,el,bBtn){
   </div>`;
 }
 function _bodyToggleAll(v){document.querySelectorAll('.bodykw').forEach(c=>{c.checked=v;});}
+function _bodyPreview(){const ta=document.getElementById('body-add-edit'),pv=document.getElementById('body-add-preview');if(ta&&pv)pv.innerHTML=ta.value;}
 async function bodyGenerate(){
   if(!curPost)return;
   const sel=[...document.querySelectorAll('.bodykw:checked')].map(c=>_bodyMissing[+c.getAttribute('data-i')]).filter(Boolean);
