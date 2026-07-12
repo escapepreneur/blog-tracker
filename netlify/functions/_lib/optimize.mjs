@@ -120,6 +120,84 @@ Keep ALL existing content — add or adjust only what the instruction asks; do n
   return tu.input;
 }
 
+const ADDITIONS_TOOL = {
+  name: 'emit_additions',
+  description: 'Return a few small HTML blocks that cover the missing keywords, each tagged with where in the existing article it should be inserted.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      blocks: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            placement: { type: 'string', enum: ['after_intro', 'in_faq', 'end'], description: 'after_intro = right after the opening section (best for definitions / "what it is / what it stands for / meaning"). in_faq = merged into the existing FAQ (for question-style terms). end = only if it fits nowhere else.' },
+            html: { type: 'string', description: 'ONLY the NEW content, as clean HTML using ONLY <p> and <h3> — never <h2>, no class, no style, no <script>. For FAQ items use <h3>Question</h3><p>Answer</p> pairs.' },
+            label: { type: 'string', description: 'short description of what this block covers' },
+          },
+          required: ['placement', 'html'],
+        },
+      },
+      summary: { type: 'string', description: '1-2 sentences: what was added and where.' },
+    },
+    required: ['blocks'],
+  },
+};
+
+// Generate a FEW small additions (definition, FAQ answers) for the missing keywords —
+// NOT a full rewrite. Fast + can't truncate the article. Returns { blocks, summary }.
+export async function improveBodyBlocks({ brand, title, currentHtml, missing, anthropicKey, model = MODEL }) {
+  const miss = (missing || []).slice(0, 15).map(k => `- "${k.query}"${k.impressions ? ` (${k.impressions} impr/90d)` : ''}`).join('\n');
+  const hasFaq = /(faq|frequently asked|common questions)/i.test(String(currentHtml || '').match(/<h[23][^>]*>[\s\S]*?<\/h[23]>/gi)?.join(' ') || '');
+  const user = `This LIVE ${BRANDS[brand].name} blog post already ranks in Google. Title: "${title || ''}". Write a FEW concise additions covering the search terms it under-serves. These get INSERTED into the existing article — do NOT rewrite or restate existing content.
+
+TERMS TO COVER:
+${miss || '(none)'}
+
+RULES:
+- Output ONLY the new content, as small blocks.
+- Definitions / "what it is / what it stands for / meaning" -> placement "after_intro".
+- Question-style terms -> placement "in_faq" as <h3>Question</h3><p>Answer</p> pairs${hasFaq ? ' (they will be merged into the existing FAQ)' : ''}.
+- Use ONLY <p> and <h3>. Never <h2>. No classes, inline styles, or <script>.
+- Concise, in the brand voice, no padding. A couple of tight blocks is better than a wall of text.
+
+Return via emit_additions.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 4000, system: systemPrompt(brand), tools: [ADDITIONS_TOOL], tool_choice: { type: 'tool', name: 'emit_additions' }, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
+// Splice generated blocks into the ORIGINAL article HTML at their placement — so nothing
+// is ever regenerated or lost. Blocks contain only <p>/<h3> (no <h2>), so h2 offsets stay valid.
+export function insertBlocks(html, blocks) {
+  let out = String(html || '');
+  const h2s = (s) => { const idx = []; const re = /<h2\b/gi; let m; while ((m = re.exec(s))) idx.push(m.index); return idx; };
+  const faqIdx = (s) => { const re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi; let m, last = -1; while ((m = re.exec(s))) { if (/faq|frequently asked|common questions/i.test(m[1].replace(/<[^>]+>/g, ''))) last = m.index; } return last; };
+  for (const b of (blocks || [])) {
+    if (!b || !b.html) continue;
+    const frag = `\n${b.html}\n`;
+    if (b.placement === 'after_intro') {
+      const idx = h2s(out);
+      if (idx.length >= 2) out = out.slice(0, idx[1]) + frag + out.slice(idx[1]);
+      else out += frag;
+    } else if (b.placement === 'in_faq') {
+      const f = faqIdx(out);
+      if (f >= 0) {
+        const rel = out.slice(f + 3).search(/<h2\b/i);       // next h2 after the FAQ heading
+        const pos = rel >= 0 ? f + 3 + rel : out.length;      // end of FAQ section (or article end)
+        out = out.slice(0, pos) + frag + out.slice(pos);
+      } else out += frag;
+    } else out += frag;
+  }
+  return out;
+}
+
 const WOVEN_TOOL = {
   name: 'emit_woven_body',
   description: 'Return the FULL article HTML with coverage for the missing keywords woven into the right places. Additive only — keep every existing section.',

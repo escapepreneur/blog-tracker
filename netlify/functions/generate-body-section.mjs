@@ -2,7 +2,7 @@
 // SELECTED keywords and build the full new body. Background fn; updates the body_proposals
 // row (phase 'analysed' -> 'proposed'). The dashboard polls for phase 'proposed'.
 import { getBlogPostDetail } from './_lib/ghl.mjs';
-import { improveBodyWoven, bodyLossCheck } from './_lib/optimize.mjs';
+import { improveBodyBlocks, insertBlocks, bodyLossCheck } from './_lib/optimize.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -27,10 +27,12 @@ export const handler = async (event) => {
     const brand = post.blog;
 
     const detail = await getBlogPostDetail({ ghlPostId: prop.ghl_post_id, pit: PIT });
-    const gen = await improveBodyWoven({ brand, title: detail.title, currentHtml: detail.rawHTML, missing: keywords, anthropicKey: AKEY });
-    const new_html = gen.body_html || detail.rawHTML || '';
+    // Generate only the small additions, then splice them into the ORIGINAL html by code —
+    // fast, can't truncate, can't lose existing content.
+    const gen = await improveBodyBlocks({ brand, title: detail.title, currentHtml: detail.rawHTML, missing: keywords, anthropicKey: AKEY });
+    const new_html = insertBlocks(detail.rawHTML, gen.blocks);
     const warn = bodyLossCheck(detail.rawHTML, new_html);
-    const summary = gen.summary || 'Wove in coverage for the selected keywords.';
+    const summary = gen.summary || 'Added coverage for the selected keywords, placed in the article.';
 
     await rest(`body_proposals?id=eq.${prop.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
       added_html: '', new_html, summary, note: warn || null,
