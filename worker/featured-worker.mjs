@@ -84,15 +84,15 @@ async function pinBackfill(limit) {
     try {
       const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
       let assets = (d && d.assets) || {};
-      if (!assets.pin_image_url) {
-        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
-        const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
-        assets = { ...assets, pin_image_url: up.url };
-        const w = d
-          ? await rest(`post_drafts?post_id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) })
-          : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, assets }) });
-        if (!w.ok) throw new Error(`save pin_image_url ${w.status}: ${(await w.text()).slice(0, 120)}`);
-      }
+      // ALWAYS render a fresh pin in the CURRENT design — never reuse an old stored pin
+      // image (older ones were rendered in the previous style, so reuse = wrong layout).
+      const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
+      const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
+      assets = { ...assets, pin_image_url: up.url };
+      const w = d
+        ? await rest(`post_drafts?post_id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) })
+        : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, assets }) });
+      if (!w.ok) throw new Error(`save pin_image_url ${w.status}: ${(await w.text()).slice(0, 120)}`);
       const draft = { assets, meta_description: (d && d.meta_description) || null };
       const res = await postPinsForPost({ pit: PIT, userId, brand: p.blog, post: p, draft });
       const ok = res.posted && res.posted.some(x => !x.error);
