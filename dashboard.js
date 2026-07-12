@@ -1130,7 +1130,7 @@ async function renderFeaturedRefresh(){
   const tg=esc(a.featured_tagline||'');
   const srch=esc(a.featured_image_search||post.primary_keyword||'');
   el.innerHTML=`<div class="card" style="padding:14px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px">Featured image</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:13px;font-weight:700">Featured image</div><button class="btn btn-xs btn-ghost" onclick="renderFeaturedRefresh()" title="Check for the latest rendered image">↻ Refresh</button></div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">The graphic has the headline drawn onto it. Render a preview, review it here, then push it onto the live post — nothing goes live until you approve it.</div>
     ${img?`<div style="margin-bottom:8px">${preview?'<div style="font-size:11px;font-weight:700;color:#8a5a00;background:#fff7e6;border:1px solid #f2d9a0;border-radius:6px;padding:3px 8px;display:inline-block;margin-bottom:6px">PREVIEW — not live yet</div>':''}<img src="${esc(img)}" alt="featured image" style="display:block;width:100%;max-width:460px;border-radius:8px"></div>`:'<div style="font-size:12px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px">No image rendered yet — set the text below and render a preview.</div>'}
     ${preview?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px">
@@ -1157,19 +1157,21 @@ async function refreshFeatured(swap){
   const st=document.getElementById('ft-status');
   const before=((await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle()).data||{}).assets||{};
   const beforeImg=before.featured_image_url||'';
-  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Rendering a preview… (~2 min)</div>';
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>'+(swap?'Trying a different background':'Rendering a preview')+'… (~1-2 min). It\'ll update here automatically, or hit ↻ Refresh.</div>';
+  const forPost=curPost; // lock to this post so navigating away can't misfire
   try{
-    const r=await fetch('/.netlify/functions/refresh-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,featured_title:title,featured_tagline:tagline,featured_image_search:search,swap:!!swap})});
+    const r=await fetch('/.netlify/functions/refresh-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:forPost,featured_title:title,featured_tagline:tagline,featured_image_search:search,swap:!!swap})});
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||('HTTP '+r.status));}
   }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Could not start: '+esc(String(e&&e.message||e))+'</span>';return;}
   const t0=Date.now();
   const poll=async()=>{
-    const a=((await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle()).data||{}).assets||{};
+    if(curPost!==forPost)return; // user moved to another post
+    const a=((await sb.from('post_drafts').select('assets').eq('post_id',forPost).maybeSingle()).data||{}).assets||{};
     if(a.featured_image_url&&a.featured_image_url!==beforeImg){renderFeaturedRefresh();return;}
-    if(Date.now()-t0>240000){if(st)st.innerHTML='<span style="color:var(--amber-t)">Still rendering — GitHub Actions can be slow. Check back in a minute.</span>';return;}
-    setTimeout(poll,8000);
+    if(Date.now()-t0>300000){renderFeaturedRefresh();return;} // reload anyway — shows a late render if it landed
+    setTimeout(poll,7000);
   };
-  setTimeout(poll,8000);
+  setTimeout(poll,7000);
 }
 async function applyFeatured(){
   if(!curPost)return;
