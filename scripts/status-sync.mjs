@@ -7,7 +7,7 @@
 //  - Indexing: on go-live, ask Google to crawl the URL (Indexing API); each run also
 //    flips Indexed no/requested -> yes once Search Console confirms. Needs GOOGLE_SA_KEY.
 //   env: SUPABASE_SERVICE_ROLE_KEY, GHL_API_TOKEN, GOOGLE_SA_KEY (optional)
-import { publishBlogPost } from '../netlify/functions/_lib/ghl.mjs';
+import { publishBlogPost, getBlogPostDetail, getBlogPostBySlug } from '../netlify/functions/_lib/ghl.mjs';
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
@@ -130,6 +130,34 @@ async function verifyLive(url) {
       } catch (e) { console.error(`  FAIL pin ${p.id}: ${e.message}`); }
     }
     console.log(`[status-sync] pinterest: ${pinned} post(s) pinned`);
+  }
+
+  // Title backfill: live posts with no tracker title -> pull it from the GHL post (by
+  // ghl_post_id, else by url slug). Fixes older posts + is a permanent safety net so the
+  // tracker title always matches what's published.
+  let titled = 0;
+  if (LIVE && PIT) {
+    const live = await (await rest(`posts?status=eq.live&url=not.is.null&select=id,blog,url,title,ghl_post_id`)).json();
+    for (const p of (Array.isArray(live) ? live : [])) {
+      if (p.title && p.title.trim()) continue;
+      try {
+        let ghlId = p.ghl_post_id;
+        if (!ghlId) {
+          const slug = (p.url.split('/post/')[1] || '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+          const f = slug ? await getBlogPostBySlug({ brand: p.blog, slug, pit: PIT }) : null;
+          ghlId = f && (f._id || f.id);
+        }
+        if (!ghlId) continue;
+        const d = await getBlogPostDetail({ ghlPostId: ghlId, pit: PIT });
+        if (d && d.title) {
+          const body = { title: d.title };
+          if (!p.ghl_post_id) body.ghl_post_id = ghlId;
+          await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(body) });
+          titled++;
+        }
+      } catch (e) { /* per-post best-effort */ }
+    }
+    console.log(`[status-sync] titles: ${titled} backfilled from GHL`);
   }
 
   console.log(`[status-sync] done. published=${published} flipped=${flipped} waiting=${waiting} failed=${failed}`);

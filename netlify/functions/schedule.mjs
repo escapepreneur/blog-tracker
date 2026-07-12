@@ -43,6 +43,9 @@ export const handler = async (event) => {
     });
 
     const patch = { ghl_post_id: r.id, url: r.url, current_step: Math.max(post.current_step || 0, 5) };
+    // keep the tracker title in sync with what we publish (the draft's H1)
+    const draftTitle = draft.assets && draft.assets.title;
+    if (draftTitle && !(post.title && post.title.trim())) patch.title = draftTitle;
     if (publish) {
       patch.status = 'live'; patch.published_date = today; patch.confirmed_live = true; patch.scheduled_date = date || today;
       patch.indexed = 'requested';
