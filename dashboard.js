@@ -72,11 +72,28 @@ async function initApp(){
     document.getElementById('btn-esc').className='bsw-btn'+(activeBlog==='esc'?' a-esc':'');
     document.getElementById('btn-nms').className='bsw-btn'+(activeBlog==='nms'?' a-nms':'');
     const savedTab=localStorage.getItem('cd_tab');if(savedTab&&document.getElementById('pane-'+savedTab))switchTab(savedTab);
+    loadDfsBalance();
   }catch(e){
     console.error('initApp error:',e);
     document.getElementById('con-screen').style.display='flex';
     document.getElementById('main-app').style.display='none';
   }
+}
+async function loadDfsBalance(){
+  const el=document.getElementById('dfs-balance');if(!el)return;
+  try{
+    const r=await fetch('/.netlify/functions/dataforseo-balance');const j=await r.json().catch(()=>({}));
+    if(!j||j.configured===false){el.style.display='none';return;}
+    el.style.display='inline-block';
+    if(j.error){el.textContent='🔎 balance —';el.title='DataForSEO balance unavailable: '+j.error;el.style.color='var(--text3)';return;}
+    const bal=j.balance;
+    el.textContent='🔎 DataForSEO $'+(bal!=null?Number(bal).toFixed(2):'—');
+    const low=bal!=null&&bal<5, mid=bal!=null&&bal>=5&&bal<15;
+    el.style.color=low?'#b42318':mid?'#8a5a00':'var(--text3)';
+    el.style.borderColor=low?'#f3c0c0':mid?'#f2d9a0':'var(--border)';
+    el.style.background=low?'#fff5f5':mid?'#fff7e6':'var(--bg2)';
+    el.title=(low?'Low balance — top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
+  }catch(e){el.style.display='none';}
 }
 async function connectSB(){
   const url=document.getElementById('sb-url').value.trim(),key=document.getElementById('sb-key').value.trim();

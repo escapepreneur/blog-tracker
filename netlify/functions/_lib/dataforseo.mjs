@@ -31,6 +31,17 @@ async function post(path, task) {
   return { configured: true, cost: d.cost, result: (t.result && t.result[0]) || null };
 }
 
+// Current account balance (USD) for the header indicator. { configured, balance }.
+export async function getBalance() {
+  if (!dfsConfigured()) return { configured: false };
+  const r = await fetch(BASE + '/appendix/user_data', { headers: { Authorization: authHeader() } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.status_code !== 20000) throw new Error(`dataforseo balance ${r.status}/${d.status_code}`);
+  const res = d.tasks && d.tasks[0] && d.tasks[0].result && d.tasks[0].result[0];
+  const money = res && res.money;
+  return { configured: true, balance: money && money.balance != null ? money.balance : null };
+}
+
 // Normalise a Labs item into the shape the rest of the app uses.
 function norm(item) {
   const ki = item.keyword_info || {};
