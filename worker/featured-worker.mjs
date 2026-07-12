@@ -3,6 +3,7 @@
 // Optional argv[2] = a single post_id (from repository_dispatch); otherwise processes all pending.
 import { searchPexels } from '../netlify/functions/_lib/pexels.mjs';
 import { uploadMedia, updatePostImage } from '../netlify/functions/_lib/ghl.mjs';
+import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
 import { renderFeatured } from './render-featured.mjs';
 import { renderPin } from './render-pin.mjs';
 
@@ -63,7 +64,50 @@ async function processOne(row) {
   }
 }
 
-const pending = await getPending();
-console.log(`${pending.length} draft(s) need a featured image${ONLY ? ` (post ${ONLY})` : ''}`);
-for (const r of pending) { try { await processOne(r); } catch (e) { console.error('  FAIL', r.post_id, e.message); } }
+// PIN BACKFILL: render + pin every live post that was never pinned (older posts with no
+// pin image). Renders a branded pin from the title (no Pexels needed), uploads it, and
+// pins to the topic + blog board with the article link. Self-healing: a failure leaves
+// pinterest_posted=false so a re-run retries it. Triggered via repository_dispatch with
+// client_payload.post_id = "PIN_BACKFILL".
+async function pinBackfill() {
+  const userId = await getGhlUserId(PIT);
+  if (!userId) { console.error('pin-backfill: no GHL userId (cannot post)'); return; }
+  const posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster&order=published_date.desc.nullslast')).json();
+  console.log(`pin-backfill: ${Array.isArray(posts) ? posts.length : 0} unpinned live post(s)`);
+  let done = 0, failed = 0;
+  for (const p of (Array.isArray(posts) ? posts : [])) {
+    const label = `[${p.blog}] ${p.title || p.primary_keyword || p.id}`;
+    try {
+      const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
+      let assets = (d && d.assets) || {};
+      if (!assets.pin_image_url) {
+        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: assets.featured_tagline || '', brand: p.blog, seed: p.id });
+        const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
+        assets = { ...assets, pin_image_url: up.url };
+        const w = d
+          ? await rest(`post_drafts?post_id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) })
+          : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, assets }) });
+        if (!w.ok) throw new Error(`save pin_image_url ${w.status}: ${(await w.text()).slice(0, 120)}`);
+      }
+      const draft = { assets, meta_description: (d && d.meta_description) || null };
+      const res = await postPinsForPost({ pit: PIT, userId, brand: p.blog, post: p, draft });
+      const ok = res.posted && res.posted.some(x => !x.error);
+      if (ok) {
+        await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ pinterest_posted: true }) });
+        done++;
+        console.log(`  pinned ${label} -> ${res.posted.map(x => x.board + (x.error ? ' ERR' : '')).join(', ')}`);
+      } else { failed++; console.error(`  FAIL ${label}: ${res.skipped || JSON.stringify(res.posted)}`); }
+    } catch (e) { failed++; console.error(`  FAIL ${label}: ${e.message}`); }
+    await new Promise(r => setTimeout(r, 1500)); // throttle for Pinterest rate limits
+  }
+  console.log(`pin-backfill done: ${done} pinned, ${failed} failed`);
+}
+
+if (ONLY === 'PIN_BACKFILL') {
+  await pinBackfill();
+} else {
+  const pending = await getPending();
+  console.log(`${pending.length} draft(s) need a featured image${ONLY ? ` (post ${ONLY})` : ''}`);
+  for (const r of pending) { try { await processOne(r); } catch (e) { console.error('  FAIL', r.post_id, e.message); } }
+}
 console.log('done');
