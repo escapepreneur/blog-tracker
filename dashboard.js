@@ -1957,7 +1957,7 @@ async function researchKeywords(){
   const start=Date.now();
   const iv=setInterval(async()=>{
     const{data}=await sb.from('keyword_runs').select('status,result,error').eq('id',runId).single();
-    if(data&&data.status==='done'){clearInterval(iv);if(btn)btn.disabled=false;renderClusters(data.result);}
+    if(data&&data.status==='done'){clearInterval(iv);if(btn)btn.disabled=false;renderResearchResults(data.result);}
     else if(data&&data.status==='error'){clearInterval(iv);if(btn)btn.disabled=false;if(status)status.innerHTML=_kwErr(data.error||'Research failed.');}
     else if(Date.now()-start>200000){clearInterval(iv);if(btn)btn.disabled=false;if(status)status.innerHTML=_kwErr('Still working or it hit a snag. Try again.');}
   },5000);
@@ -1995,7 +1995,7 @@ function setKwMode(m){
   const rb=document.getElementById('kw-research-btn');if(rb)rb.innerHTML=(m==='cluster'?'✦ Build content cluster':'✦ Research keywords');
   const ta=document.getElementById('kw-seeds');if(ta)ta.placeholder=(m==='cluster'?'one broad topic, e.g.\ngohighlevel':'gohighlevel\nemail marketing for coaches\nsales funnel\ncrm');
 }
-function renderClusters(out){
+function renderResearchResults(out){
   if(out&&out.mode==='cluster')return renderContentCluster(out);
   _kwActiveCluster=null;_kwCluster=null;
   _kwClusters=(out&&out.clusters)||[];
