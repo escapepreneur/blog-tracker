@@ -1889,8 +1889,8 @@ async function renderOpportunities(){
     const cd=cooldownOf(p.id);
     // Always keep a way into the post (measuring gates re-doing title/meta, not opening
     // it or improving the body). Show the badge alongside, never instead of, the button.
-    const action=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none">
-      ${cd?`<span title="Title/meta optimised — measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ measuring</span>`:''}
+    const action=`<div style="display:flex;align-items:center;gap:8px;flex:none">
+      ${cd?`<span title="Title/meta optimised — measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ Measuring</span>`:''}
       <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">${cd?'Open':'Optimise'}</button>
     </div>`;
     const collapsed=_oppsCollapsedSet().has(p.id);
