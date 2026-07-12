@@ -1241,7 +1241,7 @@ async function bodyRefine(){
   const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Revising the article… (~40s)</div>';
   const before=((await sb.from('body_proposals').select('updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
   const beforeU=before&&before.updated_at;
-  try{await fetch('/.netlify/functions/refine-body-section',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction:instr,new_html:cur})});}catch(e){}
+  try{await fetch('/.netlify/functions/refine-body-section-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction:instr,new_html:cur})});}catch(e){}
   const t0=Date.now();
   const poll=async()=>{
     const c=((await sb.from('body_proposals').select('updated_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
@@ -1258,7 +1258,7 @@ async function bodyGenerate(){
   const st=document.getElementById('body-status');if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Writing a section for '+sel.length+' keyword'+(sel.length>1?'s':'')+'… (~60s)</div>';
   const before=((await sb.from('body_proposals').select('updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
   const beforeU=before&&before.updated_at;
-  try{await fetch('/.netlify/functions/generate-body-section',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,keywords:sel})});}catch(e){}
+  try{await fetch('/.netlify/functions/generate-body-section-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,keywords:sel})});}catch(e){}
   const t0=Date.now();
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('phase,updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
