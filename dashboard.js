@@ -1133,10 +1133,11 @@ async function renderFeaturedRefresh(){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:13px;font-weight:700">Featured image</div><button class="btn btn-xs btn-ghost" onclick="renderFeaturedRefresh()" title="Check for the latest rendered image">↻ Refresh</button></div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">The graphic has the headline drawn onto it. Render a preview, review it here, then push it onto the live post — nothing goes live until you approve it.</div>
     ${img?`<div style="margin-bottom:8px">${preview?'<div style="font-size:11px;font-weight:700;color:#8a5a00;background:#fff7e6;border:1px solid #f2d9a0;border-radius:6px;padding:3px 8px;display:inline-block;margin-bottom:6px">PREVIEW — not live yet</div>':''}<img src="${esc(img)}" alt="featured image" style="display:block;width:100%;max-width:460px;border-radius:8px"></div>`:'<div style="font-size:12px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px">No image rendered yet — set the text below and render a preview.</div>'}
-    ${preview?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px">
+    ${preview?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px">
         <button class="${bBtn}" onclick="applyFeatured()">✓ Use this on the live post</button>
         <button class="btn btn-sm" onclick="refreshFeatured(true)">Swap background</button>
       </div>`:''}
+    <div id="ft-status" style="font-size:12px;color:var(--text2);margin:2px 0 12px;min-height:1px"></div>
     <label class="fl">Image headline</label>
     <input id="ft-title" value="${ft}" style="width:100%;font-size:13px;margin:4px 0 8px">
     <label class="fl">Image tagline (the script line beneath it)</label>
@@ -1144,7 +1145,6 @@ async function renderFeaturedRefresh(){
     <label class="fl">Background photo search</label>
     <input id="ft-search" value="${srch}" placeholder="e.g. laptop desk, business planning" style="width:100%;font-size:13px;margin:4px 0 10px">
     <button class="${bBtn}" onclick="refreshFeatured(false)">${preview?'Re-render preview with edits':'Render preview'}</button>
-    <div id="ft-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
   </div>`;
 }
 async function refreshFeatured(swap){
@@ -1155,10 +1155,11 @@ async function refreshFeatured(swap){
   if(!title){alert('Add an image headline.');return;}
   if(!search){alert('Add a background photo search term.');return;}
   const st=document.getElementById('ft-status');
-  const before=((await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle()).data||{}).assets||{};
-  const beforeImg=before.featured_image_url||'';
-  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>'+(swap?'Trying a different background':'Rendering a preview')+'… (~1-2 min). It\'ll update here automatically, or hit ↻ Refresh.</div>';
+  // Immediate feedback BEFORE any await, right under the buttons, so the click never looks dead.
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--teal-d);font-weight:600"><div class="spinner"></div>'+(swap?'Trying a different background':'Rendering a preview')+'… (~1-2 min). Updates here automatically, or hit ↻ Refresh.</div>';
   const forPost=curPost; // lock to this post so navigating away can't misfire
+  const before=((await sb.from('post_drafts').select('assets').eq('post_id',forPost).maybeSingle()).data||{}).assets||{};
+  const beforeImg=before.featured_image_url||'';
   try{
     const r=await fetch('/.netlify/functions/refresh-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:forPost,featured_title:title,featured_tagline:tagline,featured_image_search:search,swap:!!swap})});
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||('HTTP '+r.status));}
