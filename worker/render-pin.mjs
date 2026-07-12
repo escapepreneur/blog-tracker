@@ -21,14 +21,14 @@ const C = {
   mint: '#E9F4F2', card: '#FFFFFF', line: '#CDE4E1',
 };
 
-const MINOR = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'or', 'over', 'the', 'to', 'vs', 'with']);
-function tidyTitle(t) {
-  const ws = String(t || '').trim().split(/\s+/);
-  return ws.map((w, i) => {
-    if (i === 0) return w;
-    if (/[.?!:]$/.test(ws[i - 1] || '')) return w.charAt(0).toUpperCase() + w.slice(1); // new sentence -> capitalise
-    return MINOR.has(w.toLowerCase()) ? w.toLowerCase() : w;
-  }).join(' ');
+// Use the blog title's own capitalisation as written (don't re-case — it's already correct).
+function tidyTitle(t) { return String(t || '').replace(/\s+/g, ' ').trim(); }
+// Split a headline into a short main line + subheading at the first : ? | — (keeps ? on the main).
+function splitTitle(raw) {
+  const t = String(raw || '').replace(/\s+/g, ' ').trim();
+  const m = t.match(/^(.+?)([?:|–—])\s+(.+)$/);
+  if (m) return { main: (m[2] === '?' ? m[1] + '?' : m[1]).trim(), sub: m[3].trim() };
+  return { main: t, sub: '' };
 }
 function seedInt(s) { let h = 0; const str = String(s || 'x'); for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
 // Is the subtitle basically the same as the title? (avoid doubling up the text)
@@ -119,13 +119,15 @@ const TITLE=${JSON.stringify(t)};
 
 export async function renderPin({ title, tagline, brand = 'esc', seed = '', variant }) {
   const v = Number.isInteger(variant) ? variant : (seedInt(seed || title) % LAYOUTS.length);
-  // eyebrow is a fixed brand line; the tagline is the subtitle — but drop it if it just
-  // repeats the title (no doubling up).
-  const sub = (tagline && tagline.trim() && !tooSimilar(title, tagline)) ? tagline.trim() : '';
+  // Short main line + subheading: split the title at the first :/?/— ; otherwise fall back
+  // to the tagline as the subheading (dropped if it just repeats the main, no doubling up).
+  const { main, sub: subFromTitle } = splitTitle(title);
+  let sub = subFromTitle;
+  if (!sub && tagline && tagline.trim() && !tooSimilar(main, tagline)) sub = tagline.trim();
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
   try {
     const page = await browser.newPage({ viewport: { width: 1000, height: 1500 } });
-    await page.setContent(buildHtml({ title, kicker: EYEBROW[brand] || EYEBROW.esc, sub, brand, variant: v }), { waitUntil: 'load' });
+    await page.setContent(buildHtml({ title: main, kicker: EYEBROW[brand] || EYEBROW.esc, sub, brand, variant: v }), { waitUntil: 'load' });
     await page.waitForFunction('window.__done === true', { timeout: 8000 });
     return await page.locator('.canvas').screenshot({ type: 'jpeg', quality: 90 });
   } finally {
