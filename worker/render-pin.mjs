@@ -14,7 +14,7 @@ const MARTHIN = b64('assets/marthin.woff2');
 const LOGOS = { esc: b64('assets/logo.png'), nms: b64('assets/logo-nms.png') }; // white logos
 const LOGO_W = { esc: 116, nms: 210 };
 const DOMAIN = { esc: 'ESCHUB.COM', nms: 'ESCAPEPRENEUR.COM' };
-const EYEBROW = { esc: 'on the blog', nms: 'no more somedays' };
+const EYEBROW = { esc: 'On The Blog', nms: 'No More Somedays' };
 
 const C = {
   teal: '#17A2A0', deep: '#0F6E6C', ink: '#123f3e', grey: '#5a726f',
@@ -24,9 +24,24 @@ const C = {
 const MINOR = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'or', 'over', 'the', 'to', 'vs', 'with']);
 function tidyTitle(t) {
   const ws = String(t || '').trim().split(/\s+/);
-  return ws.map((w, i) => (i === 0 ? w : (MINOR.has(w.toLowerCase()) ? w.toLowerCase() : w))).join(' ');
+  return ws.map((w, i) => {
+    if (i === 0) return w;
+    if (/[.?!:]$/.test(ws[i - 1] || '')) return w.charAt(0).toUpperCase() + w.slice(1); // new sentence -> capitalise
+    return MINOR.has(w.toLowerCase()) ? w.toLowerCase() : w;
+  }).join(' ');
 }
 function seedInt(s) { let h = 0; const str = String(s || 'x'); for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
+// Is the subtitle basically the same as the title? (avoid doubling up the text)
+function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function tooSimilar(title, sub) {
+  const t = norm(title), s = norm(sub);
+  if (!s) return true;
+  if (t.includes(s) || s.includes(t)) return true;
+  const ts = new Set(t.split(' '));
+  const ss = s.split(' ').filter(Boolean);
+  const overlap = ss.filter(w => ts.has(w)).length / Math.max(1, ss.length);
+  return overlap >= 0.7;
+}
 const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const FONTS = `
@@ -104,8 +119,9 @@ const TITLE=${JSON.stringify(t)};
 
 export async function renderPin({ title, tagline, brand = 'esc', seed = '', variant }) {
   const v = Number.isInteger(variant) ? variant : (seedInt(seed || title) % LAYOUTS.length);
-  // eyebrow is a fixed brand line ("on the blog"); the tagline (if any) is the subtitle.
-  const sub = (tagline && tagline.trim()) ? tagline.trim() : '';
+  // eyebrow is a fixed brand line; the tagline is the subtitle — but drop it if it just
+  // repeats the title (no doubling up).
+  const sub = (tagline && tagline.trim() && !tooSimilar(title, tagline)) ? tagline.trim() : '';
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
   try {
     const page = await browser.newPage({ viewport: { width: 1000, height: 1500 } });
