@@ -18,7 +18,7 @@ export const handler = async (event) => {
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
-  const { post_id, featured_title, featured_tagline, featured_image_search } = body;
+  const { post_id, featured_title, featured_tagline, featured_image_search, swap } = body;
   if (!post_id) return json(400, { error: 'post_id required' });
   if (!featured_title || !String(featured_title).trim()) return json(400, { error: 'featured_title required' });
   if (!featured_image_search || !String(featured_image_search).trim()) return json(400, { error: 'featured_image_search required' });
@@ -35,8 +35,9 @@ export const handler = async (event) => {
     a.featured_title = String(featured_title).trim();
     a.featured_tagline = typeof featured_tagline === 'string' ? featured_tagline.trim() : (a.featured_tagline || '');
     a.featured_image_search = String(featured_image_search).trim();
-    a.featured_bg_index = 0;
-    delete a.featured_image_url;   // mark pending so the worker renders + pushes to live
+    a.featured_bg_index = swap ? ((a.featured_bg_index || 0) + 1) : 0;
+    a.featured_review = true;      // preview only — worker renders but does NOT push to the live post
+    delete a.featured_image_url;   // mark pending so the worker renders it
     delete a.pin_image_url;        // let the pin re-render to match too
 
     if (draft) {

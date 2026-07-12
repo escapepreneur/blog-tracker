@@ -53,7 +53,8 @@ async function processOne(row) {
 
   // If this post is already in GHL, push the new image onto it (keeping its status)
   // so re-render/swap updates a live or scheduled post without a full republish.
-  if (post && post.ghl_post_id) {
+  // EXCEPT when featured_review is set: that's a preview the user must approve first.
+  if (post && post.ghl_post_id && !a.featured_review) {
     const ghlStatus = post.status === 'live' ? 'PUBLISHED' : 'DRAFT';
     try {
       await updatePostImage({ ghlPostId: post.ghl_post_id, pit: PIT, brand, status: ghlStatus, imageUrl: up.url, imageAltText: a.featured_title || post.title || post.primary_keyword });
