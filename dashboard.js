@@ -927,7 +927,7 @@ async function loadCooldown(){
   const{data}=await sb.from('optimizations').select('opt_date').eq('post_id',curPost).order('opt_date',{ascending:false}).limit(1);
   const last=(data||[])[0];
   if(!last||!last.opt_date){return;}
-  const days=Math.floor((Date.now()-Date.parse(last.opt_date))/86400000);
+  const days=Math.max(0,Math.floor((Date.now()-Date.parse(last.opt_date))/86400000));
   const until=new Date(Date.parse(last.opt_date)+COOLDOWN_DAYS*86400000).toISOString().slice(0,10);
   _optCooldown={inCooldown:days<COOLDOWN_DAYS,days,until,last:last.opt_date};
 }
