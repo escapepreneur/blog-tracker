@@ -27,13 +27,16 @@ export const handler = async (event) => {
   const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
 
   try {
-    const [post] = await (await rest(`posts?id=eq.${post_id}&select=blog`)).json();
+    const [post] = await (await rest(`posts?id=eq.${post_id}&select=blog,subtitle`)).json();
     if (!post) return json(404, { error: 'post not found' });
     const [draft] = await (await rest(`post_drafts?post_id=eq.${post_id}&select=assets`)).json();
 
     const a = (draft && draft.assets) || {};
     a.featured_title = String(featured_title).trim();
-    a.featured_tagline = typeof featured_tagline === 'string' ? featured_tagline.trim() : (a.featured_tagline || '');
+    // The subtitle is the master (drives the graphic tagline + the article subheading).
+    const sub = typeof featured_tagline === 'string' ? featured_tagline.trim() : (post.subtitle || a.featured_tagline || '');
+    a.featured_tagline = sub;
+    if (sub !== (post.subtitle || '')) await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ subtitle: sub }) });
     a.featured_image_search = String(featured_image_search).trim();
     a.featured_bg_index = swap ? ((a.featured_bg_index || 0) + 1) : 0;
     a.featured_review = true;      // preview only — worker renders but does NOT push to the live post

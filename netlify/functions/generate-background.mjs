@@ -67,6 +67,7 @@ export const handler = async (event) => {
     if (['idea', 'drafted'].includes(post.status)) {
       const patch = { status: 'drafted', current_step: Math.max(post.current_step || 0, 2) };
       if (!post.title) patch.title = draft.title; // fill the H1 title if the tracker has none
+      if (!post.subtitle && draft.featured_tagline) patch.subtitle = draft.featured_tagline; // seed the master subtitle
       await rest(`posts?id=eq.${postId}`, {
         method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
       });

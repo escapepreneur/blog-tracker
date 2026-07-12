@@ -27,23 +27,24 @@ async function getPending() {
 }
 
 async function processOne(row) {
-  const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog,status,ghl_post_id,title,primary_keyword`)).json();
+  const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog,status,ghl_post_id,title,primary_keyword,subtitle`)).json();
   const brand = (post && post.blog) || 'esc'; // selects the per-brand logo (esc / nms)
   const a = row.assets || {};
+  const tagline = (post && post.subtitle) || a.featured_tagline || ''; // subtitle is the master
   const term = a.featured_image_search;
   const idx = a.featured_bg_index || 0;
   const cands = await searchPexels(term, PEXELS, 5);
   if (!cands.length) { console.log('  no Pexels results for:', term); return; }
   const pick = cands[idx % cands.length];
   const bg = Buffer.from(await (await fetch(pick.url)).arrayBuffer()).toString('base64');
-  const jpeg = await renderFeatured({ title: a.featured_title || '', tagline: a.featured_tagline || '', bgBase64: bg, brand });
+  const jpeg = await renderFeatured({ title: a.featured_title || '', tagline, bgBase64: bg, brand });
   const up = await uploadMedia({ buffer: jpeg, filename: `featured-${row.post_id}.jpg`, pit: PIT });
   const assets = { ...a, featured_image_url: up.url, featured_bg_index: idx };
 
   // Pinterest pin (1000x1500, same bg + title) — stored for in-body embed + Pinterest posting.
   if (!a.pin_image_url) {
     try {
-      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline: a.featured_tagline || '', brand, seed: row.post_id });
+      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline, brand, seed: row.post_id });
       const pinUp = await uploadMedia({ buffer: pinJpeg, filename: `pin-${row.post_id}.jpg`, pit: PIT });
       assets.pin_image_url = pinUp.url;
       console.log('  pin ✓', row.post_id, '->', pinUp.url);
@@ -72,7 +73,7 @@ async function processOne(row) {
 async function pinBackfill(limit) {
   const userId = await getGhlUserId(PIT);
   if (!userId) { console.error('pin-backfill: no GHL userId (cannot post)'); return; }
-  let posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster&order=published_date.desc.nullslast')).json();
+  let posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster,subtitle&order=published_date.desc.nullslast')).json();
   posts = Array.isArray(posts) ? posts : [];
   const total = posts.length;
   if (limit && posts.length > limit) posts = posts.slice(0, limit);
@@ -84,7 +85,7 @@ async function pinBackfill(limit) {
       const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
       let assets = (d && d.assets) || {};
       if (!assets.pin_image_url) {
-        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: assets.featured_tagline || '', brand: p.blog, seed: p.id });
+        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
         const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
         assets = { ...assets, pin_image_url: up.url };
         const w = d

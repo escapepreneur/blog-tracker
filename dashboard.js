@@ -809,6 +809,7 @@ async function openPost(id,tab){
   document.getElementById('pm-title').textContent=kw||title||'Post';
   document.getElementById('pm-kw-display').textContent=kw&&title?title:(kw?'No title yet':'');
   document.getElementById('pm-title-i').value=title;
+  {const st=document.getElementById('pm-subtitle');if(st)st.value=post.subtitle||'';}
   document.getElementById('pm-url').value=post.url||'';
   document.getElementById('pm-status').value=post.status||'idea';
   const pmSched=document.getElementById('pm-sched');if(pmSched)pmSched.value=post.scheduled_date||'';
@@ -854,6 +855,7 @@ async function savePost(){
   try{
     const u={
       title:document.getElementById('pm-title-i')?.value.trim()||null,
+      subtitle:document.getElementById('pm-subtitle')?.value.trim()||null,
       url:document.getElementById('pm-url')?.value.trim()||null,
       status:document.getElementById('pm-status')?.value||'idea',
       scheduled_date:document.getElementById('pm-sched')?.value||null,
@@ -1127,7 +1129,7 @@ async function renderFeaturedRefresh(){
   const preview=!!(a.featured_review&&img);
   const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
   const ft=esc(a.featured_title||post.title||'');
-  const tg=esc(a.featured_tagline||'');
+  const tg=esc(post.subtitle||a.featured_tagline||''); // subtitle is the master tagline
   const srch=esc(a.featured_image_search||post.primary_keyword||'');
   el.innerHTML=`<div class="card" style="padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:13px;font-weight:700">Featured image</div><button class="btn btn-xs btn-ghost" onclick="renderFeaturedRefresh()" title="Check for the latest rendered image">↻ Refresh</button></div>
