@@ -69,11 +69,14 @@ async function processOne(row) {
 // pins to the topic + blog board with the article link. Self-healing: a failure leaves
 // pinterest_posted=false so a re-run retries it. Triggered via repository_dispatch with
 // client_payload.post_id = "PIN_BACKFILL".
-async function pinBackfill() {
+async function pinBackfill(limit) {
   const userId = await getGhlUserId(PIT);
   if (!userId) { console.error('pin-backfill: no GHL userId (cannot post)'); return; }
-  const posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster&order=published_date.desc.nullslast')).json();
-  console.log(`pin-backfill: ${Array.isArray(posts) ? posts.length : 0} unpinned live post(s)`);
+  let posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster&order=published_date.desc.nullslast')).json();
+  posts = Array.isArray(posts) ? posts : [];
+  const total = posts.length;
+  if (limit && posts.length > limit) posts = posts.slice(0, limit);
+  console.log(`pin-backfill: ${total} unpinned live post(s); processing ${posts.length} this run`);
   let done = 0, failed = 0;
   for (const p of (Array.isArray(posts) ? posts : [])) {
     const label = `[${p.blog}] ${p.title || p.primary_keyword || p.id}`;
@@ -103,8 +106,9 @@ async function pinBackfill() {
   console.log(`pin-backfill done: ${done} pinned, ${failed} failed`);
 }
 
-if (ONLY === 'PIN_BACKFILL') {
-  await pinBackfill();
+if (ONLY && ONLY.startsWith('PIN_BACKFILL')) {
+  const lim = parseInt(ONLY.split(':')[1] || '', 10);
+  await pinBackfill(Number.isFinite(lim) && lim > 0 ? lim : null);
 } else {
   const pending = await getPending();
   console.log(`${pending.length} draft(s) need a featured image${ONLY ? ` (post ${ONLY})` : ''}`);
