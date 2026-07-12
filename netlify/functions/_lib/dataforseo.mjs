@@ -18,6 +18,9 @@ async function post(path, task) {
     body: JSON.stringify([task]), // DataForSEO takes an array of tasks
   });
   const d = await r.json().catch(() => ({}));
+  if (r.status === 402 || d.status_code === 40200) {
+    throw new Error('DataForSEO is out of funds — add a deposit at app.dataforseo.com (Billing) to run keyword research. Pay-as-you-go, rolls over, ~1-4¢ per run.');
+  }
   if (!r.ok || d.status_code !== 20000) {
     throw new Error(`dataforseo ${path} ${r.status}/${d.status_code}: ${(d.status_message || '').slice(0, 160)}`);
   }
