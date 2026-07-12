@@ -953,12 +953,15 @@ function _cooldownCard(label){
   </div>`;
 }
 async function renderRankingsTab(){
-  await loadCooldown();
-  await renderGscMetrics();   // sets _gscMetrics (used by the log's before/after)
-  await renderOptimizeSection();
-  await renderBodySection();
-  await renderOptLog();
-  renderGscHistory();
+  // Each section is independent — guard every one so a failure in (say) the title/meta
+  // optimiser can never stop the article/body improver from rendering.
+  const step=async(fn,label)=>{try{await fn();}catch(e){console.error('rankings '+label+' failed',e);}};
+  await step(loadCooldown,'cooldown');
+  await step(renderGscMetrics,'metrics');   // sets _gscMetrics (used by the log's before/after)
+  await step(renderOptimizeSection,'optimise');
+  await step(renderBodySection,'body');
+  await step(renderOptLog,'log');
+  await step(async()=>renderGscHistory(),'history');
 }
 // ── TITLE/META OPTIMISER (Rankings tab) ── proposes a stronger title+meta for a live post
 // using the keywords it ranks for, one-click apply to the live GHL post in place.
