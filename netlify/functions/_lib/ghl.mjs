@@ -165,8 +165,12 @@ export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, titl
 // republish an improved body. Returns { id, urlSlug }.
 export async function createPostRaw({ brand, pit, title, rawHTML, description, urlSlug, imageUrl, imageAltText, categories, author, status = 'PUBLISHED', publishedAt }) {
   const b = BRANDS[brand];
+  // Always apply the GHL affiliate auto-link (first GoHighLevel/HighLevel mention),
+  // same as createBlogPost — so optimised/republished posts keep the affiliate link.
+  // affiliateLinkify protects existing <a>, so it won't double-link.
+  const linked = affiliateLinkify(rawHTML || '');
   const payload = {
-    title, locationId: LOC, blogId: b.blogId, rawHTML, status, urlSlug,
+    title, locationId: LOC, blogId: b.blogId, rawHTML: linked, status, urlSlug,
     description: description || '', imageUrl: imageUrl || '', imageAltText: imageAltText || title || '',
     categories: (categories || []).map(c => c._id || c.id || c).filter(Boolean),
     author: author || b.authorId, publishedAt: publishedAt || new Date().toISOString(),
