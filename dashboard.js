@@ -920,7 +920,29 @@ async function delGsc(id){await sb.from('gsc_positions').delete().eq('id',id);re
 
 // ── OPTIMIZATION PANEL (Rankings tab): live metrics + health + optimization log ──
 let _gscMetrics=null;
+let _optCooldown=null,_cooldownOverride={};
+const COOLDOWN_DAYS=30;
+async function loadCooldown(){
+  _optCooldown=null;
+  const{data}=await sb.from('optimizations').select('opt_date').eq('post_id',curPost).order('opt_date',{ascending:false}).limit(1);
+  const last=(data||[])[0];
+  if(!last||!last.opt_date){return;}
+  const days=Math.floor((Date.now()-Date.parse(last.opt_date))/86400000);
+  const until=new Date(Date.parse(last.opt_date)+COOLDOWN_DAYS*86400000).toISOString().slice(0,10);
+  _optCooldown={inCooldown:days<COOLDOWN_DAYS,days,until,last:last.opt_date};
+}
+function _cooldownActive(){return !!(_optCooldown&&_optCooldown.inCooldown&&!_cooldownOverride[curPost]);}
+function overrideCooldown(){_cooldownOverride[curPost]=true;renderOptimizeSection();renderBodySection();}
+function _cooldownCard(label){
+  const c=_optCooldown||{days:0};
+  return `<div class="card" style="padding:14px">
+    <div style="font-size:13px;font-weight:700">${label}</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:6px">Optimised ${c.days===0?'today':c.days+' day'+(c.days!==1?'s':'')+' ago'}. Give it until <b>${fd(c.until)}</b> (${COOLDOWN_DAYS} days) to prove itself before changing it again — that lets Google re-rank it and keeps the before/after measurement clean.</div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" onclick="overrideCooldown()">Optimise anyway</button></div>
+  </div>`;
+}
 async function renderRankingsTab(){
+  await loadCooldown();
   await renderGscMetrics();   // sets _gscMetrics (used by the log's before/after)
   await renderOptimizeSection();
   await renderBodySection();
@@ -944,6 +966,7 @@ async function renderOptimizeSection(){
   const prop=(data||[])[0];
   const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
   if(!prop){
+    if(_cooldownActive()){el.innerHTML=_cooldownCard('Optimise title & meta');return;}
     el.innerHTML=`<div class="card" style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">Optimise title &amp; meta</div>
@@ -1067,6 +1090,7 @@ async function renderBodySection(){
   const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
   const dom=activeBlog==='nms'?'escapepreneur.com':'eschub.com';
   if(!p||p.phase==='done'){
+    if(_cooldownActive()){el.innerHTML=_cooldownCard('Improve the article');return;}
     el.innerHTML=`<div class="card" style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">Improve the article</div>
