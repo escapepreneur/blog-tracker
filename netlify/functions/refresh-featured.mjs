@@ -40,11 +40,10 @@ export const handler = async (event) => {
     delete a.featured_image_url;   // mark pending so the worker renders it
     delete a.pin_image_url;        // let the pin re-render to match too
 
-    if (draft) {
-      await rest(`post_drafts?post_id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets: a }) });
-    } else {
-      await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id, blog: post.blog, assets: a }) });
-    }
+    const w = draft
+      ? await rest(`post_drafts?post_id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets: a }) })
+      : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id, assets: a }) });
+    if (!w.ok) return json(500, { error: `could not save featured fields: ${w.status} ${(await w.text()).slice(0, 160)}` });
 
     const r = await fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
       method: 'POST',
