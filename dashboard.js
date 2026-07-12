@@ -933,6 +933,17 @@ async function loadCooldown(){
 }
 function _cooldownActive(){return !!(_optCooldown&&_optCooldown.inCooldown&&!_cooldownOverride[curPost]);}
 function overrideCooldown(){_cooldownOverride[curPost]=true;renderOptimizeSection();renderBodySection();}
+async function markAsOptimised(){
+  if(!curPost)return;
+  if(!confirm('Mark this post as optimised? Use this when you changed it yourself in GHL — it starts the 30-day cooldown and shows the post as "measuring".'))return;
+  const post=allPosts.find(p=>p.id===curPost);
+  const pg=_gscMetrics&&_gscMetrics.page;
+  const baseline=pg?{position:pg.position,impressions:pg.impressions,clicks:pg.clicks,ctr:pg.ctr,window:'90d',captured:localToday(),source:'manual'}:null;
+  const{error}=await sb.from('optimizations').insert({post_id:curPost,blog:post?post.blog:activeBlog,opt_date:localToday(),kind:'manual',note:'Marked as optimised (changed manually in GHL)',baseline});
+  if(error){toast('Failed: '+esc(error.message),4000);return;}
+  toast('Marked as optimised ✓',2500);
+  _cooldownOverride[curPost]=false;await loadCooldown();renderOptimizeSection();renderBodySection();renderOptLog();
+}
 function _cooldownCard(label){
   const c=_optCooldown||{days:0};
   return `<div class="card" style="padding:14px">
@@ -973,6 +984,7 @@ async function renderOptimizeSection(){
         <div style="font-size:12px;color:var(--text2);margin-top:2px">Rewrite this post's title + meta description around the keywords it already ranks for, to win more clicks. The article body isn't touched.</div></div>
         <button class="${bBtn}" style="flex:none" id="opt-run-btn" onclick="optimizeNow()">✨ Optimise</button>
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px">Already changed this post yourself in GHL? <button class="btn btn-xs btn-ghost" onclick="markAsOptimised()">Mark as optimised</button> to start its 30-day cooldown.</div>
       <div id="opt-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
     </div>`;
     return;
@@ -1738,6 +1750,10 @@ async function renderOpportunities(){
   catch(e){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--red-t)">Could not load opportunities: '+esc(String(e&&e.message||e))+'</div>';return;}
   const S=j.striking||[],L=j.lowCtr||[],G=j.growing||[];
   _gscOpps=[...S,...L,...G];
+  // which posts are inside their 30-day optimise cooldown -> show "measuring", not "to do"
+  const _or=((await sb.from('optimizations').select('post_id,opt_date').order('opt_date',{ascending:false})).data)||[];
+  const optMap={};_or.forEach(o=>{if(!optMap[o.post_id])optMap[o.post_id]=o.opt_date;});
+  const cooldownOf=(pid)=>{const d=optMap[pid];if(!d)return null;const days=Math.max(0,Math.floor((Date.now()-Date.parse(d))/86400000));return days<COOLDOWN_DAYS?{days,until:new Date(Date.parse(d)+COOLDOWN_DAYS*86400000).toISOString().slice(0,10)}:null;};
   // annotate each keyword with its bucket + original index (for + Idea)
   const ann=_gscOpps.map((x,i)=>({...x,_i:i,_bucket:i<S.length?'striking':i<S.length+L.length?'lowctr':'growing'}));
   // group keywords by the page they rank on
@@ -1765,13 +1781,17 @@ async function renderOpportunities(){
   const postCard=(g)=>{
     const p=g.post,title=p.title||p.primary_keyword||g.page.replace(/^https?:\/\/[^/]+/,'');
     const items=g.items.slice().sort((a,b)=>b.impressions-a.impressions);
-    return `<div class="card" style="padding:12px 14px;margin-bottom:10px">
+    const cd=cooldownOf(p.id);
+    const action=cd
+      ? `<span title="Optimised — measuring until ${cd.until}" style="flex:none;font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ optimised · measuring</span>`
+      : `<button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">Optimise</button>`;
+    return `<div class="card" style="padding:12px 14px;margin-bottom:10px${cd?';opacity:.7':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
         <div style="min-width:0">
           <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d${cd?` · measuring until ${fd(cd.until)}`:''}</div>
         </div>
-        <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">Optimise</button>
+        ${action}
       </div>
       ${kHdr}${items.map(x=>kwRow(x,false)).join('')}
     </div>`;
