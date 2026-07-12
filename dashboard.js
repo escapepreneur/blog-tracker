@@ -1833,6 +1833,17 @@ async function loadDraft(postId){
 // Search Console opportunities (Insights tab): grouped BY POST — each post card lists the
 // keywords it's ranking for (near page 1 / low CTR / page 2-3), with one Optimise button.
 // Untracked ranking pages group separately with a "+ Idea" per keyword.
+// Collapsed article cards in Insights persist across refreshes (localStorage).
+function _oppsCollapsedSet(){try{return new Set(JSON.parse(localStorage.getItem('cd_opps_collapsed')||'[]'))}catch(e){return new Set()}}
+function toggleOppCollapse(pid){
+  const set=_oppsCollapsedSet();
+  if(set.has(pid))set.delete(pid);else set.add(pid);
+  try{localStorage.setItem('cd_opps_collapsed',JSON.stringify([...set]))}catch(e){}
+  const collapsed=set.has(pid);
+  const box=document.getElementById('oppkw-'+pid);if(box)box.style.display=collapsed?'none':'';
+  const chev=document.getElementById('oppchev-'+pid);if(chev)chev.textContent=collapsed?'▸':'▾';
+  const card=document.getElementById('oppcard-'+pid);if(card)card.style.opacity=collapsed?'0.55':'';
+}
 async function renderOpportunities(){
   const el=document.getElementById('gsc-opps');if(!el)return;
   el.innerHTML='<div class="empty" style="padding:1rem">Loading from Search Console…</div>';
@@ -1879,15 +1890,19 @@ async function renderOpportunities(){
       ${cd?`<span title="Title/meta optimised — measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ measuring</span>`:''}
       <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">${cd?'Open':'Optimise'}</button>
     </div>`;
-    return `<div class="card" style="padding:12px 14px;margin-bottom:10px${cd?';opacity:.7':''}">
+    const collapsed=_oppsCollapsedSet().has(p.id);
+    return `<div class="card" id="oppcard-${p.id}" style="padding:12px 14px;margin-bottom:10px${collapsed?';opacity:.55':(cd?';opacity:.7':'')}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
-        <div style="min-width:0">
-          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d${cd?` · measuring until ${fd(cd.until)}`:''}</div>
+        <div style="display:flex;align-items:flex-start;gap:9px;min-width:0">
+          <button id="oppchev-${p.id}" title="Collapse / expand" onclick="toggleOppCollapse('${p.id}')" style="flex:none;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);line-height:1.4;padding:0;margin-top:1px">${collapsed?'▸':'▾'}</button>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${items.length} keyword${items.length!==1?'s':''} · best position ${g.bestPos.toFixed(1)} · ${g.totImpr.toLocaleString()} impressions/90d${cd?` · measuring until ${fd(cd.until)}`:''}</div>
+          </div>
         </div>
         ${action}
       </div>
-      ${kHdr}${items.map(x=>kwRow(x,false)).join('')}
+      <div id="oppkw-${p.id}"${collapsed?' style="display:none"':''}>${kHdr}${items.map(x=>kwRow(x,false)).join('')}</div>
     </div>`;
   };
   const otherCard=(g)=>{
