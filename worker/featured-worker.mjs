@@ -70,9 +70,11 @@ async function processOne(row) {
 // pins to the topic + blog board with the article link. Self-healing: a failure leaves
 // pinterest_posted=false so a re-run retries it. Triggered via repository_dispatch with
 // client_payload.post_id = "PIN_BACKFILL".
-async function pinBackfill(limit) {
-  const userId = await getGhlUserId(PIT);
-  if (!userId) { console.error('pin-backfill: no GHL userId (cannot post)'); return; }
+async function pinBackfill(limit, mode = 'both') {
+  // mode: 'render' = make + store pin images only (preview, NO posting); 'post' = post the
+  // already-rendered pins; 'both' = render + post. The gate: render first, review, then post.
+  const userId = mode === 'render' ? null : await getGhlUserId(PIT);
+  if (mode !== 'render' && !userId) { console.error('pin-backfill: no GHL userId (cannot post)'); return; }
   let posts = await (await rest('posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster,subtitle&order=published_date.desc.nullslast')).json();
   posts = Array.isArray(posts) ? posts : [];
   const total = posts.length;
@@ -84,15 +86,18 @@ async function pinBackfill(limit) {
     try {
       const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
       let assets = (d && d.assets) || {};
-      // ALWAYS render a fresh pin in the CURRENT design — never reuse an old stored pin
-      // image (older ones were rendered in the previous style, so reuse = wrong layout).
-      const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
-      const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
-      assets = { ...assets, pin_image_url: up.url };
-      const w = d
-        ? await rest(`post_drafts?post_id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) })
-        : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, assets }) });
-      if (!w.ok) throw new Error(`save pin_image_url ${w.status}: ${(await w.text()).slice(0, 120)}`);
+      if (mode !== 'post') {
+        // render a fresh pin in the CURRENT design (never reuse an old stored image)
+        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
+        const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
+        assets = { ...assets, pin_image_url: up.url };
+        const w = d
+          ? await rest(`post_drafts?post_id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ assets }) })
+          : await rest('post_drafts', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, assets }) });
+        if (!w.ok) throw new Error(`save pin_image_url ${w.status}: ${(await w.text()).slice(0, 120)}`);
+      }
+      if (mode === 'render') { done++; console.log(`  rendered ${label} (preview only — not posted)`); continue; }
+      if (!assets.pin_image_url) { console.log(`  skip ${label}: no rendered pin to post`); continue; }
       const draft = { assets, meta_description: (d && d.meta_description) || null };
       const res = await postPinsForPost({ pit: PIT, userId, brand: p.blog, post: p, draft });
       const ok = res.posted && res.posted.some(x => !x.error);
@@ -107,9 +112,11 @@ async function pinBackfill(limit) {
   console.log(`pin-backfill done: ${done} pinned, ${failed} failed`);
 }
 
-if (ONLY && ONLY.startsWith('PIN_BACKFILL')) {
-  const lim = parseInt(ONLY.split(':')[1] || '', 10);
-  await pinBackfill(Number.isFinite(lim) && lim > 0 ? lim : null);
+if (ONLY && ONLY.startsWith('PIN_')) {
+  const [tag, n] = ONLY.split(':');
+  const lim = Number.isFinite(parseInt(n, 10)) && parseInt(n, 10) > 0 ? parseInt(n, 10) : null;
+  const mode = tag === 'PIN_RENDER' ? 'render' : tag === 'PIN_POST' ? 'post' : 'both';
+  await pinBackfill(lim, mode);
 } else {
   const pending = await getPending();
   console.log(`${pending.length} draft(s) need a featured image${ONLY ? ` (post ${ONLY})` : ''}`);
