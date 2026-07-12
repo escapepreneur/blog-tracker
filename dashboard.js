@@ -976,6 +976,7 @@ async function renderRankingsTab(){
   await step(loadCooldown,'cooldown');
   await step(renderGscMetrics,'metrics');   // sets _gscMetrics (used by the log's before/after)
   await step(renderOptimizeSection,'optimise');
+  await step(renderFeaturedRefresh,'featured');
   await step(renderBodySection,'body');
   await step(renderOptLog,'log');
   await step(async()=>renderGscHistory(),'history');
@@ -1113,6 +1114,57 @@ async function optimizeRefine(){
 
 // ── ARTICLE BODY IMPROVER (Rankings tab) ── keyword-coverage audit + additive section,
 // then the guided safe republish (temp publish → Sienna deletes old → swap onto real URL).
+// ── FEATURED IMAGE REFRESH (Rankings tab) ── re-render the branded graphic so its
+// headline matches the optimised title; the worker pushes it onto the live post in place.
+async function renderFeaturedRefresh(){
+  const el=document.getElementById('pm-featured');if(!el||!curPost)return;
+  const post=allPosts.find(p=>p.id===curPost);
+  if(!post||!post.url||post.status!=='live'){el.innerHTML='';return;}
+  const{data}=await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle();
+  const a=(data&&data.assets)||{};
+  const curImg=a.featured_image_url||'';
+  const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
+  const ft=esc(a.featured_title||post.title||'');
+  const tg=esc(a.featured_tagline||'');
+  const srch=esc(a.featured_image_search||post.primary_keyword||'');
+  el.innerHTML=`<div class="card" style="padding:14px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px">Featured image</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">The featured graphic has the headline drawn onto it — if you changed the title, re-render it so they match. It updates on the live post in place (no republish).</div>
+    ${curImg?`<img src="${esc(curImg)}" alt="current featured image" style="display:block;width:100%;max-width:460px;border-radius:8px;margin-bottom:10px">`:'<div style="font-size:12px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px">No tracked image for this post yet — re-render to generate one that matches the title.</div>'}
+    <label class="fl">Image headline</label>
+    <input id="ft-title" value="${ft}" style="width:100%;font-size:13px;margin:4px 0 8px">
+    <label class="fl">Image tagline (the script line beneath it)</label>
+    <input id="ft-tagline" value="${tg}" style="width:100%;font-size:13px;margin:4px 0 8px">
+    <label class="fl">Background photo search</label>
+    <input id="ft-search" value="${srch}" placeholder="e.g. laptop desk, business planning" style="width:100%;font-size:13px;margin:4px 0 10px">
+    <button class="${bBtn}" onclick="refreshFeatured()">Re-render &amp; update live image</button>
+    <div id="ft-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+  </div>`;
+}
+async function refreshFeatured(){
+  if(!curPost)return;
+  const title=((document.getElementById('ft-title')||{}).value||'').trim();
+  const tagline=((document.getElementById('ft-tagline')||{}).value||'').trim();
+  const search=((document.getElementById('ft-search')||{}).value||'').trim();
+  if(!title){alert('Add an image headline.');return;}
+  if(!search){alert('Add a background photo search term.');return;}
+  const st=document.getElementById('ft-status');
+  const before=((await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle()).data||{}).assets||{};
+  const beforeImg=before.featured_image_url||'';
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Rendering the new image and updating the live post… (~2 min)</div>';
+  try{
+    const r=await fetch('/.netlify/functions/refresh-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,featured_title:title,featured_tagline:tagline,featured_image_search:search})});
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||('HTTP '+r.status));}
+  }catch(e){if(st)st.innerHTML='<span style="color:var(--red-t)">Could not start: '+esc(String(e&&e.message||e))+'</span>';return;}
+  const t0=Date.now();
+  const poll=async()=>{
+    const a=((await sb.from('post_drafts').select('assets').eq('post_id',curPost).maybeSingle()).data||{}).assets||{};
+    if(a.featured_image_url&&a.featured_image_url!==beforeImg){if(st)st.innerHTML='<span style="color:var(--green)">✓ New image rendered and pushed to the live post.</span>';renderFeaturedRefresh();return;}
+    if(Date.now()-t0>240000){if(st)st.innerHTML='<span style="color:var(--amber-t)">Still rendering — GitHub Actions can be slow. Check back in a minute.</span>';return;}
+    setTimeout(poll,8000);
+  };
+  setTimeout(poll,8000);
+}
 async function renderBodySection(){
   const el=document.getElementById('pm-body');if(!el||!curPost)return;
   const post=allPosts.find(p=>p.id===curPost);
