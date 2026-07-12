@@ -98,25 +98,84 @@ Apply the instruction. Keep it solid SEO/CTR: title ideally <=60 chars leading w
   return tu.input;
 }
 
-// Refine the additive body section per a plain-English instruction.
-export async function refineBodySection({ brand, title, currentSection, instruction, anthropicKey, model = MODEL }) {
-  const user = `Here is an HTML section that will be APPENDED to a LIVE ${BRANDS[brand].name} blog post titled "${title || ''}". Apply the instruction and return the revised section.
+// Refine the FULL article body per a plain-English instruction (add/adjust only, keep everything).
+export async function refineBodySection({ brand, title, currentBody, instruction, anthropicKey, model = MODEL }) {
+  const user = `Here is the FULL article HTML for a LIVE ${BRANDS[brand].name} blog post titled "${title || ''}". Apply the instruction and return the FULL revised article.
 
-CURRENT SECTION HTML:
-${currentSection || ''}
+CURRENT ARTICLE HTML:
+${currentBody || ''}
 
 INSTRUCTION: ${instruction}
 
-Apply the instruction. Keep clean HTML (<h2>/<h3>/<p>, FAQ style where useful), no inline styles, no <script>, no class attributes, on brand, honest, non-repetitive. Return via emit_addition.`;
+Keep ALL existing content — add or adjust only what the instruction asks; do not delete sections, links or images. Clean HTML (<h2>/<h3>/<p>), no <script>, no class attributes, on brand. Return via emit_woven_body.`;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: 2500, system: systemPrompt(brand), tools: [ADD_TOOL], tool_choice: { type: 'tool', name: 'emit_addition' }, messages: [{ role: 'user', content: user }] }),
+    body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(brand), tools: [WOVEN_TOOL], tool_choice: { type: 'tool', name: 'emit_woven_body' }, messages: [{ role: 'user', content: user }] }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();
+  if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`revision stopped: ${data.stop_reason} (article may be too long)`);
   const tu = (data.content || []).find(b => b.type === 'tool_use');
   if (!tu) throw new Error('no tool_use in response');
   return tu.input;
+}
+
+const WOVEN_TOOL = {
+  name: 'emit_woven_body',
+  description: 'Return the FULL article HTML with coverage for the missing keywords woven into the right places. Additive only — keep every existing section.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      body_html: { type: 'string', description: 'The COMPLETE revised article HTML. Keep ALL existing content — do not delete or rewrite existing paragraphs/headings. Insert the new coverage where it naturally belongs (e.g. a definition near the top section, not at the end) and MERGE any new Q&As into the existing FAQ section rather than adding a second one. Preserve existing internal links, the resource/CTA link, images and structure. Clean HTML only (<h2>/<h3>/<p>), no <script>, no class attributes, no new inline styles.' },
+      summary: { type: 'string', description: '1-2 sentences: what was added and where it was placed/merged.' },
+      changes: { type: 'array', items: { type: 'string' }, description: 'Short bullets of each addition and where it went.' },
+    },
+    required: ['body_html', 'summary'],
+  },
+};
+
+// Weave coverage for the missing keywords INTO the full article (additive; existing
+// content preserved). Returns the complete revised body_html.
+export async function improveBodyWoven({ brand, title, currentHtml, missing, anthropicKey, model = MODEL }) {
+  const miss = (missing || []).slice(0, 15).map(k => `- "${k.query}"${k.impressions ? ` (${k.impressions} impr/90d)` : ''}`).join('\n');
+  const user = `This is a LIVE ${BRANDS[brand].name} blog post that already ranks in Google. Title: "${title || ''}". Revise the FULL article to cover the search terms it under-serves — woven into the RIGHT places, not tacked on the end.
+
+TERMS TO COVER:
+${miss || '(none)'}
+
+RULES:
+- Keep EVERY existing section, paragraph, heading, link and image. Add only — do not delete or rewrite existing content (light connective sentences are fine).
+- Put each addition where it belongs: definitions/"what it means" near the relevant top section; extra Q&As MERGED INTO the existing FAQ section (do not create a second FAQ).
+- Keep the existing internal links, the resource/CTA link, and the overall structure/voice intact.
+
+CURRENT ARTICLE HTML:
+${currentHtml || ''}
+
+Return the complete revised article via emit_woven_body.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(brand), tools: [WOVEN_TOOL], tool_choice: { type: 'tool', name: 'emit_woven_body' }, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`generation stopped: ${data.stop_reason} (article may be too long)`);
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
+// Compare a revised body against the original: flag lost headings / shrinkage (safety
+// for "don't lose anything"). Returns a warning string ('' if all good).
+export function bodyLossCheck(originalHtml, revisedHtml) {
+  const strip = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const heads = (h) => [...String(h || '').matchAll(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+  const revLow = strip(revisedHtml).toLowerCase();
+  const lostHeads = heads(originalHtml).filter(hd => !revLow.includes(hd.toLowerCase().slice(0, 45)));
+  const oLen = strip(originalHtml).length, rLen = strip(revisedHtml).length;
+  const warns = [];
+  if (lostHeads.length) warns.push(`${lostHeads.length} original heading(s) not found in the revision (${lostHeads.slice(0, 3).map(h => `"${h.slice(0, 40)}"`).join(', ')}) — check nothing was dropped.`);
+  if (rLen < oLen * 0.9) warns.push(`Revised article is shorter than the original (${rLen} vs ${oLen} chars) — verify nothing was removed.`);
+  return warns.join(' ');
 }
 
 const REVIEW_TOOL = {

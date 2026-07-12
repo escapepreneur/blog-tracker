@@ -25,10 +25,10 @@ export const handler = async (event) => {
     if (prop.temp_ghl_post_id) return json(409, { error: 'a temp version already exists for this post' });
     const brand = post.blog;
 
-    // carry over the current post's metadata (fresh) + rebuild the body from the current
-    // live content + the (possibly hand-edited) added section, so edits flow through.
+    // carry over the current post's metadata (fresh); the body is the full woven revision
+    // (new_html), which the UI may have hand-edited.
     const cur = await getBlogPostDetail({ ghlPostId: prop.ghl_post_id, pit: PIT });
-    const rawHTML = (cur.rawHTML || '') + (prop.added_html ? ('\n' + prop.added_html) : '');
+    const rawHTML = prop.new_html || cur.rawHTML || '';
     const tempSlug = `${prop.real_slug}-v2-${Math.random().toString(36).slice(2, 6)}`;
     const created = await createPostRaw({
       brand, pit: PIT, title: cur.title, rawHTML, description: cur.description,
