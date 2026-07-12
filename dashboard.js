@@ -1102,7 +1102,7 @@ async function renderBodySection(){
   const bBtn='btn '+(activeBlog==='nms'?'btn-pp':'btn-p')+' btn-sm';
   const dom=activeBlog==='nms'?'escapepreneur.com':'eschub.com';
   if(!p||p.phase==='done'){
-    if(_cooldownActive()){el.innerHTML=_cooldownCard('Improve the article');return;}
+    // Body improvement is additive + separate from the title/meta cooldown — never block it.
     el.innerHTML=`<div class="card" style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">Improve the article</div>
@@ -1783,9 +1783,12 @@ async function renderOpportunities(){
     const p=g.post,title=p.title||p.primary_keyword||g.page.replace(/^https?:\/\/[^/]+/,'');
     const items=g.items.slice().sort((a,b)=>b.impressions-a.impressions);
     const cd=cooldownOf(p.id);
-    const action=cd
-      ? `<span title="Optimised — measuring until ${cd.until}" style="flex:none;font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ optimised · measuring</span>`
-      : `<button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">Optimise</button>`;
+    // Always keep a way into the post (measuring gates re-doing title/meta, not opening
+    // it or improving the body). Show the badge alongside, never instead of, the button.
+    const action=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none">
+      ${cd?`<span title="Title/meta optimised — measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ measuring</span>`:''}
+      <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">${cd?'Open':'Optimise'}</button>
+    </div>`;
     return `<div class="card" style="padding:12px 14px;margin-bottom:10px${cd?';opacity:.7':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
         <div style="min-width:0">
