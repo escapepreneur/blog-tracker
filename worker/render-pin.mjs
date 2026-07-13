@@ -113,28 +113,32 @@ const COL_TEXT=${JSON.stringify(pal.text)}, COL_ACCENT=${JSON.stringify(pal.acce
       L=[{t:best.a,s:false},{t:best.b,s:true}]; }
   }
 
-  const MAXW_B=862, MAXW_S=812, SCRIPT=0.98, MAXCAP=300, MIN=52;
-  const lh=(l)=> l.s?1.07:1.02;                  // per-line height factor
+  // Fill-to-width: size EACH line so its natural width fills the column (flush both
+  // margins), so the headline stretches edge to edge and reads as large as possible.
+  // Short connector words (vs / & / +) stay small instead of blowing up to fill.
+  const MAXW_B=884, MAXW_S=866, REF=100, CAP=340, MIN=40;
+  const CONN=['vs','v','v.','&','x','+','and','or','/'];
+  const isConn=(t)=> CONN.indexOf(String(t).trim().toLowerCase())>=0;
+  const lh=(l)=> l.s?1.07:1.03;                  // per-line height factor
   const eb=box.querySelector('.eyebrow-wrap'), subEl=box.querySelector('.sub');
-  const availH=box.clientHeight - (eb?eb.offsetHeight:0) - (subEl?subEl.offsetHeight:0) - 78;
-  const heightFactor=L.reduce((a,l)=> a + lh(l)*(l.s?SCRIPT:1), 0);
-  const fits=(f)=>{
-    for(const l of L){ const fs=l.s?Math.round(f*SCRIPT):f; if(wOf(l.t,fs,l.s)>(l.s?MAXW_S:MAXW_B)) return false; }
-    return true;
-  };
-  let f=Math.min(MAXCAP, Math.floor(availH/heightFactor));
-  while(f>MIN && !fits(f)) f-=2;
+  const availH=box.clientHeight - (eb?eb.offsetHeight:0) - (subEl?subEl.offsetHeight:0) - 70;
+
+  let sizes=L.map(l=>{ if(isConn(l.t)) return null; const w=wOf(l.t,REF,l.s)||REF; return REF*(l.s?MAXW_S:MAXW_B)/w; });
+  const fill=sizes.filter(x=>x!=null); const mean=fill.length?fill.reduce((a,b)=>a+b,0)/fill.length:150;
+  sizes=sizes.map(s=> s==null ? mean*0.42 : s).map(s=> Math.min(CAP, Math.max(MIN, s)));
+  // don't let the stack overflow the available height (leave room for eyebrow + subline)
+  let H=sizes.reduce((a,s,i)=> a + s*lh(L[i]), 0);
+  if(H>availH){ const k=availH/H; sizes=sizes.map(s=>s*k); }
 
   // paint the stack
-  for(const l of L){
-    const fs=l.s?Math.round(f*SCRIPT):f;
+  L.forEach((l,i)=>{
     const s=document.createElement('span');
     s.textContent=l.t;
-    s.style.cssText='display:block;white-space:nowrap;color:'+(l.s?COL_ACCENT:COL_TEXT)+';font-size:'+fs+'px;'+
-      (l.s ? "font-family:'Marthin';font-weight:400;line-height:1.07;letter-spacing:3px;margin-left:-4px;"
-           : "font-family:'EscBold';font-weight:700;line-height:1.02;letter-spacing:1px;");
+    s.style.cssText='display:block;white-space:nowrap;color:'+(l.s?COL_ACCENT:COL_TEXT)+';font-size:'+Math.round(sizes[i])+'px;'+
+      (l.s ? "font-family:'Marthin';font-weight:400;line-height:1.07;letter-spacing:2px;margin-left:-2px;"
+           : "font-family:'EscBold';font-weight:700;line-height:1.03;letter-spacing:0.5px;");
     stack.appendChild(s);
-  }
+  });
   window.__done=true;
 })();
 </script></body></html>`;
