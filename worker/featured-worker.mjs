@@ -44,7 +44,7 @@ async function processOne(row) {
   // Pinterest pin (1000x1500, same bg + title) — stored for in-body embed + Pinterest posting.
   if (!a.pin_image_url) {
     try {
-      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline, brand, seed: row.post_id });
+      const pinJpeg = await renderPin({ title: a.featured_title || '', tagline, lines: a.pin_lines, sub: a.pin_sub, brand, seed: row.post_id });
       const pinUp = await uploadMedia({ buffer: pinJpeg, filename: `pin-${row.post_id}.jpg`, pit: PIT });
       assets.pin_image_url = pinUp.url;
       console.log('  pin ✓', row.post_id, '->', pinUp.url);
@@ -88,7 +88,7 @@ async function pinBackfill(limit, mode = 'both') {
       let assets = (d && d.assets) || {};
       if (mode !== 'post') {
         // render a fresh pin in the CURRENT design (never reuse an old stored image)
-        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', brand: p.blog, seed: p.id });
+        const pinJpeg = await renderPin({ title: p.title || p.primary_keyword || '', tagline: p.subtitle || assets.featured_tagline || '', lines: assets.pin_lines, sub: assets.pin_sub, brand: p.blog, seed: p.id });
         const up = await uploadMedia({ buffer: pinJpeg, filename: `pin-${p.id}.jpg`, pit: PIT });
         assets = { ...assets, pin_image_url: up.url };
         const w = d
