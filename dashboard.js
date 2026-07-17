@@ -2350,6 +2350,7 @@ async function renderDraftTab(){
   if(pid!==curPost)return;
   _curDraft=d;
   el.innerHTML=_dupBanner()+(d?_draftViewHtml(d):_draftEmptyHtml());
+  if(d)_wireFeatBgGrid();
 }
 function _draftEmptyHtml(){
   return `<div style="text-align:center;padding:2rem 1rem">
@@ -2423,7 +2424,7 @@ async function scheduleNow(override){
     toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
-async function rerenderFeatured(swap){
+async function rerenderFeatured(swap,bgUrl){
   if(!_curDraft||!_curDraft.assets)return;
   const pid=curPost;
   const old=(_curDraft.assets.featured_image_url)||'';
@@ -2431,9 +2432,9 @@ async function rerenderFeatured(swap){
   const tg=((document.getElementById('feat-tag')||{}).value||'').trim();
   document.querySelectorAll('#feat-area button').forEach(b=>b.disabled=true);
   const prev=document.getElementById('feat-preview');
-  if(prev)prev.innerHTML='<div style="padding:18px 14px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin:4px 0 8px;text-align:center;font-size:13px;color:var(--text)">⏳ '+(swap?'Swapping the background':'Rendering your featured image')+'… <b><span id="feat-elapsed">0</span>s</b><div style="font-size:11px;color:var(--text3);margin-top:6px">Usually about a minute (it builds the image on a server). The preview updates by itself.</div></div>';
+  if(prev)prev.innerHTML='<div style="padding:18px 14px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin:4px 0 8px;text-align:center;font-size:13px;color:var(--text)">⏳ '+(bgUrl?'Rendering with your chosen background':swap?'Swapping the background':'Rendering your featured image')+'… <b><span id="feat-elapsed">0</span>s</b><div style="font-size:11px;color:var(--text3);margin-top:6px">Usually about a minute (it builds the image on a server). The preview updates by itself.</div></div>';
   let status;
-  try{const res=await fetch('/.netlify/functions/rerender-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,featured_title:ft,featured_tagline:tg,swap:!!swap})});status=res.status;const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok){toast('Re-render failed: '+(d.error||('HTTP '+status)),4500);if(curPost===pid)renderDraftTab();return;}}
+  try{const res=await fetch('/.netlify/functions/rerender-featured',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,featured_title:ft,featured_tagline:tg,swap:!!swap,featured_bg_url:bgUrl||undefined})});status=res.status;const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok){toast('Re-render failed: '+(d.error||('HTTP '+status)),4500);if(curPost===pid)renderDraftTab();return;}}
   catch(e){toast('Re-render error: '+e.message,4000);if(curPost===pid)renderDraftTab();return;}
   const start=Date.now();
   const iv=setInterval(async()=>{
@@ -2443,6 +2444,43 @@ async function rerenderFeatured(swap){
     if(url&&url!==old){clearInterval(iv);if(curPost===pid){_curDraft=d;renderDraftTab();}toast('Featured image updated ✓',3000);}
     else if(Date.now()-start>240000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Still rendering — hit Check again in a moment',4500);}
   },4000);
+}
+// FEATURED BACKGROUND PICKER — a grid of Pexels candidates (like the body-images picker)
+// so Sienna can see real options and choose, instead of blindly clicking Swap.
+function _featBgGrid(a){
+  const cands=a.featured_bg_candidates||[];
+  const thumbs=cands.map((c,j)=>`<img data-j="${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${a.featured_bg_url===c.url?'#29abab':'transparent'}">`).join('');
+  return `<div id="feat-bg-picker" style="margin-top:8px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <input id="feat-bg-term" value="${esc(a.featured_image_search||'')}" placeholder="Background search term" onkeydown="if(event.key==='Enter')loadFeaturedBgOptions()" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)">
+      <button id="feat-bg-load-btn" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="loadFeaturedBgOptions()">${cands.length?'More options':'Show options'}</button>
+    </div>
+    <div id="feat-bg-grid" style="display:flex;gap:6px;flex-wrap:wrap">${thumbs||'<span style="font-size:11px;color:var(--text3)">Click "Show options" to see backgrounds to choose from.</span>'}</div>
+  </div>`;
+}
+function _wireFeatBgGrid(){
+  const el=document.getElementById('feat-bg-grid');if(!el||!_curDraft||!_curDraft.assets)return;
+  const cands=_curDraft.assets.featured_bg_candidates||[];
+  el.querySelectorAll('img[data-j]').forEach(img=>img.addEventListener('click',()=>{
+    const c=cands[Number(img.dataset.j)];if(c)rerenderFeatured(false,c.url);
+  }));
+}
+async function loadFeaturedBgOptions(){
+  if(!_curDraft||!_curDraft.assets)return;
+  const pid=curPost;
+  const term=((document.getElementById('feat-bg-term')||{}).value||'').trim();
+  const btn=document.getElementById('feat-bg-load-btn');if(btn){btn.disabled=true;btn.textContent='Finding…';}
+  try{
+    const res=await fetch('/.netlify/functions/regen-featured-candidates',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,term})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok||!d.ok){toast('Could not load options: '+(d.error||('HTTP '+res.status)),4000);return}
+    _curDraft.assets.featured_bg_candidates=d.candidates||[];
+    _curDraft.assets.featured_image_search=d.term||_curDraft.assets.featured_image_search;
+    const grid=document.getElementById('feat-bg-picker');if(grid&&curPost===pid)grid.outerHTML=_featBgGrid(_curDraft.assets);
+    _wireFeatBgGrid();
+    toast((d.candidates||[]).length?'Options loaded — click one to use it':'No results — try a different term',3000);
+  }catch(e){toast('Error: '+e.message,4000)}
+  finally{const b=document.getElementById('feat-bg-load-btn');if(b){b.disabled=false;b.textContent='More options';}}
 }
 // IMAGE TITLE/TAGLINE SUGGESTIONS — a few alternate options for the featured/pin image text,
 // each one click away from filling the fields above (still needs Re-render to apply).
@@ -2631,6 +2669,7 @@ function _draftViewHtml(d){
       <button id="feat-suggest-btn" class="btn btn-ghost btn-sm" style="font-size:11px" onclick="suggestFeaturedTitles()">✨ Suggest alternatives</button>
     </div>
     <div id="feat-suggest-area"></div>
+    ${_featBgGrid(a)}
     <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
   </div>`:''}
   ${_draftRow('Title (H1)',esc(a.title||'—'))}

@@ -31,15 +31,18 @@ async function processOne(row) {
   const brand = (post && post.blog) || 'esc'; // selects the per-brand logo (esc / nms)
   const a = row.assets || {};
   const tagline = (post && post.subtitle) || a.featured_tagline || ''; // subtitle is the master
-  const term = a.featured_image_search;
-  const idx = a.featured_bg_index || 0;
-  const cands = await searchPexels(term, PEXELS, 5);
-  if (!cands.length) { console.log('  no Pexels results for:', term); return; }
-  const pick = cands[idx % cands.length];
-  const bg = Buffer.from(await (await fetch(pick.url)).arrayBuffer()).toString('base64');
+  let bgUrl = a.featured_bg_url; // an explicit pick from the candidate grid takes priority
+  if (!bgUrl) {
+    const term = a.featured_image_search;
+    const idx = a.featured_bg_index || 0;
+    const cands = await searchPexels(term, PEXELS, 5);
+    if (!cands.length) { console.log('  no Pexels results for:', term); return; }
+    bgUrl = cands[idx % cands.length].url;
+  }
+  const bg = Buffer.from(await (await fetch(bgUrl)).arrayBuffer()).toString('base64');
   const jpeg = await renderFeatured({ title: a.featured_title || '', tagline, bgBase64: bg, brand });
   const up = await uploadMedia({ buffer: jpeg, filename: `featured-${row.post_id}.jpg`, pit: PIT });
-  const assets = { ...a, featured_image_url: up.url, featured_bg_index: idx };
+  const assets = { ...a, featured_image_url: up.url, featured_bg_url: bgUrl };
 
   // Pinterest pin (1000x1500, same bg + title) — stored for in-body embed + Pinterest posting.
   if (!a.pin_image_url) {
