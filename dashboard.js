@@ -452,7 +452,7 @@ function renderResearch(){
       ${isManual?`<div class="drag-handle" title="Drag to reorder">⋮⋮</div>`:''}
       <div class="research-num">${i+1}</div>
       ${score!=null?`<div class="score-badge" style="${badgeStyle};width:32px;height:32px;font-size:11px;flex-shrink:0">${score}</div>`:''}
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','details')">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openPost('${p.id}','draft')">
         <div class="kw-primary">${esc(titleCase(p.primary_keyword||'Untitled'))}</div>
         ${p.supplementary_keywords?`<div class="prk">${esc(p.supplementary_keywords.substring(0,60))}${p.supplementary_keywords.length>60?'…':''}</div>`:''}
         ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
