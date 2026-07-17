@@ -75,6 +75,7 @@ async function initApp(){
   }
 }
 async function afterLogin(session){
+  if(window.location.hash.includes('access_token'))history.replaceState(null,'',window.location.pathname); // strip the magic-link token off the visible URL
   document.getElementById('con-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
   const acctEl=document.getElementById('acct-email');if(acctEl)acctEl.textContent=session.user.email;
@@ -102,38 +103,22 @@ async function loadDfsBalance(){
     el.title=(low?'Low balance — top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
   }catch(e){el.style.display='none';}
 }
-async function loginSB(){
-  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
+async function sendMagicLink(){
+  const email=document.getElementById('login-email').value.trim();
   const errEl=document.getElementById('con-err');
-  if(!email||!password){errEl.style.color='var(--red)';errEl.textContent='Please enter both.';return}
   errEl.style.color='var(--red)';errEl.textContent='';
+  if(!email){errEl.textContent='Enter your email.';return}
   try{
-    const{data,error}=await sb.auth.signInWithPassword({email,password});
+    const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
     if(error)throw error;
-    await afterLogin(data.session);
-  }catch(e){errEl.textContent='Could not log in: '+e.message}
+    document.getElementById('login-form').style.display='none';
+    document.getElementById('login-sent-email').textContent=email;
+    document.getElementById('login-sent').style.display='block';
+  }catch(e){errEl.textContent='Could not send login link: '+e.message}
 }
 async function logoutSB(){
   await sb.auth.signOut();
   location.reload();
-}
-async function requestPasswordReset(){
-  const email=document.getElementById('login-email').value.trim();
-  const errEl=document.getElementById('con-err');
-  errEl.style.color='var(--red)';
-  if(!email){errEl.textContent='Enter your email above first.';return}
-  try{
-    const{error}=await sb.auth.resetPasswordForEmail(email);
-    if(error)throw error;
-    errEl.style.color='var(--teal)';
-    errEl.textContent='Password reset email sent (check your inbox).';
-  }catch(e){errEl.textContent='Could not send reset email: '+e.message}
-}
-function saveApiKey(){
-  const k=document.getElementById('set-api-key').value.trim();if(!k)return;
-  localStorage.setItem('claude-api-key',k);
-  document.getElementById('set-api-key').value='';
-  document.getElementById('set-api-msg').textContent='API key saved.';
 }
 function saveCadence(){
   const v=document.getElementById('set-cadence').value;
@@ -686,19 +671,18 @@ async function reCopyBrief(){
 
 // KEYWORD RANKING
 async function rankKeywords(){
-  const apiKey=localStorage.getItem('claude-api-key');
   const supp=getSuppString();
   const kw=document.getElementById('np-kw').value.trim();
   if(!supp){toast('Add supplementary keywords first');return}
-  if(!apiKey){toast('Add Claude API key in Settings first');return}
   const btn=document.getElementById('rank-btn');btn.textContent='…';btn.disabled=true;
   const result=document.getElementById('kw-rank-result');
   result.style.display='block';
   result.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;color:var(--text2)"><div class="spinner"></div>Ranking keywords…</div>`;
   const prompt=`You are helping plan SEO content for a blog post targeting coaches and solopreneurs.\n\nPrimary keyword: "${kw}"\nSupplementary keywords: ${supp}\n\nFor each supplementary keyword recommend where to use it: H2 heading, intro_meta (intro and meta description), or natural (mention once naturally).\n\nRespond ONLY with JSON:\n[{"keyword":"exact keyword","category":"H2"|"intro_meta"|"natural","reason":"brief reason"}]`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('/.netlify/functions/claude-proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
+    if(!res.ok)throw new Error(rd.error||'proxy error');
     const recs=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
     const catMap={'H2':'krl-h2','intro_meta':'krl-intro','natural':'krl-natural'};
     const catLabel={'H2':'H2 heading','intro_meta':'Intro + meta','natural':'Natural mention'};
@@ -1559,8 +1543,6 @@ async function removeLink(lid){await sb.from('internal_links').delete().eq('id',
 
 // AI SUGGESTIONS
 async function getSuggestions(){
-  const apiKey=localStorage.getItem('claude-api-key');
-  if(!apiKey){document.getElementById('sug-area').innerHTML=`<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r2);padding:10px;font-size:12px;color:var(--amber-t)">No API key. Add in Settings.</div>`;return}
   const post=gp(curPost);if(!post)return;
   const li=new Set(_links.filter(l=>l.from_post_id===curPost).map(l=>l.to_post_id).filter(Boolean));
   const cands=bp().filter(p=>p.id!==curPost&&!li.has(p.id)&&p.status==='live');
@@ -1570,8 +1552,9 @@ async function getSuggestions(){
   const cl=cands.map((p,i)=>`${i+1}. "${p.primary_keyword||p.title}"${p.supplementary_keywords?' | '+p.supplementary_keywords:''}`).join('\n');
   const prompt=`Internal link suggestions for ${BM[activeBlog].name} blog.\n\nPost: "${post.primary_keyword||post.title}"\n${post.supplementary_keywords?'Supp: '+post.supplementary_keywords:''}\n\nAvailable live posts:\n${cl}\n\nRecommend 3 most relevant. One sentence reason each.\n\nJSON only:\n[{"index":1,"title":"keyword or title","reason":"reason"}]`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('/.netlify/functions/claude-proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})});
     const rd=await res.json();
+    if(!res.ok)throw new Error(rd.error||'proxy error');
     const sugs=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
     let html='<div class="sug-box">';
     sugs.forEach(s=>{const m=cands.find(c=>(c.primary_keyword||c.title)===s.title)||cands[s.index-1];if(!m)return;html+=`<div class="sug-item"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(m.primary_keyword||m.title)}</div><div class="sug-rsn">${esc(s.reason)}</div></div><button class="btn btn-p btn-xs" id="sugbtn-${m.id}" onclick="addSugLink('${m.id}')">Add</button></div></div>`});
@@ -1605,10 +1588,8 @@ async function deleteDest(id){await sb.from('link_destinations').delete().eq('id
 
 // SETTINGS
 function showSettings(){
-  const ak=localStorage.getItem('claude-api-key'),cadence=localStorage.getItem('pub-cadence')||'1';
+  const cadence=localStorage.getItem('pub-cadence')||'1';
   const tz=localStorage.getItem('tz-offset')||'0';
-  document.getElementById('set-api-key').placeholder=ak?'sk-ant-••••••':'sk-ant-...';
-  document.getElementById('set-api-msg').textContent=ak?'API key saved.':'No API key saved.';
   document.getElementById('set-cadence').value=cadence;
   document.getElementById('set-tz-offset').value=tz;
   document.getElementById('set-tz-preview').textContent='Today = '+localToday();
@@ -2729,12 +2710,6 @@ async function reviewLivePost(id){
   const p=gp(id);
   if(!p||!p.url){toast('No URL set for this post');return}
   toast('Fetching post for review…',3000);
-  const apiKey=localStorage.getItem('claude-api-key');
-  if(!apiKey){
-    // Just open the URL for manual review
-    window.open(p.url,'_blank');
-    return;
-  }
   try{
     const prompt=`Please review this live blog post URL and check for the following issues. Fetch the page at: ${p.url}
 
@@ -2748,9 +2723,9 @@ Check for:
 
 Report findings clearly. If everything looks good say so. Keep it brief.`;
     
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/.netlify/functions/claude-proxy',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-5',
         max_tokens:1000,
@@ -2759,6 +2734,7 @@ Report findings clearly. If everything looks good say so. Keep it brief.`;
       })
     });
     const rd=await res.json();
+    if(!res.ok)throw new Error(rd.error||'proxy error');
     const text=rd.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'Could not fetch review.';
     showReviewModal(p,text);
   }catch(e){
@@ -3018,10 +2994,8 @@ async function calAddNewKw(dateStr){
 
 // ── CONTENT GAP FINDER ──────────────────────────────────────────
 async function findContentGaps(){
-  const apiKey=localStorage.getItem('claude-api-key');
   const resultEl=document.getElementById('gap-result');
   if(!resultEl)return;
-  if(!apiKey){resultEl.innerHTML='<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r2);padding:10px 12px;font-size:12px;color:var(--amber-t)">⚠️ No Claude API key found. Add it in Settings → Claude API key.</div>';return}
   const posts=bp().filter(p=>p.status==='live'||p.status==='drafted'||p.status==='scheduled');
   if(posts.length<3){document.getElementById('gap-result').innerHTML='<div style="font-size:12px;color:var(--text3)">Add more posts first — need at least 3 to find gaps.</div>';return}
   const btn=document.getElementById('gap-btn');
@@ -3047,12 +3021,13 @@ Respond ONLY with JSON:
 [{"keyword":"specific keyword phrase","reason":"why it's a gap worth filling"}]`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/.netlify/functions/claude-proxy',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1200,messages:[{role:'user',content:prompt}]})
     });
     const rd=await res.json();
+    if(!res.ok)throw new Error(rd.error||'proxy error');
     const gaps=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
     let html='<div style="margin-top:4px">';
     gaps.forEach(g=>{

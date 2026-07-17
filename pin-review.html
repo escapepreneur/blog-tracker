@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pinterest Pin Review</title>
+<style>
+  :root{ --teal:#209A9B; --deep:#0F5C5A; --ink:#2C3345; --good:#2E9E5B; --fix:#D64545; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Poppins',-apple-system,Segoe UI,Roboto,sans-serif;background:#EDEDEA;color:var(--ink)}
+  header{position:sticky;top:0;z-index:20;background:rgba(237,237,234,.95);backdrop-filter:blur(6px);border-bottom:1px solid #d8d8d3;padding:18px 28px}
+  .hwrap{max-width:1500px;margin:0 auto}
+  h1{font-size:22px;color:var(--deep)}
+  p.sub{margin-top:4px;color:#5f6b69;font-size:13px;max-width:760px;line-height:1.45}
+  .bar{display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .counts{display:flex;gap:14px;font-size:13px;font-weight:600}
+  .counts span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.good{background:var(--good)} .dot.fix{background:var(--fix)} .dot.none{background:#bcbcb6}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .filters button{border:1px solid #c7c7c1;background:#fff;color:#555;padding:6px 14px;border-radius:999px;font:inherit;font-size:12.5px;cursor:pointer}
+  .filters button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .status{font-size:12px;color:#7a857f;margin-top:8px;min-height:16px}
+  .grid{max-width:1500px;margin:24px auto;padding:0 28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:24px}
+  .card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08);display:flex;flex-direction:column;border:3px solid transparent}
+  .card.good{border-color:var(--good)} .card.fix{border-color:var(--fix)}
+  .imgwrap{position:relative;cursor:zoom-in}
+  .card img{width:100%;height:auto;display:block;background:#ddd;aspect-ratio:2/3;object-fit:cover}
+  .badge{position:absolute;top:10px;right:10px;font-size:11px;font-weight:700;color:#fff;padding:4px 10px;border-radius:999px;opacity:0;transition:.15s}
+  .card.good .badge{opacity:1;background:var(--good)} .card.fix .badge{opacity:1;background:var(--fix);content:''}
+  .meta{padding:11px 13px 14px;display:flex;flex-direction:column;gap:9px}
+  .tag{align-self:flex-start;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .tag.esc{background:#E1F0EF;color:var(--deep)} .tag.nms{background:#FBEFD5;color:#8a6d12}
+  .title{font-size:12.5px;line-height:1.35;color:#3a4553}
+  .btns{display:flex;gap:8px}
+  .btns button{flex:1;border:1px solid #d0d0ca;background:#fafaf8;padding:7px 0;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:#666}
+  .btns button.good.on{background:var(--good);color:#fff;border-color:var(--good)}
+  .btns button.fix.on{background:var(--fix);color:#fff;border-color:var(--fix)}
+  textarea{width:100%;border:1px solid #d8d8d3;border-radius:8px;padding:8px 9px;font:inherit;font-size:12.5px;resize:vertical;min-height:44px}
+  textarea:focus{outline:none;border-color:var(--teal)}
+  .saved{font-size:10.5px;color:#9aa39d;min-height:13px}
+  .saved.ok{color:var(--good)}
+  a.open{font-size:11px;color:var(--teal);text-decoration:none}
+  .loading{max-width:1500px;margin:60px auto;text-align:center;color:#7a857f;padding:0 28px}
+  /* lightbox */
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}
+  #lb img{max-height:94vh;max-width:60vw;border-radius:10px}
+  /* login gate */
+  #login-wrap{position:fixed;inset:0;background:#EDEDEA;display:flex;align-items:center;justify-content:center;z-index:100}
+  #login-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:32px;width:320px}
+  #login-card h2{font-size:18px;color:var(--deep);margin-bottom:14px}
+  #login-card label{display:block;font-size:11px;font-weight:600;color:#7a857f;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+  #login-card input{width:100%;border:1px solid #d8d8d3;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px;margin-bottom:12px}
+  #login-card button{width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px 0;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  #login-err{font-size:12px;color:var(--fix);margin-top:8px;min-height:16px}
+</style>
+</head>
+<body>
+<div id="login-wrap">
+  <div id="login-card">
+    <h2>Pin Review — log in</h2>
+    <div id="login-form">
+      <label>Email</label><input type="email" id="login-email" autocomplete="username" onkeydown="if(event.key==='Enter')loginPin()">
+      <button onclick="loginPin()">Send login link</button>
+    </div>
+    <div id="login-sent" style="display:none;font-size:13px;color:#3a4553;line-height:1.6">Check <strong id="login-sent-email"></strong> for a login link.</div>
+    <div id="login-err"></div>
+  </div>
+</div>
+<header>
+  <div class="hwrap">
+    <h1>Pinterest Pin Review</h1>
+    <p class="sub">Mark each pin <strong>Good</strong> or <strong>Needs fix</strong> and leave a note — it saves automatically and I can read it directly. <strong>Nothing posts to Pinterest</strong> until you say so. Click a pin to enlarge.</p>
+    <div class="bar">
+      <div class="counts">
+        <span><span class="dot good"></span><b id="c-good">0</b> good</span>
+        <span><span class="dot fix"></span><b id="c-fix">0</b> needs fix</span>
+        <span><span class="dot none"></span><b id="c-none">0</b> unreviewed</span>
+      </div>
+      <div class="filters">
+        <button data-f="all" class="on">All</button>
+        <button data-f="fix">Needs fix</button>
+        <button data-f="good">Good</button>
+        <button data-f="none">Unreviewed</button>
+        <button data-f="esc">ESC Hub</button>
+        <button data-f="nms">No More Somedays</button>
+      </div>
+    </div>
+    <div class="status" id="status">Loading pins…</div>
+  </div>
+</header>
+<div class="loading" id="loading">Loading pins from the tracker…</div>
+<div class="grid" id="grid"></div>
+<div id="lb"><img src="" alt=""></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL="https://vpprrknnkjyluhgtoezu.supabase.co";
+const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwcHJya25ua2p5bHVoZ3RvZXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODY3MjQsImV4cCI6MjA5MzM2MjcyNH0.JkfdqKNqL5dPbbNgX1AYkWVNmVp9Oi7vEjk4weQNuBk";
+const BASE=SUPA_URL+"/rest/v1";
+const H={apikey:ANON,Authorization:"Bearer "+ANON,"content-type":"application/json"};
+const sbAuth=supabase.createClient(SUPA_URL,ANON);
+const label={esc:'ESC Hub',nms:'No More Somedays'};
+
+async function afterLoginPin(session){
+  if(window.location.hash.includes('access_token'))history.replaceState(null,'',window.location.pathname);
+  H.Authorization="Bearer "+session.access_token;
+  document.getElementById('login-wrap').style.display='none';
+  load();
+}
+async function loginPin(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('login-err');
+  if(!email){errEl.textContent='Enter your email.';return}
+  errEl.textContent='';
+  try{
+    const{error}=await sbAuth.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+    if(error)throw error;
+    document.getElementById('login-form').style.display='none';
+    document.getElementById('login-sent-email').textContent=email;
+    document.getElementById('login-sent').style.display='block';
+  }catch(e){errEl.textContent='Could not send login link: '+e.message}
+}
+(async()=>{
+  const{data:{session}}=await sbAuth.auth.getSession();
+  if(session) await afterLoginPin(session);
+})();
+let PINS=[], STATE={}, filter='all';
+
+async function getJSON(q){ const r=await fetch(BASE+"/"+q,{headers:H}); return r.ok?r.json():[]; }
+
+async function load(){
+  const [posts,drafts,fb]=await Promise.all([
+    getJSON("posts?status=eq.live&url=not.is.null&select=id,blog,title,url"),
+    getJSON("post_drafts?select=post_id,assets"),
+    getJSON("pin_feedback?select=post_id,status,comment")
+  ]);
+  const dmap={}; drafts.forEach(d=>dmap[d.post_id]=(d.assets||{}));
+  const fmap={}; fb.forEach(f=>fmap[f.post_id]=f);
+  PINS=posts
+    .filter(p=>p.url && !/^\s*\[/.test(p.title||''))
+    .map(p=>({id:p.id,b:p.blog||'esc',t:p.title||'',u:p.url,img:(dmap[p.id]||{}).pin_image_url}))
+    .filter(x=>x.img)
+    .sort((a,b)=> (a.b>b.b?1:a.b<b.b?-1:0) || a.t.localeCompare(b.t));
+  PINS.forEach(x=>{ const f=fmap[x.id]||{}; STATE[x.id]={status:f.status||null,comment:f.comment||'',b:x.b,t:x.t}; });
+  document.getElementById('loading').style.display='none';
+  document.getElementById('status').textContent=PINS.length+" pins loaded. Your marks are saved to the tracker as you go.";
+  render(); counts();
+}
+
+function counts(){
+  let g=0,f=0,n=0;
+  PINS.forEach(x=>{ const s=STATE[x.id].status; if(s==='good')g++; else if(s==='fix')f++; else n++; });
+  document.getElementById('c-good').textContent=g;
+  document.getElementById('c-fix').textContent=f;
+  document.getElementById('c-none').textContent=n;
+}
+
+function visible(x){
+  const s=STATE[x.id].status;
+  if(filter==='all')return true;
+  if(filter==='fix')return s==='fix';
+  if(filter==='good')return s==='good';
+  if(filter==='none')return !s;
+  if(filter==='esc'||filter==='nms')return x.b===filter;
+  return true;
+}
+
+function render(){
+  const grid=document.getElementById('grid'); grid.innerHTML='';
+  PINS.filter(visible).forEach(x=>{
+    const st=STATE[x.id];
+    const c=document.createElement('div'); c.className='card'+(st.status?' '+st.status:''); c.dataset.id=x.id;
+    c.innerHTML=`
+      <div class="imgwrap"><img loading="lazy" src="${x.img}" alt="">
+        <span class="badge">${st.status==='good'?'GOOD':'NEEDS FIX'}</span></div>
+      <div class="meta">
+        <span class="tag ${x.b}">${label[x.b]}</span>
+        <div class="title">${x.t.replace(/</g,'&lt;')}</div>
+        <div class="btns">
+          <button class="good${st.status==='good'?' on':''}" data-s="good">&#10003; Good</button>
+          <button class="fix${st.status==='fix'?' on':''}" data-s="fix">&#10007; Needs fix</button>
+        </div>
+        <textarea placeholder="Add a note (what's wrong / what to change)…">${(st.comment||'').replace(/</g,'&lt;')}</textarea>
+        <div class="saved"></div>
+        <a class="open" href="${x.u}" target="_blank" rel="noopener">Open article &#8599;</a>
+      </div>`;
+    grid.appendChild(c);
+    const savedEl=c.querySelector('.saved');
+    c.querySelector('.imgwrap').addEventListener('click',()=>{ const lb=document.getElementById('lb'); lb.querySelector('img').src=x.img; lb.style.display='flex'; });
+    c.querySelectorAll('.btns button').forEach(b=>b.addEventListener('click',()=>{
+      const s=b.dataset.s; st.status=(st.status===s?null:s);
+      c.className='card'+(st.status?' '+st.status:'');
+      c.querySelectorAll('.btns button').forEach(x2=>x2.classList.remove('on'));
+      if(st.status) b.classList.add('on');
+      c.querySelector('.badge').textContent=st.status==='good'?'GOOD':'NEEDS FIX';
+      save(x.id,savedEl); counts();
+    }));
+    let t; const ta=c.querySelector('textarea');
+    ta.addEventListener('input',()=>{ st.comment=ta.value; clearTimeout(t); savedEl.textContent='typing…'; savedEl.className='saved'; t=setTimeout(()=>save(x.id,savedEl),700); });
+    ta.addEventListener('blur',()=>{ st.comment=ta.value; clearTimeout(t); save(x.id,savedEl); });
+  });
+}
+
+async function save(id,el){
+  const st=STATE[id];
+  const row={post_id:id,blog:st.b,title:st.t,status:st.status||null,comment:st.comment||null,updated_at:new Date().toISOString()};
+  if(el){el.textContent='saving…';el.className='saved';}
+  try{
+    const r=await fetch(BASE+"/pin_feedback",{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates'},body:JSON.stringify(row)});
+    if(el){ if(r.ok){el.textContent='saved ✓';el.className='saved ok';} else {el.textContent='save failed';el.className='saved';} }
+  }catch(e){ if(el){el.textContent='offline — not saved';el.className='saved';} }
+}
+
+document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.filters button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); filter=b.dataset.f; render();
+}));
+document.getElementById('lb').addEventListener('click',function(){this.style.display='none';});
+</script>
+</body>
+</html>
