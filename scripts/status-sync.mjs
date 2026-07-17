@@ -62,7 +62,11 @@ async function verifyLive(url) {
           await publishBlogPost({ ghlPostId: p.ghl_post_id, pit: PIT, brand: p.blog, imageUrl: img, imageAltText: p.title || p.primary_keyword });
           await setLive(p, goLive);
           published++;
-          if (p.url) { try { await requestIndexing(p.url); await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'requested' }) }); } catch (e) { /* indexing best-effort */ } }
+          // Verify the page is actually serving before asking Google to crawl it — publishing
+          // can take a moment to propagate, and a too-early request just gets a 404 that then
+          // sits stale for weeks. If it's not up yet, leave indexed as-is; the self-heal loop
+          // below (ageDays 2-30) will verify + request once the page is confirmed live.
+          if (p.url) { try { if ((await verifyLive(p.url)) === 200) { await requestIndexing(p.url); await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'requested' }) }); } } catch (e) { /* indexing best-effort */ } }
         } catch (e) { console.error(`  FAIL publish ${label}: ${e.message}`); failed++; }
       } else published++;
       continue;

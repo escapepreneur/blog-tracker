@@ -55,7 +55,16 @@ export const handler = async (event) => {
     await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
 
     // On go-live, ask Google to crawl it (best-effort; no-op if GOOGLE_SA_KEY unset).
-    if (publish && r.url) { try { await requestIndexing(r.url); } catch (e) { /* indexing is best-effort */ } }
+    // Verify the page is actually serving first — GHL can take a moment to propagate a
+    // brand-new post, and asking Google to crawl too early gets a 404 that then sits
+    // stale for a long time before Google bothers rechecking. If it's not up yet, skip
+    // silently — the daily status-sync self-heal will request it once it verifies 200.
+    if (publish && r.url) {
+      try {
+        const live = await fetch(r.url, { method: 'GET', redirect: 'follow' }).then(res => res.status === 200).catch(() => false);
+        if (live) await requestIndexing(r.url);
+      } catch (e) { /* indexing is best-effort */ }
+    }
 
     return json(200, { ok: true, ghl_post_id: r.id, url: r.url, published: !!publish, date: date || (publish ? today : null) });
   } catch (e) {
