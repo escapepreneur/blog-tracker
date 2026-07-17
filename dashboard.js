@@ -814,8 +814,8 @@ async function openPost(id,tab){
   curPost=id; // Progress checklist removed; _links cached + Links tab loads lazily
   const post=gp(id);if(!post)return;
   const kw=post.primary_keyword||'',title=post.title||'';
-  document.getElementById('pm-title').textContent=kw||title||'Post';
-  document.getElementById('pm-kw-display').textContent=kw&&title?title:(kw?'No title yet':'');
+  document.getElementById('pm-title').textContent=kw&&title?`${kw} — ${title}`:(kw||title||'Post');
+  document.getElementById('pm-kw-display').textContent=(kw&&!title)?'No title yet':'';
   document.getElementById('pm-title-i').value=title;
   {const st=document.getElementById('pm-subtitle');if(st)st.value=post.subtitle||'';}
   document.getElementById('pm-url').value=post.url||'';
