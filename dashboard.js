@@ -2376,7 +2376,7 @@ function copyDraftField(k){
   navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
 }
 function _bodyImageSlot(slot,i){
-  const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches — edit the term and Regenerate</span>';
+  const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:180px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches — edit the term and Regenerate</span>';
   return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
     <input id="bterm-${i}" value="${esc(slot.term||'')}" onkeydown="if(event.key==='Enter')regenSlotImages(${i})" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)" title="Edit the search term, then Regenerate">
     <button id="bregen-${i}" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="regenSlotImages(${i})">Regenerate</button>
@@ -2449,7 +2449,7 @@ async function rerenderFeatured(swap,bgUrl){
 // so Sienna can see real options and choose, instead of blindly clicking Swap.
 function _featBgGrid(a){
   const cands=a.featured_bg_candidates||[];
-  const thumbs=cands.map((c,j)=>`<img data-j="${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" style="width:104px;height:68px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid ${a.featured_bg_url===c.url?'#29abab':'transparent'}">`).join('');
+  const thumbs=cands.map((c,j)=>`<img data-j="${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${a.featured_bg_url===c.url?'#29abab':'transparent'}">`).join('');
   return `<div id="feat-bg-picker" style="margin-top:8px">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
       <input id="feat-bg-term" value="${esc(a.featured_image_search||'')}" placeholder="Background search term" onkeydown="if(event.key==='Enter')loadFeaturedBgOptions()" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)">
@@ -2655,7 +2655,6 @@ function _draftViewHtml(d){
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
-  ${_editorialBlock(d)}
   ${a.featured_image_search?`<div id="feat-area" style="margin-bottom:14px">
     <label class="fl">Featured image</label>
     <div id="feat-preview">${a.featured_image_url
@@ -2678,11 +2677,6 @@ function _draftViewHtml(d){
   ${_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'—'))}
   ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'— (footer CTAs only)')}
-  <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
-  <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
-    <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>
-    <div style="max-height:440px;overflow-y:auto;border-top:1px solid var(--border);padding:14px 16px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
-  </details>
   <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
       <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
@@ -2692,6 +2686,12 @@ function _draftViewHtml(d){
       <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}</div>
     </div>
   </details>
+  <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
+  <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
+    <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>
+    <div style="max-height:440px;overflow-y:auto;border-top:1px solid var(--border);padding:14px 16px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
+  </details>
+  ${_editorialBlock(d)}
   <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
     ${post.ghl_post_id
       ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>${post.url?`<div style="margin-top:4px"><a href="${esc(post.url)}" target="_blank" style="font-size:11px;color:var(--text2)">${esc(post.url)}</a></div>`:''}<button class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:8px" onclick="resetSent()">Reset — re-publish / deleted in GHL</button>`
