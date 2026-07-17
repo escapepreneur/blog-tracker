@@ -60,24 +60,31 @@ function calcScore(ks,vol){
 function scoreClass(s){return s===null?'score-n':'score-badge';}
 
 // INIT
+const SUPABASE_URL='https://vpprrknnkjyluhgtoezu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwcHJya25ua2p5bHVoZ3RvZXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODY3MjQsImV4cCI6MjA5MzM2MjcyNH0.JkfdqKNqL5dPbbNgX1AYkWVNmVp9Oi7vEjk4weQNuBk';
 async function initApp(){
-  const url=localStorage.getItem('sb-url'),key=localStorage.getItem('sb-key');
-  if(!url||!key){document.getElementById('con-screen').style.display='flex';return}
+  sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   try{
-    sb=supabase.createClient(url,key);
-    document.getElementById('main-app').style.display='flex';
-    const savedBlog=localStorage.getItem('cd_blog');if(savedBlog==='esc'||savedBlog==='nms')activeBlog=savedBlog; // remember brand across reloads
-    await loadAll();
-    // reflect the restored brand in the switcher, and reopen the tab the user was on
-    document.getElementById('btn-esc').className='bsw-btn'+(activeBlog==='esc'?' a-esc':'');
-    document.getElementById('btn-nms').className='bsw-btn'+(activeBlog==='nms'?' a-nms':'');
-    const savedTab=localStorage.getItem('cd_tab');if(savedTab&&document.getElementById('pane-'+savedTab))switchTab(savedTab);
-    loadDfsBalance();
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session){document.getElementById('con-screen').style.display='flex';return}
+    await afterLogin(session);
   }catch(e){
     console.error('initApp error:',e);
     document.getElementById('con-screen').style.display='flex';
     document.getElementById('main-app').style.display='none';
   }
+}
+async function afterLogin(session){
+  document.getElementById('con-screen').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  const acctEl=document.getElementById('acct-email');if(acctEl)acctEl.textContent=session.user.email;
+  const savedBlog=localStorage.getItem('cd_blog');if(savedBlog==='esc'||savedBlog==='nms')activeBlog=savedBlog; // remember brand across reloads
+  await loadAll();
+  // reflect the restored brand in the switcher, and reopen the tab the user was on
+  document.getElementById('btn-esc').className='bsw-btn'+(activeBlog==='esc'?' a-esc':'');
+  document.getElementById('btn-nms').className='bsw-btn'+(activeBlog==='nms'?' a-nms':'');
+  const savedTab=localStorage.getItem('cd_tab');if(savedTab&&document.getElementById('pane-'+savedTab))switchTab(savedTab);
+  loadDfsBalance();
 }
 async function loadDfsBalance(){
   const el=document.getElementById('dfs-balance');if(!el)return;
@@ -95,24 +102,32 @@ async function loadDfsBalance(){
     el.title=(low?'Low balance — top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
   }catch(e){el.style.display='none';}
 }
-async function connectSB(){
-  const url=document.getElementById('sb-url').value.trim(),key=document.getElementById('sb-key').value.trim();
-  if(!url||!key){document.getElementById('con-err').textContent='Please enter both.';return}
+async function loginSB(){
+  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('con-err');
+  if(!email||!password){errEl.style.color='var(--red)';errEl.textContent='Please enter both.';return}
+  errEl.style.color='var(--red)';errEl.textContent='';
   try{
-    const c=supabase.createClient(url,key);
-    const{error}=await c.from('posts').select('id').limit(1);
+    const{data,error}=await sb.auth.signInWithPassword({email,password});
     if(error)throw error;
-    localStorage.setItem('sb-url',url);localStorage.setItem('sb-key',key);
-    sb=c;document.getElementById('con-screen').style.display='none';
-    document.getElementById('main-app').style.display='flex';loadAll();
-  }catch(e){document.getElementById('con-err').textContent='Could not connect: '+e.message}
+    await afterLogin(data.session);
+  }catch(e){errEl.textContent='Could not log in: '+e.message}
 }
-function updateSB(){
-  const url=document.getElementById('set-sb-url').value.trim(),key=document.getElementById('set-sb-key').value.trim();
-  if(!url||!key)return;
-  localStorage.setItem('sb-url',url);localStorage.setItem('sb-key',key);
-  document.getElementById('set-sb-msg').textContent='Saved. Reloading...';
-  setTimeout(()=>location.reload(),800);
+async function logoutSB(){
+  await sb.auth.signOut();
+  location.reload();
+}
+async function requestPasswordReset(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('con-err');
+  errEl.style.color='var(--red)';
+  if(!email){errEl.textContent='Enter your email above first.';return}
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email);
+    if(error)throw error;
+    errEl.style.color='var(--teal)';
+    errEl.textContent='Password reset email sent (check your inbox).';
+  }catch(e){errEl.textContent='Could not send reset email: '+e.message}
 }
 function saveApiKey(){
   const k=document.getElementById('set-api-key').value.trim();if(!k)return;
@@ -1590,10 +1605,8 @@ async function deleteDest(id){await sb.from('link_destinations').delete().eq('id
 
 // SETTINGS
 function showSettings(){
-  const url=localStorage.getItem('sb-url')||'',ak=localStorage.getItem('claude-api-key'),cadence=localStorage.getItem('pub-cadence')||'1';
+  const ak=localStorage.getItem('claude-api-key'),cadence=localStorage.getItem('pub-cadence')||'1';
   const tz=localStorage.getItem('tz-offset')||'0';
-  document.getElementById('set-sb-url').value=url;
-  document.getElementById('set-sb-key').value='';
   document.getElementById('set-api-key').placeholder=ak?'sk-ant-••••••':'sk-ant-...';
   document.getElementById('set-api-msg').textContent=ak?'API key saved.':'No API key saved.';
   document.getElementById('set-cadence').value=cadence;

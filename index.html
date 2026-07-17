@@ -276,18 +276,17 @@ input[type=file]{width:100%}
 </style>
 </head>
 <body>
-<!-- CONNECT -->
+<!-- LOGIN -->
 <div id="con-screen" class="con-wrap" style="display:none">
   <div class="con-card">
     <div class="con-mark">E</div>
     <h2 style="font-size:22px;font-weight:700;margin-bottom:.4rem">Content Dashboard</h2>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:.25rem;font-weight:600">Escapepreneur™</p>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:1.75rem;line-height:1.6">Enter your Supabase project URL and anon key to connect.</p>
-    <div style="margin-bottom:10px"><label class="fl">Project URL</label><input type="url" id="sb-url" placeholder="https://xxxx.supabase.co"></div>
-    <div style="margin-bottom:14px"><label class="fl">Anon key</label><input type="password" id="sb-key" placeholder="eyJ..."></div>
-    <button class="btn btn-p" onclick="connectSB()" style="width:100%;justify-content:center">Connect</button>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1.75rem;font-weight:600">Escapepreneur™</p>
+    <div style="margin-bottom:10px"><label class="fl">Email</label><input type="email" id="login-email" placeholder="you@escapepreneur.com" autocomplete="username"></div>
+    <div style="margin-bottom:14px"><label class="fl">Password</label><input type="password" id="login-password" placeholder="" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginSB()"></div>
+    <button class="btn btn-p" onclick="loginSB()" style="width:100%;justify-content:center">Log in</button>
     <div id="con-err" style="font-size:12px;color:var(--red);margin-top:8px;min-height:18px"></div>
-    <p style="font-size:11px;color:var(--text3);margin-top:1rem;text-align:center">Supabase → Project Settings → API</p>
+    <p style="font-size:11px;color:var(--text3);margin-top:.5rem;text-align:center"><a href="#" onclick="requestPasswordReset();return false" style="color:var(--text3);text-decoration:underline">Forgot password?</a></p>
   </div>
 </div>
 <!-- APP -->
@@ -825,11 +824,9 @@ input[type=file]{width:100%}
 <div class="modal" style="max-width:520px">
   <div class="mhdr"><div class="mtitle">Settings</div><button class="xbtn" onclick="closeModal('settings-modal')">✕</button></div>
   <div style="margin-bottom:1.5rem">
-    <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Supabase connection</div>
-    <div style="margin-bottom:8px"><label class="fl">Project URL</label><input type="url" id="set-sb-url"></div>
-    <div style="margin-bottom:10px"><label class="fl">Anon key</label><input type="password" id="set-sb-key"></div>
-    <button class="btn btn-p btn-sm" onclick="updateSB()">Update connection</button>
-    <div id="set-sb-msg" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Account</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Signed in as <strong id="acct-email">—</strong></div>
+    <button class="btn btn-sm" onclick="logoutSB()">Log out</button>
   </div>
   <div style="margin-bottom:1.5rem">
     <div style="font-size:14px;font-weight:700;margin-bottom:.5rem">Claude API key</div>
