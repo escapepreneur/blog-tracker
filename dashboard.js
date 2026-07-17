@@ -2444,6 +2444,51 @@ async function rerenderFeatured(swap){
     else if(Date.now()-start>240000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Still rendering — hit Check again in a moment',4500);}
   },4000);
 }
+// IMAGE TITLE/TAGLINE SUGGESTIONS — a few alternate options for the featured/pin image text,
+// each one click away from filling the fields above (still needs Re-render to apply).
+async function suggestFeaturedTitles(){
+  const post=gp(curPost);if(!post)return;
+  const area=document.getElementById('feat-suggest-area');if(!area)return;
+  const btn=document.getElementById('feat-suggest-btn');
+  const curTitle=((document.getElementById('feat-title')||{}).value||'').trim();
+  const curTag=((document.getElementById('feat-tag')||{}).value||'').trim();
+  btn.disabled=true;btn.textContent='Thinking…';
+  area.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:6px"><div class="spinner"></div>Asking Claude…</div>';
+  const brandNm=(BM[post.blog]||{}).name||'the blog';
+  const prompt=`Suggest 5 alternate title+tagline pairs for the featured/Pinterest image on this ${brandNm} blog post.
+
+Post topic: "${post.primary_keyword||post.title||''}"
+Current image title: "${curTitle||'(none set)'}"
+Current image tagline: "${curTag||'(none set)'}"
+
+Rules for the TITLE: 2-3 words only, punchy, the single keyword/phrase a reader would recognise — short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness.
+Rules for the TAGLINE: one short supporting line (under 8 words) that adds context the title doesn't cover.
+Vary the angle across the 5 (e.g. benefit-led, curiosity-led, direct/plain, question, contrast) so they're genuinely different from each other, not minor rewordings.
+
+Respond ONLY with JSON: [{"title":"...","tagline":"..."}]`;
+  try{
+    const res=await fetch('/.netlify/functions/claude-proxy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const rd=await res.json();
+    if(!res.ok)throw new Error(rd.error||'proxy error');
+    const opts=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
+    if(!opts.length){area.innerHTML='<div style="font-size:12px;color:var(--text3);margin-top:6px">No suggestions came back — try again.</div>';return}
+    area.innerHTML=`<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">${opts.map((o,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:7px 9px">
+        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">${esc(o.title||'')}</div><div style="font-size:11px;color:var(--text3)">${esc(o.tagline||'')}</div></div>
+        <button class="btn btn-p btn-xs" data-i="${i}">Use</button>
+      </div>`).join('')}</div>`;
+    // data attributes (not inline onclick) so apostrophes/quotes in AI text can't break the markup
+    area.querySelectorAll('button[data-i]').forEach(b=>b.addEventListener('click',()=>{
+      const o=opts[Number(b.dataset.i)];useFeatSuggestion(o.title||'',o.tagline||'');
+    }));
+  }catch(e){area.innerHTML=`<div style="font-size:12px;color:var(--red-t);margin-top:6px">Could not get suggestions: ${esc(e.message)}</div>`}
+  finally{btn.disabled=false;btn.textContent='✨ Suggest alternatives';}
+}
+function useFeatSuggestion(title,tagline){
+  const t=document.getElementById('feat-title'),g=document.getElementById('feat-tag');
+  if(t)t.value=title;if(g)g.value=tagline;
+  toast('Filled in — click Re-render image to apply');
+}
 async function resetSent(){
   const p=gp(curPost);if(!p)return;
   if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted — it does NOT change anything in GHL.'))return;
@@ -2580,7 +2625,12 @@ function _draftViewHtml(d){
       : `<div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin:4px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Rendering…</span><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="renderDraftTab()">Check again</button></div>`}</div>
     <input id="feat-title" value="${esc(a.featured_title||'')}" placeholder="Image title" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;background:#fff;color:var(--text);margin-bottom:6px">
     <input id="feat-tag" value="${esc(a.featured_tagline||'')}" placeholder="Image tagline" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;background:#fff;color:var(--text);margin-bottom:6px">
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="feat-rerender" class="btn btn-p btn-sm" style="font-size:11px" onclick="rerenderFeatured(false)">Re-render image</button><button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="rerenderFeatured(true)">Swap background</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button id="feat-rerender" class="btn btn-p btn-sm" style="font-size:11px" onclick="rerenderFeatured(false)">Re-render image</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="rerenderFeatured(true)">Swap background</button>
+      <button id="feat-suggest-btn" class="btn btn-ghost btn-sm" style="font-size:11px" onclick="suggestFeaturedTitles()">✨ Suggest alternatives</button>
+    </div>
+    <div id="feat-suggest-area"></div>
     <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
   </div>`:''}
   ${_draftRow('Title (H1)',esc(a.title||'—'))}
