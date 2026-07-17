@@ -59,11 +59,9 @@
 <div id="login-wrap">
   <div id="login-card">
     <h2>Pin Review — log in</h2>
-    <div id="login-form">
-      <label>Email</label><input type="email" id="login-email" autocomplete="username" onkeydown="if(event.key==='Enter')loginPin()">
-      <button onclick="loginPin()">Send login link</button>
-    </div>
-    <div id="login-sent" style="display:none;font-size:13px;color:#3a4553;line-height:1.6">Check <strong id="login-sent-email"></strong> for a login link.</div>
+    <label>Email</label><input type="email" id="login-email" autocomplete="username">
+    <label>Password</label><input type="password" id="login-password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPin()">
+    <button onclick="loginPin()">Log in</button>
     <div id="login-err"></div>
   </div>
 </div>
@@ -102,23 +100,20 @@ const sbAuth=supabase.createClient(SUPA_URL,ANON);
 const label={esc:'ESC Hub',nms:'No More Somedays'};
 
 async function afterLoginPin(session){
-  if(window.location.hash.includes('access_token'))history.replaceState(null,'',window.location.pathname);
   H.Authorization="Bearer "+session.access_token;
   document.getElementById('login-wrap').style.display='none';
   load();
 }
 async function loginPin(){
-  const email=document.getElementById('login-email').value.trim();
+  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
   const errEl=document.getElementById('login-err');
-  if(!email){errEl.textContent='Enter your email.';return}
+  if(!email||!password){errEl.textContent='Please enter both.';return}
   errEl.textContent='';
   try{
-    const{error}=await sbAuth.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+    const{data,error}=await sbAuth.auth.signInWithPassword({email,password});
     if(error)throw error;
-    document.getElementById('login-form').style.display='none';
-    document.getElementById('login-sent-email').textContent=email;
-    document.getElementById('login-sent').style.display='block';
-  }catch(e){errEl.textContent='Could not send login link: '+e.message}
+    await afterLoginPin(data.session);
+  }catch(e){errEl.textContent='Could not log in: '+e.message}
 }
 (async()=>{
   const{data:{session}}=await sbAuth.auth.getSession();

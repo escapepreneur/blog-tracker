@@ -103,22 +103,32 @@ async function loadDfsBalance(){
     el.title=(low?'Low balance — top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
   }catch(e){el.style.display='none';}
 }
-async function sendMagicLink(){
-  const email=document.getElementById('login-email').value.trim();
+async function loginSB(){
+  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
   const errEl=document.getElementById('con-err');
+  if(!email||!password){errEl.style.color='var(--red)';errEl.textContent='Please enter both.';return}
   errEl.style.color='var(--red)';errEl.textContent='';
-  if(!email){errEl.textContent='Enter your email.';return}
   try{
-    const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+    const{data,error}=await sb.auth.signInWithPassword({email,password});
     if(error)throw error;
-    document.getElementById('login-form').style.display='none';
-    document.getElementById('login-sent-email').textContent=email;
-    document.getElementById('login-sent').style.display='block';
-  }catch(e){errEl.textContent='Could not send login link: '+e.message}
+    await afterLogin(data.session);
+  }catch(e){errEl.textContent='Could not log in: '+e.message}
 }
 async function logoutSB(){
   await sb.auth.signOut();
   location.reload();
+}
+async function requestPasswordReset(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('con-err');
+  errEl.style.color='var(--red)';
+  if(!email){errEl.textContent='Enter your email above first.';return}
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email);
+    if(error)throw error;
+    errEl.style.color='var(--teal)';
+    errEl.textContent='Password reset email sent (check your inbox).';
+  }catch(e){errEl.textContent='Could not send reset email: '+e.message}
 }
 function saveCadence(){
   const v=document.getElementById('set-cadence').value;
