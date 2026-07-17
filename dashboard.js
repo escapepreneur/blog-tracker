@@ -2498,7 +2498,7 @@ Post topic: "${post.primary_keyword||post.title||''}"
 Current image title: "${curTitle||'(none set)'}"
 Current image tagline: "${curTag||'(none set)'}"
 
-Rules for the TITLE: 2-3 words only, punchy, the single keyword/phrase a reader would recognise — short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness.
+Rules for the TITLE: 2-3 words, punchy, the single keyword/phrase a reader would recognise — short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness. Mix the lengths across the 5 — don't make them all the same word count; aim for at least two at 3 words, not all clipped down to 2.
 Rules for the TAGLINE: one short supporting line (under 8 words) that adds context the title doesn't cover.
 Vary the angle across the 5 (e.g. benefit-led, curiosity-led, direct/plain, question, contrast) so they're genuinely different from each other, not minor rewordings.
 
@@ -2583,6 +2583,11 @@ async function runEditorialReview(){
     else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Editorial review timed out — try again',4000);}
   },5000);
 }
+// Bold section header + divider for the Draft tab, so each part of the page reads as
+// its own distinct block instead of blurring into the next one.
+function _secHead(icon,label){
+  return `<div style="display:flex;align-items:center;gap:7px;margin:24px 0 10px;padding-top:16px;border-top:2px solid var(--border)"><span style="font-size:15px">${icon}</span><span style="font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em">${label}</span></div>`;
+}
 function _draftRow(label,value,copyKey){
   return `<div style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><label class="fl" style="margin:0">${label}</label>${copyKey?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:0 7px" onclick="copyDraftField('${copyKey}')">Copy</button>`:''}</div>
@@ -2649,13 +2654,13 @@ function _draftViewHtml(d){
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="generateDraftNow()">Regenerate</button>
   </div>
+  ${_secHead('🔎','Worth a look')}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:14px">
     ${_reportBlock('Must fix before publishing',r.hard,'var(--red-t)')}
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
     <details${(r.hard&&r.hard.length)||(r.warn&&r.warn.length)?'':' open'}><summary style="font-size:11px;color:var(--text3);cursor:pointer">${(r.pass||[]).length} checks passed</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text3);line-height:1.6">${(r.pass||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></details>
   </div>
-  ${a.featured_image_search?`<div id="feat-area" style="margin-bottom:14px">
-    <label class="fl">Featured image</label>
+  ${a.featured_image_search?`${_secHead('🖼️','Featured Image')}<div id="feat-area" style="margin-bottom:14px">
     <div id="feat-preview">${a.featured_image_url
       ? `<img src="${esc(a.featured_image_url)}" alt="featured" style="display:block;width:100%;border-radius:var(--r2);border:1px solid var(--border);margin:4px 0 8px">`
       : `<div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2);margin:4px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Rendering…</span><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="renderDraftTab()">Check again</button></div>`}</div>
@@ -2670,14 +2675,16 @@ function _draftViewHtml(d){
     ${_featBgGrid(a)}
     <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
   </div>`:''}
+  ${_secHead('🏷️','Titles &amp; Meta')}
   ${_draftRow('Title (H1)',esc(a.title||'—'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
   ${_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'—'))}
   ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'— (footer CTAs only)')}
-  <details style="margin-bottom:6px"><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600">Images & captions</summary>
-    <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:8px">
+  ${_secHead('📷','Body Images &amp; Captions')}
+  <details style="margin-bottom:6px;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2);padding:2px 13px" open><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600;padding:9px 0">Images &amp; captions</summary>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:2px;padding-bottom:11px">
       <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
       ${imgPick}
       <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
@@ -2685,7 +2692,8 @@ function _draftViewHtml(d){
       <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}</div>
     </div>
   </details>
-  <div style="margin-bottom:10px"><label class="fl">Internal links</label><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
+  ${_secHead('🔗','Internal Links')}
+  <div style="margin-bottom:10px"><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
   <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
     <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>
     <div style="max-height:440px;overflow-y:auto;border-top:1px solid var(--border);padding:14px 16px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
