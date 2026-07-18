@@ -343,18 +343,14 @@ input[type=file]{width:100%}
         <!-- METRIC PILLS -->
         <div id="dash-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
 
-        <!-- ROW 1: NEXT UP + TODAY -->
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
+        <!-- ROW 1: NEXT UP (full width — "Today's posts" removed, superseded by the auto-publish cron) -->
+        <div style="margin-bottom:14px">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div class="sh" style="margin:0">Pipeline — next up</div>
               <button class="btn btn-xs" onclick="switchTab('calendar')" style="font-size:10px">Calendar →</button>
             </div>
-            <div id="nextup-list"></div>
-          </div>
-          <div class="card">
-            <div class="sh" style="margin-bottom:8px">📅 Today's posts</div>
-            <div id="dash-today"></div>
+            <div id="nextup-list" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
           </div>
         </div>
 

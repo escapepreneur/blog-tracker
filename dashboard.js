@@ -326,7 +326,6 @@ function socialIconRow(s,p){
 function renderDashboard(){
   if(activeTab!=='dashboard')return;
   const posts=bp();
-  const today=localToday();
   document.getElementById('dash-title').textContent=BM[activeBlog].name;
   document.getElementById('dash-sub').textContent=BM[activeBlog].sub;
   const live=posts.filter(p=>p.status==='live').length;
@@ -346,20 +345,13 @@ function renderDashboard(){
     <button class="dash-pill dash-pill-amber" onclick="switchTab('posts','not-indexed')"><span class="dp-num">${notIdx+idxReq}</span><span class="dp-lbl">Indexing needed</span></button>
     <button class="dash-pill dash-pill-teal" onclick="switchTab('keywords')"><span class="dp-num">${ideas}</span><span class="dp-lbl">In queue</span></button>`;
 
-  // NEXT UP — pipeline order (proposed date, not yet scheduled/live)
-  const pipelinePosts=posts.filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status)).sort((a,b)=>new Date(a.proposed_date)-new Date(b.proposed_date)).slice(0,3);
+  // NEXT UP — pipeline order (proposed date, not yet scheduled/live). Full width now that
+  // "Today's posts" is gone (superseded by the auto-publish cron), so show more of the queue.
+  const pipelinePosts=posts.filter(p=>p.proposed_date&&!['scheduled','live'].includes(p.status)).sort((a,b)=>new Date(a.proposed_date)-new Date(b.proposed_date)).slice(0,6);
   const nuEl=document.getElementById('nextup-list');
   if(nuEl){
-    if(!pipelinePosts.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No proposed dates set yet. Add in Planning → Research queue.</div>'}
+    if(!pipelinePosts.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0;grid-column:1/-1">No proposed dates set yet. Add in Planning → Research queue.</div>'}
     else{nuEl.innerHTML=pipelinePosts.map((p,i)=>`<div class="next-up-item" style="cursor:pointer" onclick="openPost('${p.id}','draft')"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div><div style="display:flex;align-items:center;gap:6px;margin-top:2px">${sbadge(p.status)}<span class="prk" style="margin:0">${fd(p.proposed_date)}</span></div></div></div>`).join('')}
-  }
-
-  // TODAY — posts scheduled for today
-  const todayPosts=posts.filter(p=>p.status==='scheduled'&&p.scheduled_date===today);
-  const todayEl=document.getElementById('dash-today');
-  if(todayEl){
-    if(!todayPosts.length){todayEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No posts scheduled for today.</div>'}
-    else{todayEl.innerHTML=todayPosts.map(p=>`<div class="post-row" style="border-left:3px solid var(--teal)"><div class="kw-primary">${esc(p.primary_keyword||p.title||'Post')}</div>${p.title&&p.primary_keyword?`<div class="post-title-sub">${esc(p.title)}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="confirmGoLive('${p.id}')">✓ Confirm live + socials</button><button class="btn btn-sm" onclick="openPost('${p.id}','details')">View</button></div></div>`).join('')}
   }
 
   // SOCIAL INCOMPLETE — live posts with missing social items
@@ -398,15 +390,6 @@ function renderDashboard(){
   const completePct=totalPosts>0?Math.round(completePosts/totalPosts*100):0;
   const cpWrap=document.getElementById('complete-pill-wrap');
   if(cpWrap){const cpCls=completePct>=80?'sched-green':completePct>=40?'sched-amber':'sched-red';cpWrap.innerHTML=`<button class="sched-pill ${cpCls}" onclick="switchTab('posts','needs-work')"><span class="sched-dot" style="${completePct>=80?'background:#2a7d3f':completePct>=40?'background:#e8960a':'background:#e04444'}"></span>${completePosts}/${totalPosts} complete</button>`}
-}
-
-async function confirmGoLive(id){
-  const p=gp(id);if(!p)return;
-  await sb.from('posts').update({status:'live',published_date:localToday()}).eq('id',id);
-  const s=p.social_tracking?.[0];
-  if(s){await sb.from('social_tracking').update({fb_shared:true,ig_shared:true,pinterest_image_created:true}).eq('id',s.id)}
-  await loadPosts();render();
-  toast('✓ Post live — FB and IG marked done. Pinterest still needs pinning.',4000);
 }
 
 async function approvePost(id,sendBack=false,note=''){

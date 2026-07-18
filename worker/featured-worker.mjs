@@ -106,6 +106,13 @@ async function pinBackfill(limit, mode = 'both') {
       const ok = res.posted && res.posted.some(x => !x.error);
       if (ok) {
         await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ pinterest_posted: true }) });
+        // Keep the dashboard's "Social Incomplete" checklist honest — this is the only place
+        // a pin actually gets posted, so mark it here instead of relying on a manual click
+        // that nothing in this pipeline prompts anyone to make.
+        const stPatch = { pinterest_shared: true, pinterest_image_created: true };
+        const [st] = await (await rest(`social_tracking?post_id=eq.${p.id}&select=id`)).json();
+        if (st) await rest(`social_tracking?id=eq.${st.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(stPatch) });
+        else await rest('social_tracking', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ post_id: p.id, ...stPatch }) });
         done++;
         console.log(`  pinned ${label} -> ${res.posted.map(x => x.board + (x.error ? ' ERR' : '')).join(', ')}`);
       } else { failed++; console.error(`  FAIL ${label}: ${res.skipped || JSON.stringify(res.posted)}`); }
