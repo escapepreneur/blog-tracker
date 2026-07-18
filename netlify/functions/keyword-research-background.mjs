@@ -137,25 +137,20 @@ ${cov}
 Return the cluster via the emit_content_cluster tool.`;
 }
 
-// Expand seeds -> deduped, covered-filtered, min-volume + max-difficulty-filtered,
-// volume-sorted keyword list. The difficulty cutoff is a hard exclusion — keywords above
-// it never reach Claude, so an impossible-to-rank head term can't slip through no matter
-// how on-brand it looks (unlike the opportunity score, which is a judgment call).
-async function expandKeywords(seeds, broaden, covered, minVol, maxKD) {
+// Dedupe (keeping the higher-volume duplicate), drop already-covered terms, apply the
+// min-volume / max-difficulty cutoffs, sort by volume, cap at 90. Shared by the live
+// DataForSEO path and the CSV-import path — only where the raw keyword list comes from
+// differs. The difficulty cutoff is a hard exclusion — keywords above it never reach
+// Claude, so an impossible-to-rank head term can't slip through no matter how on-brand it
+// looks (unlike the opportunity score, which is a judgment call).
+function dedupeAndFilter(rawKeywords, covered, minVol, maxKD) {
   const coveredNorm = new Set(covered.map(norm));
-  let cost = 0;
-  const calls = seeds.map(s => keywordSuggestions(s, { limit: 150 }));
-  if (broaden) calls.push(keywordIdeas(seeds, { limit: 300, minVolume: 30 }));
-  const results = await Promise.all(calls);
   const byKw = new Map();
-  for (const r of results) {
-    cost += r.cost || 0;
-    for (const k of (r.keywords || [])) {
-      const key = norm(k.keyword);
-      if (!key || coveredNorm.has(key)) continue;
-      const prev = byKw.get(key);
-      if (!prev || (k.volume || 0) > (prev.volume || 0)) byKw.set(key, k);
-    }
+  for (const k of rawKeywords) {
+    const key = norm(k.keyword);
+    if (!key || coveredNorm.has(key)) continue;
+    const prev = byKw.get(key);
+    if (!prev || (k.volume || 0) > (prev.volume || 0)) byKw.set(key, k);
   }
   let keywords = [...byKw.values()].sort((a, c) => (c.volume || 0) - (a.volume || 0));
   const rawCount = keywords.length;
@@ -165,7 +160,36 @@ async function expandKeywords(seeds, broaden, covered, minVol, maxKD) {
   // penalised for missing data.
   keywords = keywords.filter(k => k.difficulty == null || k.difficulty <= maxKD);
   keywords = keywords.slice(0, 90);
+  return { keywords, rawCount, aboveMin };
+}
+
+// Expand seeds via DataForSEO -> filtered keyword list (live-research path).
+async function expandKeywords(seeds, broaden, covered, minVol, maxKD) {
+  let cost = 0;
+  const calls = seeds.map(s => keywordSuggestions(s, { limit: 150 }));
+  if (broaden) calls.push(keywordIdeas(seeds, { limit: 300, minVolume: 30 }));
+  const results = await Promise.all(calls);
+  const raw = [];
+  for (const r of results) { cost += r.cost || 0; raw.push(...(r.keywords || [])); }
+  const { keywords, rawCount, aboveMin } = dedupeAndFilter(raw, covered, minVol, maxKD);
   return { keywords, rawCount, aboveMin, cost };
+}
+
+// Take a client-supplied keyword list (already researched elsewhere — Keysearch, GKP CSV
+// export, etc.) -> filtered keyword list. No DataForSEO call, no cost. Not filtered by
+// volume/difficulty by default (minVol/maxKD default to "no cutoff") since the user has
+// already curated this list themselves — the point is to cluster what they give us, not
+// re-gatekeep it with filters meant for a live, unfiltered DataForSEO pull.
+function keywordsFromSupplied(supplied, covered, minVol, maxKD) {
+  const raw = (Array.isArray(supplied) ? supplied : [])
+    .map(k => ({
+      keyword: String((k && k.keyword) || '').trim(),
+      volume: Number.isFinite(+(k && k.volume)) ? +k.volume : 0,
+      difficulty: k && Number.isFinite(+k.difficulty) ? +k.difficulty : null,
+    }))
+    .filter(k => k.keyword);
+  const { keywords, rawCount, aboveMin } = dedupeAndFilter(raw, covered, minVol, maxKD);
+  return { keywords, rawCount, aboveMin };
 }
 
 async function callClaudeTool(tool, prompt, maxTokens) {
@@ -206,19 +230,40 @@ function enrich(c, metric) {
 }
 const round = (x) => Math.round(x * 10000) / 10000;
 
+// Shared clustering step: given an already-fetched/filtered keyword list, ask Claude to
+// group them into postable topics (primary + supporting keywords per topic, occasionally
+// splitting one broad term across multiple angles/clusters when that serves the reader
+// better than one crammed article).
+async function clusterKeywordsIntoIdeas(b, keywords, covered) {
+  const input = await callClaudeTool(TOOL, buildPrompt(b, keywords, covered), 8000);
+  const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
+  return (input.clusters || [])
+    .filter(c => c.relevant !== false && c.primary_keyword)
+    .map(c => enrich(c, metric))
+    .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
+}
+
 async function runIdeas(blog, seeds, broaden, covered, minVolume, maxDifficulty) {
   const b = BRANDS[blog];
   const minVol = Number.isFinite(minVolume) ? minVolume : 100;
   const maxKD = Number.isFinite(maxDifficulty) ? maxDifficulty : 100;
   const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol, maxKD);
   if (!keywords.length) return { mode: 'ideas', clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo and difficulty ${maxKD} or under for those seeds. Try broader seeds, lower the minimum, or raise the difficulty cap.` };
-  const input = await callClaudeTool(TOOL, buildPrompt(b, keywords, covered), 8000);
-  const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
-  const clusters = (input.clusters || [])
-    .filter(c => c.relevant !== false && c.primary_keyword)
-    .map(c => enrich(c, metric))
-    .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
+  const clusters = await clusterKeywordsIntoIdeas(b, keywords, covered);
   return { mode: 'ideas', clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost) };
+}
+
+// CSV-import path: cluster a keyword list the user already researched elsewhere (with
+// their own volume + score/difficulty attached) — no DataForSEO call, no re-research.
+// Not filtered by volume/difficulty by default; they already curated this list themselves.
+async function runIdeasFromList(blog, supplied, covered, minVolume, maxDifficulty) {
+  const b = BRANDS[blog];
+  const minVol = Number.isFinite(minVolume) ? minVolume : 0;
+  const maxKD = Number.isFinite(maxDifficulty) ? maxDifficulty : 100;
+  const { keywords, rawCount, aboveMin } = keywordsFromSupplied(supplied, covered, minVol, maxKD);
+  if (!keywords.length) return { mode: 'ideas', clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, minVolume: minVol, maxDifficulty: maxKD, cost: 0, note: `None of the supplied keywords made it through — check they have a keyword column, or they're all already covered by existing posts.` };
+  const clusters = await clusterKeywordsIntoIdeas(b, keywords, covered);
+  return { mode: 'ideas', clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, maxDifficulty: maxKD, cost: 0 };
 }
 
 async function runCluster(blog, seeds, broaden, covered, minVolume, maxDifficulty) {
@@ -244,7 +289,9 @@ export const handler = async (event) => {
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'bad JSON' }); }
   const runId = body.run_id;
   const b = BRANDS[body.blog];
+  const isCsv = body.mode === 'csv';
   const seeds = (Array.isArray(body.seeds) ? body.seeds : []).map(s => String(s || '').trim()).filter(Boolean).slice(0, 8);
+  const supplied = Array.isArray(body.keywords) ? body.keywords : [];
 
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
   const finish = async (patch) => {
@@ -258,20 +305,28 @@ export const handler = async (event) => {
   // Guardrails — write the error to the row so the client surfaces it.
   if (!runId) return json(400, { error: 'run_id required' });
   if (!AKEY || !SKEY) { await finish({ status: 'error', error: 'Server not configured (ANTHROPIC_API_KEY / SUPABASE_SERVICE_ROLE_KEY).' }); return json(500, {}); }
-  if (!dfsConfigured()) { await finish({ status: 'error', error: 'DataForSEO not configured.' }); return json(500, {}); }
   if (!b) { await finish({ status: 'error', error: 'unknown blog' }); return json(400, {}); }
-  if (!seeds.length) { await finish({ status: 'error', error: 'provide at least one seed keyword' }); return json(400, {}); }
+  if (isCsv) { if (!supplied.length) { await finish({ status: 'error', error: 'no keywords supplied' }); return json(400, {}); } }
+  else {
+    if (!dfsConfigured()) { await finish({ status: 'error', error: 'DataForSEO not configured.' }); return json(500, {}); }
+    if (!seeds.length) { await finish({ status: 'error', error: 'provide at least one seed keyword' }); return json(400, {}); }
+  }
 
   try {
     // Pull existing posts for the brand so Claude can flag duplicates.
     const posts = await (await fetch(`${SUPABASE_URL}/rest/v1/posts?blog=eq.${body.blog}&select=title,primary_keyword`, { headers: h })).json();
     const covered = [...new Set((posts || []).flatMap(p => [p.title, p.primary_keyword]).filter(Boolean))];
 
-    const minVolume = Number.isFinite(+body.min_volume) ? Math.max(0, +body.min_volume) : 100;
-    const maxDifficulty = Number.isFinite(+body.max_difficulty) ? Math.min(100, Math.max(0, +body.max_difficulty)) : 100;
-    const out = body.mode === 'cluster'
-      ? await runCluster(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty)
-      : await runIdeas(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty);
+    // No mode-wide default here — each run* function applies its own (100 for a live
+    // DataForSEO pull, 0/uncapped for a CSV the user already curated), so "not provided"
+    // has to survive as undefined rather than being forced to a value up front.
+    const minVolume = Number.isFinite(+body.min_volume) ? Math.max(0, +body.min_volume) : undefined;
+    const maxDifficulty = Number.isFinite(+body.max_difficulty) ? Math.min(100, Math.max(0, +body.max_difficulty)) : undefined;
+    const out = isCsv
+      ? await runIdeasFromList(body.blog, supplied, covered, minVolume, maxDifficulty)
+      : body.mode === 'cluster'
+        ? await runCluster(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty)
+        : await runIdeas(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty);
     await finish({ status: 'done', result: out, cost: out.cost });
     return json(200, out);
   } catch (e) {

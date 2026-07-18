@@ -1514,8 +1514,13 @@ async function handleGscFile(event){
 }
 
 // IMPORT KEYWORDS CSV — a keyword list already researched elsewhere (Keysearch, GKP, etc.):
-// keyword/volume/score columns, matched by header name, straight into the idea backlog.
-// No DataForSEO lookup, no Claude clustering — the numbers you already have are used as-is.
+// keyword/volume/score columns, matched by header name. No DataForSEO lookup (skips
+// straight past that cost/step) but STILL runs the same Claude clustering as "Research
+// keywords" — grouping related keywords into fewer, well-rounded post ideas (one primary +
+// several supporting keywords), occasionally splitting a broad term into multiple distinct
+// angles when that serves the reader better than one crammed article. Results land in the
+// same review list ("+ Add to Ideas" / "+ Add all") as the live researcher — nothing is
+// inserted automatically.
 async function handleKeywordCsvFile(event){
   const file=event.target.files[0];if(!file)return;
   const labelEl=document.getElementById('kw-import-file-label');
@@ -1531,26 +1536,37 @@ async function handleKeywordCsvFile(event){
   const volIdx=headers.findIndex(h=>h.includes('volume')||h.includes('search'));
   const scoreIdx=headers.findIndex(h=>h.includes('score')||h.includes('difficulty')||h==='ks'||h.includes('kd'));
   if(kwIdx===-1){resultEl.innerHTML='<span style="color:var(--red-t)">Could not find a "keyword" column.</span>';return}
-  const existing=new Set(bp().map(p=>(p.primary_keyword||'').toLowerCase().trim()).filter(Boolean));
-  let added=0,dupe=0,blank=0;const rows=[];
+  const seen=new Set();let blank=0;const keywords=[];
   for(let i=1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const cols=parseCSVLine(lines[i]);
     const kw=(cols[kwIdx]||'').replace(/['"]/g,'').trim();
     if(!kw){blank++;continue}
-    if(existing.has(kw.toLowerCase())){dupe++;continue}
-    existing.add(kw.toLowerCase()); // guard duplicate rows within the file itself too
+    if(seen.has(kw.toLowerCase()))continue; // dupe rows within the file itself
+    seen.add(kw.toLowerCase());
     const vol=volIdx>=0?parseInt((cols[volIdx]||'').replace(/[^0-9.-]/g,''),10):NaN;
-    const score=scoreIdx>=0?parseInt((cols[scoreIdx]||'').replace(/[^0-9.-]/g,''),10):NaN;
-    rows.push({blog:activeBlog,primary_keyword:kw,search_volume:isNaN(vol)?null:vol,ks_score:isNaN(score)?null:score,status:'idea',current_step:0,indexed:'no'});
+    const diff=scoreIdx>=0?parseInt((cols[scoreIdx]||'').replace(/[^0-9.-]/g,''),10):NaN;
+    keywords.push({keyword:kw,volume:isNaN(vol)?0:vol,difficulty:isNaN(diff)?null:diff});
   }
-  if(!rows.length){resultEl.innerHTML=`<span style="color:var(--amber-t)">Nothing new to import — ${dupe} already in your backlog, ${blank} blank.</span>`;return}
-  const{data,error}=await sb.from('posts').insert(rows).select('id');
-  if(error){resultEl.innerHTML=`<span style="color:var(--red-t)">Import failed: ${esc(error.message)}</span>`;return}
-  added=(data||[]).length;
-  if(data&&data.length)await sb.from('social_tracking').insert(data.map(r=>({post_id:r.id})));
-  resultEl.innerHTML=`<span style="color:var(--green)">✓ Added ${added} keyword${added!==1?'s':''} to the idea backlog. ${dupe?`${dupe} already there. `:''}${blank?`${blank} blank rows skipped.`:''}</span>`;
-  event.target.value='';await loadPosts();render();toast(`${added} keyword${added!==1?'s':''} added to ideas`);
+  if(!keywords.length){resultEl.innerHTML=`<span style="color:var(--amber-t)">No usable rows found${blank?` (${blank} blank)`:''}.</span>`;return}
+  closeModal('kw-import-modal');
+  const runId=_kwUUID();
+  const status=document.getElementById('kw-research-status');
+  const results=document.getElementById('kw-research-results');if(results)results.innerHTML='';
+  if(status)status.innerHTML=`<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 10px"></div>Clustering your ${keywords.length} imported keywords into post ideas… this takes 30–60 seconds.</div>`;
+  const{error:insErr}=await sb.from('keyword_runs').insert({id:runId,blog:activeBlog,seeds:[`CSV import: ${file.name}`],broaden:false,status:'working'});
+  if(insErr){if(status)status.innerHTML=_kwErr('Could not start: '+insErr.message);return}
+  let httpStatus;
+  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,mode:'csv',keywords})});httpStatus=r.status;}
+  catch(e){httpStatus='err';}
+  if(httpStatus!==202&&httpStatus!==200){if(status)status.innerHTML=_kwErr('Could not start clustering (status '+httpStatus+'). Try again in a moment.');return}
+  const start=Date.now();
+  const iv=setInterval(async()=>{
+    const{data}=await sb.from('keyword_runs').select('status,result,error').eq('id',runId).single();
+    if(data&&data.status==='done'){clearInterval(iv);renderResearchResults(data.result);}
+    else if(data&&data.status==='error'){clearInterval(iv);if(status)status.innerHTML=_kwErr(data.error||'Clustering failed.');}
+    else if(Date.now()-start>200000){clearInterval(iv);if(status)status.innerHTML=_kwErr('Still working or it hit a snag. Try again.');}
+  },5000);
 }
 
 // MODAL LINKS
