@@ -330,7 +330,7 @@ function renderDashboard(){
   const nuEl=document.getElementById('nextup-list');
   if(nuEl){
     if(!pipelinePosts.length){nuEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No proposed dates set yet. Add in Planning → Research queue.</div>'}
-    else{nuEl.innerHTML=pipelinePosts.map((p,i)=>`<div class="next-up-item" style="cursor:pointer" onclick="openPost('${p.id}','details')"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div><div style="display:flex;align-items:center;gap:6px;margin-top:2px">${sbadge(p.status)}<span class="prk" style="margin:0">${fd(p.proposed_date)}</span></div></div></div>`).join('')}
+    else{nuEl.innerHTML=pipelinePosts.map((p,i)=>`<div class="next-up-item" style="cursor:pointer" onclick="openPost('${p.id}','draft')"><div class="nui-num">${i+1}</div><div style="flex:1;min-width:0"><div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div><div style="display:flex;align-items:center;gap:6px;margin-top:2px">${sbadge(p.status)}<span class="prk" style="margin:0">${fd(p.proposed_date)}</span></div></div></div>`).join('')}
   }
 
   // TODAY — posts scheduled for today
