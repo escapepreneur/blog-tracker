@@ -327,7 +327,6 @@ input[type=file]{width:100%}
     <div class="sb-btm"><button onclick="showSettings()">⚙ Settings</button></div>
   </aside>
   <main class="main">
-    <div id="dfs-balance" onclick="loadDfsBalance()" title="DataForSEO keyword-research balance" style="position:fixed;top:9px;right:14px;z-index:60;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:var(--text3);cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.08)"></div>
     <!-- DASHBOARD -->
     <div id="pane-dashboard" class="pane on">
       <div class="ph">
@@ -337,6 +336,7 @@ input[type=file]{width:100%}
           <button id="weekly-sr-btn" class="sched-pill sched-teal" onclick="openSerpRobotImport()">⬆ Import SerpRobot</button>
           <button id="weekly-gsc-btn" class="sched-pill sched-teal" onclick="document.getElementById('gsc-weekly-modal').classList.add('on');document.getElementById('gsc-import-date2').value=localToday()">⬆ Import GSC</button>
           <div id="complete-pill-wrap"></div>
+          <div id="dfs-balance" onclick="loadDfsBalance()" title="DataForSEO keyword-research balance" style="font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:var(--text3);cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.08)"></div>
         </div>
       </div>
       <div class="pb">
