@@ -256,6 +256,52 @@ export function bodyLossCheck(originalHtml, revisedHtml) {
   return warns.join(' ');
 }
 
+const LINKS_TOOL = {
+  name: 'emit_linked_body',
+  description: 'Return the FULL article HTML with a natural link to each specified related post woven into the existing text. Additive only — keep every existing section, link and image.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      body_html: { type: 'string', description: 'The COMPLETE revised article HTML with each target link added at a naturally relevant point in the EXISTING text (wrap existing relevant words in <a href="...">, or add one short connecting sentence only if nothing existing fits). Keep every existing paragraph, heading, link and image — this is link-insertion only, not a rewrite. Clean HTML only, no <script>, no class attributes, no new inline styles.' },
+      summary: { type: 'string', description: '1-2 sentences: which links were added and roughly where.' },
+    },
+    required: ['body_html', 'summary'],
+  },
+};
+
+// Weave working links to specific related posts into an already-live article. Used when
+// a link is tracked as "should exist" but never actually reached the published body (GHL
+// locks body content after publish, so links added via the dashboard's manual UI after a
+// post went live never had a way to get in) — this regenerates the body with them for real.
+export async function insertMissingLinks({ brand, title, currentHtml, missingLinks, anthropicKey, model = MODEL }) {
+  const list = (missingLinks || []).map(l => `- ${l.url} — about: "${l.title || ''}"`).join('\n');
+  const user = `This is a LIVE ${BRANDS[brand].name} blog post titled "${title || ''}". It is supposed to link to the following related articles from within the body, but the links never actually made it into what's published. Weave a natural, contextually relevant link to EACH one into the EXISTING text.
+
+LINKS TO ADD:
+${list || '(none)'}
+
+RULES:
+- Prefer wrapping existing, already-relevant words/phrases in <a href="URL">...</a>. Only add a short new connecting sentence if nothing existing fits naturally.
+- Keep EVERY existing paragraph, heading, link and image untouched — this is link-insertion only, not a rewrite.
+- Spread the links across different parts of the article rather than clustering them all in one spot, if it reads naturally that way.
+- Clean HTML only, no <script>, no class attributes, no new inline styles.
+
+CURRENT ARTICLE HTML:
+${currentHtml || ''}
+
+Return the complete revised article via emit_linked_body.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(brand), tools: [LINKS_TOOL], tool_choice: { type: 'tool', name: 'emit_linked_body' }, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`generation stopped: ${data.stop_reason} (article may be too long)`);
+  const tu = (data.content || []).find(b => b.type === 'tool_use');
+  if (!tu) throw new Error('no tool_use in response');
+  return tu.input;
+}
+
 const REVIEW_TOOL = {
   name: 'emit_review',
   description: 'Review a proposed SEO title + meta description and judge whether it will earn the click.',

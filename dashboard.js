@@ -1213,10 +1213,13 @@ async function renderBodySection(){
     el.innerHTML=`<div class="card" style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">Improve the article</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:2px">See which ranking keywords the article is missing and weave coverage into the right places. Keeps all existing content; republishes on the same URL.</div></div>
-        <button class="${bBtn}" style="flex:none" onclick="improveBodyNow()">Analyse &amp; improve</button>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">See which ranking keywords the article is missing and weave coverage into the right places, or check that its tracked internal links actually made it onto the live page. Keeps all existing content; republishes on the same URL.</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:none">
+          <button class="${bBtn}" onclick="improveBodyNow()">Analyse &amp; improve</button>
+          <button class="btn btn-sm" onclick="checkLinksNow()">Check internal links</button>
+        </div>
       </div>
-      ${p&&p.phase==='done'?'<div style="font-size:12px;color:var(--green);margin-top:8px">✓ Last improvement is live.</div>':''}
+      ${p&&p.phase==='done'?`<div style="font-size:12px;color:var(--green);margin-top:8px">✓ ${p.kind==='links'?esc(p.summary||'Links checked.'):'Last improvement is live.'}</div>`:''}
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
     </div>`;
     return;
@@ -1231,16 +1234,20 @@ async function renderBodySection(){
     return;
   }
   if(p.phase==='proposed'){
+    const isLinks=p.kind==='links';
     const cov=(p.covered||[]).length,miss=(p.missing||[]);
-    const chips=miss.slice(0,12).map(k=>`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`).join('');
+    const chips=miss.slice(0,12).map(k=>isLinks
+      ?`<span title="${esc(k.url)}" style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.title||k.url)}</span>`
+      :`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`
+    ).join('');
     const hasAdd=!!(p.new_html&&p.new_html.trim());
     el.innerHTML=`<div class="card" style="padding:14px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px">Article improvement — woven in</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Woven in coverage for:':' Nothing missing 🎉'}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">${isLinks?'Internal links — woven in':'Article improvement — woven in'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${isLinks?`${miss.length} tracked link${miss.length===1?'':'s'} weren't actually on the live page. Woven in:`:`${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Woven in coverage for:':' Nothing missing 🎉'}`}</div>
       ${miss.length?`<div style="margin-bottom:10px">${chips}</div>`:''}
       ${p.note?`<div style="font-size:12px;color:var(--amber-t);background:#fff7e6;border:1px solid #f2d9a0;border-radius:8px;padding:6px 10px;margin-bottom:8px">⚠ ${esc(p.note)} Review the full article below before publishing.</div>`:''}
       ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${esc(p.summary||'')}</div>
-        <label class="fl">Revised article — coverage woven in; edit the HTML if you like</label>
+        <label class="fl">Revised article — ${isLinks?'links':'coverage'} woven in; edit the HTML if you like</label>
         <textarea id="body-add-edit" rows="12" oninput="_bodyPreview()" style="width:100%;font-size:12px;font-family:monospace;line-height:1.5;resize:vertical;margin-bottom:6px"></textarea>
         <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview full article</summary><div id="body-add-preview" style="margin-top:8px;font-size:13px;line-height:1.6;max-height:400px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px"></div></details>`:''}
       ${hasAdd?`<div style="display:flex;gap:6px;margin-bottom:10px">
@@ -1249,8 +1256,7 @@ async function renderBodySection(){
       </div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
-        <button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button>
-        <button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>
+        ${isLinks?`<button class="btn btn-sm" onclick="checkLinksNow()">Re-check</button>`:`<button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>`}
         <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button>
       </div>
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
@@ -1288,6 +1294,21 @@ async function improveBodyNow(){
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(cur&&cur.phase==='analysed'&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
+}
+async function checkLinksNow(){
+  if(!curPost)return;
+  const st=document.getElementById('body-status');
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Checking the live page against tracked internal links… (~30-60s)</div>';
+  const before=((await sb.from('body_proposals').select('created_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+  try{await fetch('/.netlify/functions/fix-links-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    if(cur&&(cur.phase==='proposed'||cur.phase==='done')&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
     if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
     setTimeout(poll,6000);
   };
