@@ -540,7 +540,7 @@ function renderPosts(){
     const dateStr=p.status==='live'?fd(p.published_date):p.scheduled_date?fd(p.scheduled_date):'';
     const ix=IDX[p.indexed||'no'];
     const score=calcScore(p.ks_score,p.search_volume);
-    return`<div class="post-row" onclick="${isIdea?'':``}openPost('${p.id}','details')">
+    return`<div class="post-row" onclick="openPost('${p.id}','draft')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${sbadge(p.status)}${stepLabel(p.current_step)}${sfilt==='needs-work'?stuckLabel(p.current_step):''}</div>
