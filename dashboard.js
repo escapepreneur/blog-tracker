@@ -1513,6 +1513,46 @@ async function handleGscFile(event){
   event.target.value='';renderDashRankings();toast(`${matched} GSC positions imported`);
 }
 
+// IMPORT KEYWORDS CSV — a keyword list already researched elsewhere (Keysearch, GKP, etc.):
+// keyword/volume/score columns, matched by header name, straight into the idea backlog.
+// No DataForSEO lookup, no Claude clustering — the numbers you already have are used as-is.
+async function handleKeywordCsvFile(event){
+  const file=event.target.files[0];if(!file)return;
+  const labelEl=document.getElementById('kw-import-file-label');
+  const resultEl=document.getElementById('kw-import-result');
+  if(labelEl)labelEl.textContent='✓ '+file.name;
+  resultEl.innerHTML='<div style="display:flex;align-items:center;gap:6px"><div class="spinner"></div> Reading CSV…</div>';
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(!lines.length){resultEl.innerHTML='<span style="color:var(--red-t)">Could not read file.</span>';return}
+  function parseCSVLine(line){const result=[];let current='',inQ=false;for(let i=0;i<line.length;i++){if(line[i]==='"'){inQ=!inQ}else if(line[i]===','&&!inQ){result.push(current.trim());current=''}else{current+=line[i]}}result.push(current.trim());return result}
+  const headers=parseCSVLine(lines[0]).map(h=>h.toLowerCase().replace(/['"]/g,'').trim());
+  const kwIdx=headers.findIndex(h=>h.includes('keyword'));
+  const volIdx=headers.findIndex(h=>h.includes('volume')||h.includes('search'));
+  const scoreIdx=headers.findIndex(h=>h.includes('score')||h.includes('difficulty')||h==='ks'||h.includes('kd'));
+  if(kwIdx===-1){resultEl.innerHTML='<span style="color:var(--red-t)">Could not find a "keyword" column.</span>';return}
+  const existing=new Set(bp().map(p=>(p.primary_keyword||'').toLowerCase().trim()).filter(Boolean));
+  let added=0,dupe=0,blank=0;const rows=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const cols=parseCSVLine(lines[i]);
+    const kw=(cols[kwIdx]||'').replace(/['"]/g,'').trim();
+    if(!kw){blank++;continue}
+    if(existing.has(kw.toLowerCase())){dupe++;continue}
+    existing.add(kw.toLowerCase()); // guard duplicate rows within the file itself too
+    const vol=volIdx>=0?parseInt((cols[volIdx]||'').replace(/[^0-9.-]/g,''),10):NaN;
+    const score=scoreIdx>=0?parseInt((cols[scoreIdx]||'').replace(/[^0-9.-]/g,''),10):NaN;
+    rows.push({blog:activeBlog,primary_keyword:kw,search_volume:isNaN(vol)?null:vol,ks_score:isNaN(score)?null:score,status:'idea',current_step:0,indexed:'no'});
+  }
+  if(!rows.length){resultEl.innerHTML=`<span style="color:var(--amber-t)">Nothing new to import — ${dupe} already in your backlog, ${blank} blank.</span>`;return}
+  const{data,error}=await sb.from('posts').insert(rows).select('id');
+  if(error){resultEl.innerHTML=`<span style="color:var(--red-t)">Import failed: ${esc(error.message)}</span>`;return}
+  added=(data||[]).length;
+  if(data&&data.length)await sb.from('social_tracking').insert(data.map(r=>({post_id:r.id})));
+  resultEl.innerHTML=`<span style="color:var(--green)">✓ Added ${added} keyword${added!==1?'s':''} to the idea backlog. ${dupe?`${dupe} already there. `:''}${blank?`${blank} blank rows skipped.`:''}</span>`;
+  event.target.value='';await loadPosts();render();toast(`${added} keyword${added!==1?'s':''} added to ideas`);
+}
+
 // MODAL LINKS
 async function renderModalLinks(){
   if(!curPost)return;await loadLinks();

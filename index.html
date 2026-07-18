@@ -572,6 +572,7 @@ input[type=file]{width:100%}
                 <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:200px;padding-right:28px;font-size:12px">
                 <button onclick="document.getElementById('research-search').value='';renderResearch()" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Clear">✕</button>
               </div>
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('kw-import-modal').classList.add('on')">⬆ Import keywords</button>
               <button id="add-research-btn" class="btn btn-p btn-sm" onclick="openNewPost()">+ Log keyword</button>
             </div>
           </div>
@@ -933,6 +934,26 @@ input[type=file]{width:100%}
   <div style="display:flex;gap:8px;margin-top:14px">
     <button class="btn btn-p btn-sm" onclick="markWeeklyDone('gsc');updateWeeklyButtons();closeModal('gsc-weekly-modal');toast('GSC import marked as done')">Mark done without importing</button>
     <button class="btn btn-sm" onclick="closeModal('gsc-weekly-modal')">Close</button>
+  </div>
+</div>
+</div>
+
+<!-- IMPORT KEYWORDS MODAL (bulk CSV — keyword/volume/score you already have, no re-research) -->
+<div class="mbg" id="kw-import-modal" onclick="mbgClick(event,'kw-import-modal')">
+<div class="modal" style="max-width:500px">
+  <div class="mhdr"><div class="mtitle">Import keywords</div><button class="xbtn" onclick="closeModal('kw-import-modal')">✕</button></div>
+  <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1a4d8f;line-height:1.7">
+    For a keyword list you've already researched elsewhere (Keysearch, GKP, etc.) — added straight to your idea backlog with no DataForSEO lookup.<br><br>
+    <strong>CSV columns:</strong> a column containing <code>keyword</code>, one containing <code>volume</code>, and one containing <code>score</code>/<code>difficulty</code>/<code>KS</code> (any order, matched by header name). Export your sheet as CSV first if it's Excel/Sheets.
+  </div>
+  <div style="border:2px dashed var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="document.getElementById('kw-import-file').click()">
+    <div style="font-size:13px;color:var(--text2)" id="kw-import-file-label">Click to upload keywords CSV</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Added to the current brand's idea backlog — duplicates are skipped</div>
+  </div>
+  <input type="file" id="kw-import-file" accept=".csv" style="display:none" onchange="handleKeywordCsvFile(event)">
+  <div id="kw-import-result"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-sm" onclick="closeModal('kw-import-modal')">Close</button>
   </div>
 </div>
 </div>
