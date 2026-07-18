@@ -65,14 +65,35 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 async function initApp(){
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   try{
+    const isRecovery=window.location.hash.includes('type=recovery'); // arrived via a "forgot password" email link
     const{data:{session}}=await sb.auth.getSession();
     if(!session){document.getElementById('con-screen').style.display='flex';return}
+    if(isRecovery){
+      history.replaceState(null,'',window.location.pathname); // strip the token off the visible URL
+      document.getElementById('reset-screen').style.display='flex';
+      return;
+    }
     await afterLogin(session);
   }catch(e){
     console.error('initApp error:',e);
     document.getElementById('con-screen').style.display='flex';
     document.getElementById('main-app').style.display='none';
   }
+}
+async function submitNewPassword(){
+  const p1=document.getElementById('reset-password').value,p2=document.getElementById('reset-password2').value;
+  const errEl=document.getElementById('reset-err');
+  errEl.textContent='';
+  if(!p1||p1.length<6){errEl.textContent='Password must be at least 6 characters.';return}
+  if(p1!==p2){errEl.textContent='Passwords do not match.';return}
+  try{
+    const{error}=await sb.auth.updateUser({password:p1});
+    if(error)throw error;
+    const{data:{session}}=await sb.auth.getSession();
+    document.getElementById('reset-screen').style.display='none';
+    await afterLogin(session);
+    toast('Password updated ✓');
+  }catch(e){errEl.textContent='Could not set password: '+e.message}
 }
 async function afterLogin(session){
   if(window.location.hash.includes('access_token'))history.replaceState(null,'',window.location.pathname); // strip the magic-link token off the visible URL

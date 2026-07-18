@@ -289,6 +289,18 @@ input[type=file]{width:100%}
     <p style="font-size:11px;color:var(--text3);margin-top:.5rem;text-align:center"><a href="#" onclick="requestPasswordReset();return false" style="color:var(--text3);text-decoration:underline">Forgot password?</a></p>
   </div>
 </div>
+<!-- SET NEW PASSWORD (landed here via a password-reset email link) -->
+<div id="reset-screen" class="con-wrap" style="display:none">
+  <div class="con-card">
+    <div class="con-mark">E</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:.4rem">Set a new password</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1.75rem;font-weight:600">Escapepreneur™</p>
+    <div style="margin-bottom:10px"><label class="fl">New password</label><input type="password" id="reset-password" placeholder="" autocomplete="new-password"></div>
+    <div style="margin-bottom:14px"><label class="fl">Confirm password</label><input type="password" id="reset-password2" placeholder="" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitNewPassword()"></div>
+    <button class="btn btn-p" onclick="submitNewPassword()" style="width:100%;justify-content:center">Set password &amp; log in</button>
+    <div id="reset-err" style="font-size:12px;color:var(--red);margin-top:8px;min-height:18px"></div>
+  </div>
+</div>
 <!-- APP -->
 <div id="main-app" class="app" style="display:none">
   <aside class="sidebar">
