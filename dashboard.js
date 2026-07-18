@@ -2052,6 +2052,8 @@ async function researchKeywords(){
   const broaden=!!(document.getElementById('kw-broaden')||{}).checked;
   const minVolEl=document.getElementById('kw-minvol');
   const minVolume=minVolEl&&minVolEl.value!==''?Math.max(0,parseInt(minVolEl.value,10)||0):100;
+  const maxKdEl=document.getElementById('kw-maxkd');
+  const maxDifficulty=maxKdEl&&maxKdEl.value!==''?Math.min(100,Math.max(0,parseInt(maxKdEl.value,10)||0)):100;
   const runId=_kwUUID();
   const btn=document.getElementById('kw-research-btn');if(btn)btn.disabled=true;
   const status=document.getElementById('kw-research-status');
@@ -2061,7 +2063,7 @@ async function researchKeywords(){
   if(insErr){if(status)status.innerHTML=_kwErr('Could not start: '+insErr.message);if(btn)btn.disabled=false;return;}
   if(status)status.innerHTML='<div class="card" style="text-align:center;padding:1.5rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 10px"></div>'+(_kwMode==='cluster'?'Building your content cluster (pillar + supporting posts)':'Pulling live keyword data and clustering into post ideas')+'… this takes 30–60 seconds.</div>';
   let httpStatus;
-  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden,min_volume:minVolume,mode:_kwMode})});httpStatus=r.status;}
+  try{const r=await fetch('/.netlify/functions/keyword-research-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:runId,blog:activeBlog,seeds,broaden,min_volume:minVolume,max_difficulty:maxDifficulty,mode:_kwMode})});httpStatus=r.status;}
   catch(e){httpStatus='err';}
   if(httpStatus!==202&&httpStatus!==200){if(status)status.innerHTML=_kwErr('Could not start research (status '+httpStatus+'). Try again in a moment.');if(btn)btn.disabled=false;return;}
   const start=Date.now();
@@ -2115,7 +2117,7 @@ function renderResearchResults(out){
   const fresh=_kwClusters.filter(c=>!c.overlaps_existing);
   const cnt=(out&&out.counts)||{};
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
-      <div style="font-size:12px;color:var(--text2)">${_kwClusters.length} topic ${_kwClusters.length===1?'idea':'ideas'}${cnt.aboveMin!=null?` · ${cnt.aboveMin} keyword${cnt.aboveMin===1?'':'s'} at ${out.minVolume??100}+/mo${cnt.raw?` (of ${cnt.raw})`:''}`:(cnt.raw?` · ${cnt.raw} keywords analysed`:'')}${out.cost?` · $${out.cost}`:''}</div>
+      <div style="font-size:12px;color:var(--text2)">${_kwClusters.length} topic ${_kwClusters.length===1?'idea':'ideas'}${cnt.aboveMin!=null?` · ${cnt.aboveMin} keyword${cnt.aboveMin===1?'':'s'} at ${out.minVolume??100}+/mo${(out.maxDifficulty??100)<100?` &amp; KD≤${out.maxDifficulty}`:''}${cnt.raw?` (of ${cnt.raw})`:''}`:(cnt.raw?` · ${cnt.raw} keywords analysed`:'')}${out.cost?` · $${out.cost}`:''}</div>
       ${fresh.length?`<button class="btn btn-p btn-sm" onclick="addAllClusters()">+ Add all ${fresh.length} new ${fresh.length===1?'idea':'ideas'}</button>`:''}
     </div>`+_kwClusters.map((c,i)=>_clusterCard(c,i)).join('');
 }

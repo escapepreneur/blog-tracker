@@ -137,8 +137,11 @@ ${cov}
 Return the cluster via the emit_content_cluster tool.`;
 }
 
-// Expand seeds -> deduped, covered-filtered, min-volume-filtered, volume-sorted keyword list.
-async function expandKeywords(seeds, broaden, covered, minVol) {
+// Expand seeds -> deduped, covered-filtered, min-volume + max-difficulty-filtered,
+// volume-sorted keyword list. The difficulty cutoff is a hard exclusion — keywords above
+// it never reach Claude, so an impossible-to-rank head term can't slip through no matter
+// how on-brand it looks (unlike the opportunity score, which is a judgment call).
+async function expandKeywords(seeds, broaden, covered, minVol, maxKD) {
   const coveredNorm = new Set(covered.map(norm));
   let cost = 0;
   const calls = seeds.map(s => keywordSuggestions(s, { limit: 150 }));
@@ -158,6 +161,9 @@ async function expandKeywords(seeds, broaden, covered, minVol) {
   const rawCount = keywords.length;
   keywords = keywords.filter(k => (k.volume || 0) >= minVol);
   const aboveMin = keywords.length;
+  // difficulty is only excluded when known and over the cap — an unscored keyword isn't
+  // penalised for missing data.
+  keywords = keywords.filter(k => k.difficulty == null || k.difficulty <= maxKD);
   keywords = keywords.slice(0, 90);
   return { keywords, rawCount, aboveMin, cost };
 }
@@ -200,25 +206,27 @@ function enrich(c, metric) {
 }
 const round = (x) => Math.round(x * 10000) / 10000;
 
-async function runIdeas(blog, seeds, broaden, covered, minVolume) {
+async function runIdeas(blog, seeds, broaden, covered, minVolume, maxDifficulty) {
   const b = BRANDS[blog];
   const minVol = Number.isFinite(minVolume) ? minVolume : 100;
-  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol);
-  if (!keywords.length) return { mode: 'ideas', clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, minVolume: minVol, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo for those seeds. Try broader seeds or lower the minimum.` };
+  const maxKD = Number.isFinite(maxDifficulty) ? maxDifficulty : 100;
+  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol, maxKD);
+  if (!keywords.length) return { mode: 'ideas', clusters: [], counts: { raw: rawCount, aboveMin: 0, used: 0, clusters: 0 }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo and difficulty ${maxKD} or under for those seeds. Try broader seeds, lower the minimum, or raise the difficulty cap.` };
   const input = await callClaudeTool(TOOL, buildPrompt(b, keywords, covered), 8000);
   const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
   const clusters = (input.clusters || [])
     .filter(c => c.relevant !== false && c.primary_keyword)
     .map(c => enrich(c, metric))
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
-  return { mode: 'ideas', clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, cost: round(cost) };
+  return { mode: 'ideas', clusters, counts: { raw: rawCount, aboveMin, used: keywords.length, clusters: clusters.length }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost) };
 }
 
-async function runCluster(blog, seeds, broaden, covered, minVolume) {
+async function runCluster(blog, seeds, broaden, covered, minVolume, maxDifficulty) {
   const b = BRANDS[blog];
   const minVol = Number.isFinite(minVolume) ? minVolume : 100;
-  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol);
-  if (!keywords.length) return { mode: 'cluster', pillar: null, supporting: [], counts: { raw: rawCount, aboveMin: 0, used: 0 }, minVolume: minVol, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo for that topic. Try a broader topic or lower the minimum.` };
+  const maxKD = Number.isFinite(maxDifficulty) ? maxDifficulty : 100;
+  const { keywords, rawCount, aboveMin, cost } = await expandKeywords(seeds, broaden, covered, minVol, maxKD);
+  if (!keywords.length) return { mode: 'cluster', pillar: null, supporting: [], counts: { raw: rawCount, aboveMin: 0, used: 0 }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost), note: `No new keywords at ${minVol}+ searches/mo and difficulty ${maxKD} or under for that topic. Try a broader topic, lower the minimum, or raise the difficulty cap.` };
   const topic = seeds.join(', ');
   const input = await callClaudeTool(CLUSTER_TOOL, buildClusterPrompt(b, topic, keywords, covered), 6000);
   const metric = new Map(keywords.map(k => [norm(k.keyword), k]));
@@ -227,7 +235,7 @@ async function runCluster(blog, seeds, broaden, covered, minVolume) {
     .filter(c => c.primary_keyword)
     .map(c => enrich(c, metric))
     .sort((a, c) => (c.opportunity || 0) - (a.opportunity || 0));
-  return { mode: 'cluster', cluster_name: input.cluster_name || seeds[0] || topic, pillar, supporting, counts: { raw: rawCount, aboveMin, used: keywords.length, supporting: supporting.length }, minVolume: minVol, cost: round(cost) };
+  return { mode: 'cluster', cluster_name: input.cluster_name || seeds[0] || topic, pillar, supporting, counts: { raw: rawCount, aboveMin, used: keywords.length, supporting: supporting.length }, minVolume: minVol, maxDifficulty: maxKD, cost: round(cost) };
 }
 
 export const handler = async (event) => {
@@ -260,9 +268,10 @@ export const handler = async (event) => {
     const covered = [...new Set((posts || []).flatMap(p => [p.title, p.primary_keyword]).filter(Boolean))];
 
     const minVolume = Number.isFinite(+body.min_volume) ? Math.max(0, +body.min_volume) : 100;
+    const maxDifficulty = Number.isFinite(+body.max_difficulty) ? Math.min(100, Math.max(0, +body.max_difficulty)) : 100;
     const out = body.mode === 'cluster'
-      ? await runCluster(body.blog, seeds, !!body.broaden, covered, minVolume)
-      : await runIdeas(body.blog, seeds, !!body.broaden, covered, minVolume);
+      ? await runCluster(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty)
+      : await runIdeas(body.blog, seeds, !!body.broaden, covered, minVolume, maxDifficulty);
     await finish({ status: 'done', result: out, cost: out.cost });
     return json(200, out);
   } catch (e) {
