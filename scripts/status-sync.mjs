@@ -11,6 +11,7 @@ import { publishBlogPost, getBlogPostDetail, getBlogPostBySlug } from '../netlif
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
+import { syncInternalLinks } from '../netlify/functions/_lib/linksync.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -67,6 +68,9 @@ async function verifyLive(url) {
           // sits stale for weeks. If it's not up yet, leave indexed as-is; the self-heal loop
           // below (ageDays 2-30) will verify + request once the page is confirmed live.
           if (p.url) { try { if ((await verifyLive(p.url)) === 200) { await requestIndexing(p.url); await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'requested' }) }); } } catch (e) { /* indexing best-effort */ } }
+          // Mirror the real in-body links the generator already wrote into the tracking
+          // table, so "Needs Links" reflects what's actually in the published article.
+          try { await syncInternalLinks({ rest, h, blog: p.blog, postId: p.id }); } catch (e) { /* best-effort */ }
         } catch (e) { console.error(`  FAIL publish ${label}: ${e.message}`); failed++; }
       } else published++;
       continue;
@@ -78,7 +82,10 @@ async function verifyLive(url) {
       if (st !== 200) { console.log(`  HOLD  (url ${st})  ${label}`); waiting++; continue; }
       console.log(`  FLIP  (url 200)  ${label}`);
     } else console.log(`  FLIP  (date reached, no url)  ${label}`);
-    if (LIVE) await setLive(p, goLive);
+    if (LIVE) {
+      await setLive(p, goLive);
+      try { await syncInternalLinks({ rest, h, blog: p.blog, postId: p.id }); } catch (e) { /* best-effort */ }
+    }
     flipped++;
   }
   // Indexing tracking + self-healing:

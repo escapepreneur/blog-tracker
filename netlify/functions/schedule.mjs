@@ -4,6 +4,7 @@
 // the date. Blocks if the draft has hard-fail check issues, or if it was already sent.
 import { createBlogPost } from './_lib/ghl.mjs';
 import { requestIndexing } from './_lib/google.mjs';
+import { syncInternalLinks } from './_lib/linksync.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -64,6 +65,9 @@ export const handler = async (event) => {
         const live = await fetch(r.url, { method: 'GET', redirect: 'follow' }).then(res => res.status === 200).catch(() => false);
         if (live) await requestIndexing(r.url);
       } catch (e) { /* indexing is best-effort */ }
+      // Mirror the real in-body links the generator already wrote into the tracking table,
+      // so the "Needs Links" widget reflects what's actually in the published article.
+      try { await syncInternalLinks({ rest, h, blog: post.blog, postId: post_id }); } catch (e) { /* best-effort */ }
     }
 
     return json(200, { ok: true, ghl_post_id: r.id, url: r.url, published: !!publish, date: date || (publish ? today : null) });
