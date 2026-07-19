@@ -52,6 +52,10 @@ export const handler = async (event) => {
       summary: rev.summary || 'Applied the selected editorial fixes.',
       note: warn || null, phase: 'proposed',
     }) });
+    // Clear the stale editorial review — these issues are being resolved in the pending
+    // temp version, so the Draft tab shouldn't keep showing the old flagged list as if
+    // nothing happened. A fresh review belongs after the swap goes live for real.
+    await rest(`post_drafts?post_id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ editorial: null }) });
     return json(200, { ok: true });
   } catch (e) { return json(500, { error: String(e && e.message || e) }); }
 };
