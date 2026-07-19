@@ -2638,7 +2638,7 @@ async function publishNow(override){
 }
 function aiEditAsk(){const i=document.getElementById('ai-instr');if(!i||!i.value.trim()){toast('Type an instruction for Claude');return}aiEditRun(i.value.trim());}
 function aiEditFix(){const r=(_curDraft&&_curDraft.check_report)||{};const items=[...(r.hard||[]),...(r.warn||[])];if(!items.length){toast('Nothing flagged');return}aiEditRun('Resolve these flagged issues, changing only what is needed: '+items.join('; '));}
-async function aiEditRun(instruction){
+async function aiEditRun(instruction,clearEditorial){
   const pid=curPost;
   const before=await loadDraft(pid);const prevTs=before?before.generated_at:null;
   const el=document.getElementById('pm-draft-body');
@@ -2649,7 +2649,13 @@ async function aiEditRun(instruction){
   const start=Date.now();
   const iv=setInterval(async()=>{
     const d=await loadDraft(pid);
-    if(d&&d.generated_at!==prevTs){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Draft updated by Claude ✓',3000);}
+    if(d&&d.generated_at!==prevTs){
+      clearInterval(iv);
+      // The editorial issues just addressed are stale now — clear them so the Draft tab
+      // doesn't keep showing "fixed" issues as still-flagged; re-run for a fresh read.
+      if(clearEditorial)await sb.from('post_drafts').update({editorial:null}).eq('post_id',pid);
+      if(curPost===pid)renderDraftTab();toast('Draft updated by Claude ✓',3000);
+    }
     else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out — try again',4000);}
   },6000);
 }
@@ -2738,23 +2744,24 @@ async function fixEditorialSelected(){
   const sel=[...document.querySelectorAll('.editiss:checked')].map(c=>_editIssues[+c.getAttribute('data-i')]).filter(Boolean);
   if(!sel.length){toast('Tick at least one issue to fix');return;}
   const post=gp(curPost);if(!post)return;
+  const pid=curPost;
   const instruction=_editorialInstruction(sel);
   if(post.status==='live'){
     if(!confirm(`This post is already published, so fixing it here weaves the changes into a NEW temp version for you to review — nothing on the live page changes until you publish it and finish the swap.\n\nStart fixing ${sel.length} issue${sel.length>1?'s':''}?`))return;
     const st=document.getElementById('edit-fix-status');
     if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Weaving the fix into a new version… (~30-60s)</div>';
-    const before=((await sb.from('body_proposals').select('created_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
-    try{await fetch('/.netlify/functions/fix-editorial-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction})});}catch(e){}
+    const before=((await sb.from('body_proposals').select('created_at').eq('post_id',pid).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    try{await fetch('/.netlify/functions/fix-editorial-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,instruction})});}catch(e){}
     const t0=Date.now();
     const poll=async()=>{
-      const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
-      if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){toast('Fix ready — switching to the Rankings tab to review',3500);switchPTab('gsc');return;}
-      if(Date.now()-t0>110000){const s=document.getElementById('edit-fix-status');if(s)s.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+      const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',pid).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+      if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){if(curPost===pid){toast('Fix ready — switching to the Rankings tab to review',3500);switchPTab('gsc');}return;}
+      if(Date.now()-t0>110000){if(curPost===pid){const s=document.getElementById('edit-fix-status');if(s)s.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';}return;}
       setTimeout(poll,6000);
     };
     setTimeout(poll,6000);
   }else{
-    aiEditRun(instruction);
+    aiEditRun(instruction,true);
   }
 }
 function _draftViewHtml(d){
