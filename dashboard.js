@@ -1219,7 +1219,7 @@ async function renderBodySection(){
           <button class="btn btn-sm" onclick="checkLinksNow()">Check internal links</button>
         </div>
       </div>
-      ${p&&p.phase==='done'?`<div style="font-size:12px;color:var(--green);margin-top:8px">✓ ${p.kind==='links'?esc(p.summary||'Links checked.'):'Last improvement is live.'}</div>`:''}
+      ${p&&p.phase==='done'?`<div style="font-size:12px;color:var(--green);margin-top:8px">✓ ${(p.kind==='links'||p.kind==='editorial')?esc(p.summary||'Done.'):'Last improvement is live.'}</div>`:''}
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
     </div>`;
     return;
@@ -1234,20 +1234,24 @@ async function renderBodySection(){
     return;
   }
   if(p.phase==='proposed'){
-    const isLinks=p.kind==='links';
+    const isLinks=p.kind==='links',isEditorial=p.kind==='editorial';
     const cov=(p.covered||[]).length,miss=(p.missing||[]);
     const chips=miss.slice(0,12).map(k=>isLinks
       ?`<span title="${esc(k.url)}" style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.title||k.url)}</span>`
       :`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`
     ).join('');
     const hasAdd=!!(p.new_html&&p.new_html.trim());
+    const headTitle=isLinks?'Internal links — woven in':isEditorial?'Editorial fixes — woven in':'Article improvement — woven in';
+    const subLine=isLinks?`${miss.length} tracked link${miss.length===1?'':'s'} weren't actually on the live page. Woven in:`
+      :isEditorial?''
+      :`${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Woven in coverage for:':' Nothing missing 🎉'}`;
     el.innerHTML=`<div class="card" style="padding:14px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px">${isLinks?'Internal links — woven in':'Article improvement — woven in'}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${isLinks?`${miss.length} tracked link${miss.length===1?'':'s'} weren't actually on the live page. Woven in:`:`${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Woven in coverage for:':' Nothing missing 🎉'}`}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">${headTitle}</div>
+      ${subLine?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${subLine}</div>`:''}
       ${miss.length?`<div style="margin-bottom:10px">${chips}</div>`:''}
       ${p.note?`<div style="font-size:12px;color:var(--amber-t);background:#fff7e6;border:1px solid #f2d9a0;border-radius:8px;padding:6px 10px;margin-bottom:8px">⚠ ${esc(p.note)} Review the full article below before publishing.</div>`:''}
       ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${esc(p.summary||'')}</div>
-        <label class="fl">Revised article — ${isLinks?'links':'coverage'} woven in; edit the HTML if you like</label>
+        <label class="fl">Revised article — ${isLinks?'links':isEditorial?'fixes':'coverage'} woven in; edit the HTML if you like</label>
         <textarea id="body-add-edit" rows="12" oninput="_bodyPreview()" style="width:100%;font-size:12px;font-family:monospace;line-height:1.5;resize:vertical;margin-bottom:6px"></textarea>
         <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview full article</summary><div id="body-add-preview" style="margin-top:8px;font-size:13px;line-height:1.6;max-height:400px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px"></div></details>`:''}
       ${hasAdd?`<div style="display:flex;gap:6px;margin-bottom:10px">
@@ -1256,7 +1260,7 @@ async function renderBodySection(){
       </div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasAdd?`<button class="${bBtn}" onclick="bodyPublish()">Publish improved version →</button>`:''}
-        ${isLinks?`<button class="btn btn-sm" onclick="checkLinksNow()">Re-check</button>`:`<button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>`}
+        ${isLinks?`<button class="btn btn-sm" onclick="checkLinksNow()">Re-check</button>`:isEditorial?'':`<button class="btn btn-sm" onclick="bodyRepick()">Change keywords</button><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button>`}
         <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button>
       </div>
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
@@ -2697,10 +2701,19 @@ function _editorialBlock(d){
   </div>`;
   const sevColor={high:'var(--red-t)',medium:'var(--amber-t)',low:'var(--text3)'},sevRank={high:0,medium:1,low:2};
   const issues=[...(e.issues||[])].sort((a,b)=>(sevRank[a.severity]??3)-(sevRank[b.severity]??3));
-  const issueHtml=issues.length?issues.map(i=>`<div style="margin-bottom:7px;padding-left:9px;border-left:2px solid ${sevColor[i.severity]||'var(--text3)'}">
-      <div style="font-size:12px;color:var(--text)"><b style="text-transform:uppercase;font-size:10px;color:${sevColor[i.severity]||'var(--text3)'}">${esc(i.severity||'')} · ${esc(i.area||'')}</b><br>${esc(i.detail||'')}</div>
-      ${i.fix?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Fix: ${esc(i.fix)}</div>`:''}
-    </div>`).join(''):'<div style="font-size:12px;color:var(--green)">No issues raised.</div>';
+  _editIssues=issues;
+  const issueHtml=issues.length?issues.map((i,idx)=>`<label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;cursor:pointer">
+      <input type="checkbox" class="editiss" data-i="${idx}" checked style="width:auto;margin-top:3px;flex:none">
+      <div style="flex:1;min-width:0;padding-left:9px;border-left:2px solid ${sevColor[i.severity]||'var(--text3)'}">
+        <div style="font-size:12px;color:var(--text)"><b style="text-transform:uppercase;font-size:10px;color:${sevColor[i.severity]||'var(--text3)'}">${esc(i.severity||'')} · ${esc(i.area||'')}</b><br>${esc(i.detail||'')}</div>
+        ${i.fix?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Fix: ${esc(i.fix)}</div>`:''}
+      </div>
+    </label>`).join(''):'<div style="font-size:12px;color:var(--green)">No issues raised.</div>';
+  const fixBar=issues.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px;margin-bottom:8px">
+      <button class="btn btn-p btn-sm" onclick="fixEditorialSelected()">Fix selected →</button>
+      <button class="btn btn-xs btn-ghost" onclick="_editToggleAll(true)">All</button>
+      <button class="btn btn-xs btn-ghost" onclick="_editToggleAll(false)">None</button>
+    </div>`:'';
   const strengths=(e.strengths||[]).length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--text3);cursor:pointer">What's working (${e.strengths.length})</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${e.strengths.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></details>`:'';
   return `<div id="pm-editorial" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap">
@@ -2711,8 +2724,38 @@ function _editorialBlock(d){
     <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:8px">${esc(e.summary||'')}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:8px"><b>Voice:</b> ${e.voice_ok?'✓':'⚠'} ${esc(e.voice_note||'')}<br><b>Audience:</b> ${e.audience_ok?'✓':'⚠'} ${esc(e.audience_note||'')}</div>
     ${issueHtml}
+    ${fixBar}
+    <div id="edit-fix-status" style="font-size:12px;color:var(--text2)"></div>
     ${strengths}
   </div>`;
+}
+let _editIssues=[];
+function _editToggleAll(v){document.querySelectorAll('.editiss').forEach(c=>{c.checked=v;});}
+function _editorialInstruction(sel){
+  return 'Address these editorial issues, changing only what each needs:\n'+sel.map(i=>`- [${i.area||'general'}] ${i.detail||''}${i.fix?` — Fix: ${i.fix}`:''}`).join('\n');
+}
+async function fixEditorialSelected(){
+  const sel=[...document.querySelectorAll('.editiss:checked')].map(c=>_editIssues[+c.getAttribute('data-i')]).filter(Boolean);
+  if(!sel.length){toast('Tick at least one issue to fix');return;}
+  const post=gp(curPost);if(!post)return;
+  const instruction=_editorialInstruction(sel);
+  if(post.status==='live'){
+    if(!confirm(`This post is already published, so fixing it here weaves the changes into a NEW temp version for you to review — nothing on the live page changes until you publish it and finish the swap.\n\nStart fixing ${sel.length} issue${sel.length>1?'s':''}?`))return;
+    const st=document.getElementById('edit-fix-status');
+    if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Weaving the fix into a new version… (~30-60s)</div>';
+    const before=((await sb.from('body_proposals').select('created_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    try{await fetch('/.netlify/functions/fix-editorial-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,instruction})});}catch(e){}
+    const t0=Date.now();
+    const poll=async()=>{
+      const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+      if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){toast('Fix ready — switching to the Rankings tab to review',3500);switchPTab('gsc');return;}
+      if(Date.now()-t0>110000){const s=document.getElementById('edit-fix-status');if(s)s.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+      setTimeout(poll,6000);
+    };
+    setTimeout(poll,6000);
+  }else{
+    aiEditRun(instruction);
+  }
 }
 function _draftViewHtml(d){
   const r=d.check_report||{},a=d.assets||{};
@@ -2725,13 +2768,14 @@ function _draftViewHtml(d){
   const bimg=(a.body_images||[]);
   const imgPick=bimg.length?bimg.map((slot,i)=>`<div id="bslot-${i}" style="margin-bottom:12px">${_bodyImageSlot(slot,i)}</div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
   return `
+  ${post.status==='live'?`<div style="background:#fff7e6;border:1px solid #f2d9a0;border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;color:#8a5a00">This post is already published — GHL locks the body once a post is live, so edits here would only change this unpublished copy and never reach the real page. Use <b>Rankings → Improve the article</b> to actually revise a live post (the editorial review's "Fix selected" button below routes there for you).</div>`:`
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:12px">
     <div style="display:flex;gap:6px">
       <input id="ai-instr" placeholder="Ask Claude to revise - e.g. trim the keyword, cut the salesy line" style="flex:1;font-size:12px;border:1px solid var(--border);border-radius:var(--r2);padding:6px 8px;background:#fff;color:var(--text)" onkeydown="if(event.key==='Enter')aiEditAsk()">
       <button class="btn btn-p btn-sm" onclick="aiEditAsk()">Ask Claude</button>
     </div>
     ${((r.hard&&r.hard.length)||(r.warn&&r.warn.length))?`<button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px" onclick="aiEditFix()">Fix flagged issues with Claude</button>`:''}
-  </div>
+  </div>`}
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
