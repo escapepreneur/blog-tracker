@@ -2506,7 +2506,7 @@ async function scheduleNow(override){
     const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,date,override:!!override})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Schedule failed: '+(d.error||('HTTP '+res.status)),4000);return}
-    await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
+    await loadPosts();await loadLinks();render();renderCalendar();renderPipeline();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
     toast('Scheduled + sent to '+brand+' ✓',3000);
   }catch(e){toast('Schedule error: '+e.message,4000)}
 }
@@ -2632,7 +2632,7 @@ async function publishNow(override){
     const res=await fetch('/.netlify/functions/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,publish:true,override:!!override})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Publish failed: '+(d.error||('HTTP '+res.status)),4000);return}
-    await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
+    await loadPosts();await loadLinks();render();renderCalendar();renderPipeline();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
     toast('Published live to '+brand+' ✓',3500);
   }catch(e){toast('Publish error: '+e.message,4000)}
 }
