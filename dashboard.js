@@ -2172,7 +2172,7 @@ function _clusterCard(c,i){
   const action=c.overlaps_existing
     ? `<button class="btn btn-xs btn-ghost" id="kwadd-${i}" onclick="addClusterIdea(${i})">+ Add anyway</button>`
     : `<button class="btn btn-xs btn-p" id="kwadd-${i}" onclick="addClusterIdea(${i})">+ Add to ideas</button>`;
-  return `<div class="card" style="margin-bottom:10px;padding:14px">
+  return `<div class="card" id="kwcard-${i}" style="margin-bottom:10px;padding:14px">
     <div style="display:grid;grid-template-columns:46px 1fr auto;gap:12px;align-items:start">
       <div style="text-align:center"><div style="font-size:20px;font-weight:800;line-height:1;color:${_oppColor(c.opportunity)}">${c.opportunity}</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">score</div></div>
       <div style="min-width:0">
@@ -2185,10 +2185,11 @@ function _clusterCard(c,i){
         ${supp?`<div style="margin-top:8px">${supp}</div>`:''}
         ${dup}
       </div>
-      <div style="white-space:nowrap">${action}</div>
+      <div style="white-space:nowrap;display:flex;flex-direction:column;gap:6px;align-items:flex-end">${action}<button class="btn btn-xs btn-ghost" style="color:var(--text3)" onclick="dismissClusterIdea(${i})">✕ Remove</button></div>
     </div>
   </div>`;
 }
+function dismissClusterIdea(i){const el=document.getElementById('kwcard-'+i);if(el)el.remove();}
 function setKwMode(m){
   _kwMode=m;
   const a=document.getElementById('kwmode-ideas'),b=document.getElementById('kwmode-cluster');
