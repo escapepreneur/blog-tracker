@@ -3345,29 +3345,53 @@ Respond ONLY with JSON:
   finally{btn.textContent='Find content gaps';btn.disabled=false}
 }
 
+function _backlinkRow(r){
+  return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:6px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:var(--text)">${esc(r.domain)}</a>
+      <span style="font-size:11px;color:var(--text3)">rank ${r.rank} · spam ${r.spam} · ${r.totalBacklinks.toLocaleString()} backlinks · ${esc(r.type||'other')}</span>
+    </div>
+    ${r.actionable?`<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600">→ ${esc(r.action||'')}</div>`:''}
+    <div style="font-size:11px;color:var(--text2);margin-top:3px">${esc(r.reason||'')}</div>
+  </div>`;
+}
 async function findBacklinkGap(){
   const resultEl=document.getElementById('backlink-gap-result');if(!resultEl)return;
   const btn=document.getElementById('backlink-gap-btn');
   btn.textContent='Scanning…';btn.disabled=true;
-  resultEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Checking who links to your competitors but not you… (~10s)</div>`;
+  resultEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Checking who links to your competitors, then judging which are real opportunities… (~30-60s)</div>`;
   try{
-    const res=await fetch('/.netlify/functions/backlink-gap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({blog:activeBlog})});
-    const d=await res.json();
-    if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
-    if(!d.results.length){resultEl.innerHTML=`<div style="font-size:12px;color:var(--text3)">No qualifying gap domains found (scanned ${d.scanned} of ${d.totalFound} candidates). Cost: $${d.cost}.</div>`;return;}
-    let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.qualifying} qualifying domain${d.qualifying===1?'':'s'} (of ${d.scanned} scanned, ${d.totalFound} total found) — link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)}. Cost: $${d.cost}.</div>`;
-    d.results.forEach(r=>{
-      html+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:var(--text)">${esc(r.domain)}</a>
-          <span style="font-size:11px;color:var(--text3)">rank ${r.rank} · spam ${r.spam} · ${r.totalBacklinks.toLocaleString()} backlinks</span>
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Links to ${r.intersections} of your competitors: ${esc(r.linksTo.join(', '))}</div>
-      </div>`;
-    });
-    resultEl.innerHTML=html;
+    const{data:run,error:insErr}=await sb.from('backlink_gap_runs').insert({blog:activeBlog,status:'working'}).select().single();
+    if(insErr)throw new Error(insErr.message);
+    let status;
+    try{const r=await fetch('/.netlify/functions/backlink-gap-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:run.id,blog:activeBlog})});status=r.status;}catch(e){status='err';}
+    if(status!==202&&status!==200){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Could not start (status ${esc(String(status))}).</div>`;return;}
+    const t0=Date.now();
+    const poll=async()=>{
+      const{data:cur}=await sb.from('backlink_gap_runs').select('status,result,error,cost').eq('id',run.id).single();
+      if(cur&&cur.status==='done'){renderBacklinkGapResult(cur.result,cur.cost);return;}
+      if(cur&&cur.status==='error'){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Error: ${esc(cur.error||'unknown')}</div>`;return;}
+      if(Date.now()-t0>110000){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Timed out — try again.</div>`;return;}
+      setTimeout(poll,4000);
+    };
+    setTimeout(poll,4000);
   }catch(e){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Error: ${esc(e.message)}</div>`}
   finally{btn.textContent='Find gap opportunities';btn.disabled=false}
+}
+function renderBacklinkGapResult(d,cost){
+  const resultEl=document.getElementById('backlink-gap-result');if(!resultEl)return;
+  if(!d||!d.results||!d.results.length){resultEl.innerHTML=`<div style="font-size:12px;color:var(--text3)">No qualifying gap domains found. Cost: $${cost}.</div>`;return;}
+  const actionable=d.results.filter(r=>r.actionable);
+  const skip=d.results.filter(r=>!r.actionable);
+  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.results.length} domain${d.results.length===1?'':'s'} link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)} — <b>${actionable.length} look like real opportunities</b>, ${skip.length} are dead ends. Cost: $${cost}.</div>`;
+  if(actionable.length){
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">Worth pursuing (${actionable.length})</div>`;
+    actionable.forEach(r=>{html+=_backlinkRow(r);});
+  }
+  if(skip.length){
+    html+=`<details style="margin-top:10px"><summary style="font-size:11px;color:var(--text3);cursor:pointer;font-weight:600">Dead ends, not worth outreach (${skip.length})</summary><div style="margin-top:8px">${skip.map(_backlinkRow).join('')}</div></details>`;
+  }
+  resultEl.innerHTML=html;
 }
 async function addGapToIdeas(kw){
   const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw,status:'idea',current_step:0,indexed:'no'}).select().single();
