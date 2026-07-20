@@ -2593,7 +2593,14 @@ function _wireFeatBgGrid(){
   const el=document.getElementById('feat-bg-grid');if(!el||!_curDraft||!_curDraft.assets)return;
   const cands=_curDraft.assets.featured_bg_candidates||[];
   el.querySelectorAll('img[data-j]').forEach(img=>img.addEventListener('click',()=>{
-    const c=cands[Number(img.dataset.j)];if(c)rerenderFeatured(false,c.url);
+    const c=cands[Number(img.dataset.j)];if(!c)return;
+    // Immediate feedback right at the click site — the actual "Rendering…" status lands
+    // in the preview box above, which is easy to miss/scroll past, so this used to look
+    // like the click did nothing even though it had already started.
+    el.querySelectorAll('img[data-j]').forEach(x=>{x.style.opacity='0.35';x.style.pointerEvents='none'});
+    img.style.opacity='1';img.style.border='3px solid #29abab';
+    toast('Rendering with this background… about a minute',3500);
+    rerenderFeatured(false,c.url);
   }));
 }
 async function loadFeaturedBgOptions(){
