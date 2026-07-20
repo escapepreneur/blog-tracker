@@ -28,7 +28,12 @@ const EXCLUDE_DOMAINS = new Set([
 ]);
 const isInfra = (domain) => {
   const d = String(domain || '').toLowerCase().replace(/^www\./, '');
-  return [...EXCLUDE_DOMAINS].some(x => d === x || d.endsWith('.' + x));
+  if ([...EXCLUDE_DOMAINS].some(x => d === x || d.endsWith('.' + x))) return true;
+  // Podcast-directory sites are the dominant noise category here — GHL/Kartra/etc. get
+  // mentioned as sponsors in show notes, which every podcast platform worldwide indexes.
+  // There are too many (country-specific) to list individually, so pattern-match instead.
+  if (/pod/.test(d)) return true;
+  return false;
 };
 
 export const handler = async (event) => {
