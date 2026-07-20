@@ -29,6 +29,9 @@ const EXCLUDE_DOMAINS = new Set([
   'player.fm', 'podchaser.com', 'listennotes.com', 'castbox.fm', 'podcasts.apple.com', 'open.spotify.com',
   'youtube.com', 'soundcloud.com', 'web.archive.org', 'archive.org',
   'facebook.com', 'twitter.com', 'x.com', 'linkedin.com', 'instagram.com', 'pinterest.com', 'reddit.com',
+  // Confirmed dead by hand — bot-protection returns 403 to any automated check (including
+  // isDead() below) but serves a real 404 to actual browsers, so it can't self-detect.
+  'landingspy.com',
 ]);
 const isInfra = (domain) => {
   const d = String(domain || '').toLowerCase().replace(/^www\./, '');
