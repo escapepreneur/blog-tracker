@@ -17,6 +17,20 @@ const CONFIG = {
 const MIN_RANK = 100;   // DataForSEO rank is 0-1000; below this is barely-indexed noise
 const MAX_SPAM = 25;    // spam score is 0-100, higher = riskier link profile
 
+// Infrastructure/aggregator domains that legitimately have high rank + low spam but are
+// NEVER real outreach targets — nobody "edits" a link shortener or podcast index to add
+// you, so these just clutter the top of raw results. Not exhaustive; tune as more turn up.
+const EXCLUDE_DOMAINS = new Set([
+  'bit.ly', 'tinyurl.com', 't.co', 'ow.ly', 'buff.ly', 'rebrand.ly', 'cutt.ly', 'is.gd', 'goo.gl',
+  'player.fm', 'podchaser.com', 'listennotes.com', 'castbox.fm', 'podcasts.apple.com', 'open.spotify.com',
+  'youtube.com', 'soundcloud.com', 'web.archive.org', 'archive.org',
+  'facebook.com', 'twitter.com', 'x.com', 'linkedin.com', 'instagram.com', 'pinterest.com', 'reddit.com',
+]);
+const isInfra = (domain) => {
+  const d = String(domain || '').toLowerCase().replace(/^www\./, '');
+  return [...EXCLUDE_DOMAINS].some(x => d === x || d.endsWith('.' + x));
+};
+
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
   if (!LOGIN || !PW) return json(500, { error: 'DataForSEO not configured.' });
@@ -53,7 +67,7 @@ export const handler = async (event) => {
       return { domain, rank, spam, totalBacklinks, intersections: linksTo.length, linksTo };
     }).filter(Boolean);
 
-    const qualifying = rows.filter(r => r.rank >= MIN_RANK && r.spam <= MAX_SPAM);
+    const qualifying = rows.filter(r => r.rank >= MIN_RANK && r.spam <= MAX_SPAM && !isInfra(r.domain));
     qualifying.sort((a, b) => (b.intersections - a.intersections) || (b.rank - a.rank));
 
     return json(200, {
