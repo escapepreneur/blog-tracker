@@ -2214,7 +2214,7 @@ async function addClusterIdea(i){
   const exists=bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase());
   if(exists){toast('Already in your list');return;}
   const supp=(c.supporting_keywords||[]).join(', ');
-  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research: ${(c.total_volume||c.primary_volume||'?')}/mo total, difficulty ~${c.avg_difficulty??c.primary_difficulty??'?'}, ${c.intent||''} intent. Opportunity ${c.opportunity}/100.`});
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',ks_score:c.primary_difficulty??null,search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research: ${(c.total_volume||c.primary_volume||'?')}/mo total, difficulty ~${c.avg_difficulty??c.primary_difficulty??'?'}, ${c.intent||''} intent. Opportunity ${c.opportunity}/100.`});
   if(error){toast('Add failed: '+error.message,4000);return;}
   await loadPosts();render();
   const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';
@@ -2226,7 +2226,7 @@ async function addAllClusters(){
     const c=_kwClusters[i];if(c.overlaps_existing)continue;
     if(bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase()))continue;
     const supp=(c.supporting_keywords||[]).join(', ');
-    const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
+    const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',ks_score:c.primary_difficulty??null,search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
     if(!error){added++;const btn=document.getElementById('kwadd-'+i);if(btn)btn.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';}
   }
   await loadPosts();render();toast('Added '+added+' new '+(added===1?'idea':'ideas')+' ✓',3000);
@@ -2265,7 +2265,7 @@ function renderContentCluster(out){
 async function addPillar(){
   const p=_kwCluster&&_kwCluster.pillar;if(!p)return;
   if(bp().find(x=>(x.primary_keyword||'').toLowerCase()===(p.primary_keyword||'').toLowerCase())){toast('Pillar already in your list');return;}
-  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:p.primary_keyword,title:p.suggested_title||null,status:'idea',current_step:0,indexed:'no',search_volume:p.primary_volume||null,total_search_volume:p.total_volume||null,supplementary_keywords:(p.supporting_keywords||[]).join(', ')||null,unique_take:p.angle||null,cluster:_kwActiveCluster||null,is_pillar:true,serp_notes:`Cluster pillar (${_kwActiveCluster||''}).`});
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:p.primary_keyword,title:p.suggested_title||null,status:'idea',current_step:0,indexed:'no',ks_score:p.primary_difficulty??null,search_volume:p.primary_volume||null,total_search_volume:p.total_volume||null,supplementary_keywords:(p.supporting_keywords||[]).join(', ')||null,unique_take:p.angle||null,cluster:_kwActiveCluster||null,is_pillar:true,serp_notes:`Cluster pillar (${_kwActiveCluster||''}).`});
   if(error){toast('Add failed: '+error.message,4000);return;}
   await loadPosts();render();
   const b=document.getElementById('kwpadd');if(b)b.outerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Added</span>';
