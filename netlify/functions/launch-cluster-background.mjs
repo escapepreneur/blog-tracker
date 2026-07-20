@@ -161,6 +161,15 @@ export const handler = async (event) => {
     const ok = generated.filter(g => g.ok);
     const failed = generated.filter(g => !g.ok);
 
+    // Dispatch the featured-image render for every successfully-generated post — the single-post
+    // generate flow already does this, but Prepare (dry_run) never did, so every prepared cluster
+    // post sat with a featured_image_search set and no image until something else triggered one.
+    if (GH_TOKEN) {
+      for (const g of ok) {
+        try { await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' }, body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: g.post.id } }) }); } catch {}
+      }
+    }
+
     // 5. Dry run (Prepare) ALWAYS completes — drafts are already saved and nothing publishes,
     //    so one failing post shouldn't hide the rest. Report which need fixing; the hard gate
     //    that blocks a broken cluster lives on the actual publish paths (below + publish_prepared).
