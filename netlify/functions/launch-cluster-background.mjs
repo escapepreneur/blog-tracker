@@ -149,6 +149,11 @@ export const handler = async (event) => {
           check_report: report, model: gen.model, generated_at: new Date().toISOString(),
         };
         await rest('post_drafts?on_conflict=post_id', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) });
+        // Match the single-post generate flow: a saved draft advances idea -> drafted so the
+        // tracker reflects reality (Prepare was leaving these stuck showing "Idea").
+        if (['idea', 'drafted'].includes(p.status)) {
+          await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'drafted', current_step: Math.max(p.current_step || 0, 2) }) });
+        }
         return { post: p, draft, report, ok: report.verdict !== 'fail' };
       } catch (e) { return { post: p, error: String(e && e.message || e), ok: false }; }
     });
