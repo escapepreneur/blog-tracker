@@ -832,7 +832,10 @@ async function openPost(id,tab){
   document.getElementById('pm-ks').value=post.ks_score!=null?post.ks_score:'';
   document.getElementById('pm-vol').value=post.search_volume||'';
   document.getElementById('pm-supp').value=post.supplementary_keywords||'';
-  {const pc=document.getElementById('pm-cluster');if(pc)pc.value=post.cluster||'';const pp=document.getElementById('pm-pillar');if(pp)pp.value=post.is_pillar?'yes':'';}
+  {const pc=document.getElementById('pm-cluster');if(pc)pc.value=post.cluster||'';const pp=document.getElementById('pm-pillar');if(pp)pp.value=post.is_pillar?'yes':'';
+   const dl=document.getElementById('pm-cluster-list');
+   if(dl){const names=[...new Set(bp().map(x=>x.cluster).filter(Boolean))].sort((a,b)=>a.localeCompare(b));dl.innerHTML=names.map(n=>`<option value="${esc(n)}">`).join('');}
+   const co=document.getElementById('cluster-suggest-out');if(co)co.innerHTML='';_suggestedCluster='';}
   document.getElementById('pm-serp-link').value=post.serp_notes||'';
   document.getElementById('pm-doc-link').value=post.unique_take||'';
   document.getElementById('pm-take').value='';
@@ -2402,6 +2405,26 @@ async function deleteCluster(name){
   await loadPosts();renderClusters();renderResearch();render();
   toast(`"${name}" cluster removed — ${posts.length} post${posts.length===1?'':'s'} deleted`);
 }
+// Suggest the best existing cluster for the OPEN post (or a new cluster name if none fit).
+// Fills the suggestion in as a one-click "Use this" — never auto-saves; Karen still hits Save.
+let _suggestedCluster='';
+async function suggestClusterForPost(){
+  if(!curPost)return;
+  const btn=document.getElementById('cluster-suggest-btn'),out=document.getElementById('cluster-suggest-out');
+  if(btn)btn.disabled=true;
+  if(out)out.innerHTML='<span style="font-size:11px;color:var(--text3)">Thinking…</span>';
+  try{
+    const r=await fetch('/.netlify/functions/suggest-cluster',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+    _suggestedCluster=d.cluster_name||'';
+    if(out)out.innerHTML=_suggestedCluster
+      ?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${d.matches_existing?'Suggested: <b>'+esc(_suggestedCluster)+'</b> (existing cluster)':'No strong existing fit — suggested new cluster: <b>'+esc(_suggestedCluster)+'</b>'} — ${esc(d.rationale||'')} <button type="button" class="btn btn-xs" onclick="_useSuggestedCluster()">Use this</button></div>`
+      :`<div style="font-size:11px;color:var(--text3);margin-top:4px">${esc(d.rationale||'No suggestion.')}</div>`;
+  }catch(e){if(out)out.innerHTML='<span style="font-size:11px;color:var(--red-t)">'+esc(String(e&&e.message||e))+'</span>';}
+  finally{if(btn)btn.disabled=false;}
+}
+function _useSuggestedCluster(){const pc=document.getElementById('pm-cluster');if(pc&&_suggestedCluster)pc.value=_suggestedCluster;}
 // Possible-duplicate check: does this post's keyword/title closely match an existing
 // LIVE post on the same blog? Returns the matching live post, or null.
 function findDuplicate(post){

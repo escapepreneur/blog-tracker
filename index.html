@@ -691,7 +691,14 @@ input[type=file]{width:100%}
     </div>
     <div style="margin-bottom:10px"><label class="fl">Supplementary keywords</label><textarea id="pm-supp" rows="2" style="resize:none" placeholder="keyword (vol/KD), keyword (vol/KD)..."></textarea></div>
     <div class="row">
-      <div class="fd w2"><label class="fl">Topic cluster <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— group related posts for internal linking</span></label><input type="text" id="pm-cluster" placeholder="e.g. GoHighLevel"></div>
+      <div class="fd w2"><label class="fl">Topic cluster <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— group related posts for internal linking</span></label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="pm-cluster" list="pm-cluster-list" placeholder="e.g. GoHighLevel" style="flex:1">
+          <button type="button" id="cluster-suggest-btn" class="btn btn-xs btn-ghost" onclick="suggestClusterForPost()" style="flex:none;white-space:nowrap">✨ Suggest</button>
+        </div>
+        <datalist id="pm-cluster-list"></datalist>
+        <div id="cluster-suggest-out"></div>
+      </div>
       <div class="fd"><label class="fl">Pillar?</label><select id="pm-pillar"><option value="">No</option><option value="yes">Yes — pillar post</option></select></div>
     </div>
     <div class="row">
