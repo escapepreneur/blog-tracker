@@ -37,6 +37,28 @@ const isInfra = (domain) => {
   return false;
 };
 
+// DataForSEO's backlink index is built from historical crawls — a domain that once linked
+// to a competitor may since have expired, been parked, or restructured its URLs, so it's
+// worth confirming the homepage still resolves before recommending outreach to it. Only
+// treat a CONFIRMED 404/410 or a connection failure (DNS, timeout) as dead — many real,
+// live sites return 403 to a plain server-side fetch (bot/Cloudflare protection) without
+// actually being down for a real visitor, so 403 and similar are NOT treated as dead.
+async function isDead(domain) {
+  for (const scheme of ['https://', 'http://']) {
+    try {
+      const controller = new AbortController();
+      const to = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(scheme + domain, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; EscHubBacklinkChecker/1.0)' } });
+      clearTimeout(to);
+      if (res.status === 404 || res.status === 410) return true;
+      return false; // reached the server, got SOME response — treat as alive
+    } catch (e) {
+      if (scheme === 'http://') return true; // both schemes failed to connect at all
+    }
+  }
+  return true;
+}
+
 const CLASSIFY_TOOL = {
   name: 'emit_classification',
   description: 'Classify each backlink-gap domain and judge whether it is a realistic outreach opportunity.',
@@ -139,7 +161,12 @@ export const handler = async (event) => {
 
     const qualifying = rows.filter(r => r.rank >= MIN_RANK && r.spam <= MAX_SPAM && !isInfra(r.domain));
     qualifying.sort((a, b) => (b.intersections - a.intersections) || (b.rank - a.rank));
-    const toClassify = qualifying.slice(0, 50);
+    const candidates = qualifying.slice(0, 50);
+
+    // Drop confirmed-dead domains before spending Claude tokens classifying them.
+    const deadFlags = await Promise.all(candidates.map(r => isDead(r.domain)));
+    const deadCount = deadFlags.filter(Boolean).length;
+    const toClassify = candidates.filter((_, i) => !deadFlags[i]);
 
     const classifications = await classify(cfg, toClassify);
     const byDomain = new Map(classifications.map(c => [c.domain, c]));
@@ -151,7 +178,7 @@ export const handler = async (event) => {
       cost: d.cost,
       result: {
         blog: body.blog, competitors: cfg.competitors, ownDomain: cfg.ownDomain,
-        totalFound, scanned: rows.length, qualifying: qualifying.length,
+        totalFound, scanned: rows.length, qualifying: qualifying.length, deadCount,
         actionableCount: merged.filter(m => m.actionable).length,
         results: merged,
       },

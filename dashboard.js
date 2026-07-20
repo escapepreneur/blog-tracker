@@ -3392,13 +3392,13 @@ function renderBacklinkGapResult(d,cost){
   if(!d||!d.results||!d.results.length){resultEl.innerHTML=`<div style="font-size:12px;color:var(--text3)">No qualifying gap domains found. Cost: $${cost}.</div>`;return;}
   const actionable=d.results.filter(r=>r.actionable);
   const skip=d.results.filter(r=>!r.actionable);
-  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.results.length} domain${d.results.length===1?'':'s'} link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)} — <b>${actionable.length} look like real opportunities</b>, ${skip.length} are dead ends. Cost: $${cost}.</div>`;
+  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.results.length} domain${d.results.length===1?'':'s'} link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)} — <b>${actionable.length} look like real opportunities</b>, ${skip.length} are not worth outreach.${d.deadCount?` (${d.deadCount} confirmed-dead domain${d.deadCount===1?'':'s'} already filtered out — no longer resolve.)`:''} Cost: $${cost}.</div>`;
   if(actionable.length){
     html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">Worth pursuing (${actionable.length})</div>`;
     actionable.forEach(r=>{html+=_backlinkRow(r);});
   }
   if(skip.length){
-    html+=`<details style="margin-top:10px"><summary style="font-size:11px;color:var(--text3);cursor:pointer;font-weight:600">Dead ends, not worth outreach (${skip.length})</summary><div style="margin-top:8px">${skip.map(_backlinkRow).join('')}</div></details>`;
+    html+=`<details style="margin-top:10px"><summary style="font-size:11px;color:var(--text3);cursor:pointer;font-weight:600">Not worth outreach (${skip.length})</summary><div style="margin-top:8px">${skip.map(_backlinkRow).join('')}</div></details>`;
   }
   resultEl.innerHTML=html;
 }
