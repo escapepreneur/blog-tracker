@@ -3345,6 +3345,30 @@ Respond ONLY with JSON:
   finally{btn.textContent='Find content gaps';btn.disabled=false}
 }
 
+async function findBacklinkGap(){
+  const resultEl=document.getElementById('backlink-gap-result');if(!resultEl)return;
+  const btn=document.getElementById('backlink-gap-btn');
+  btn.textContent='Scanning…';btn.disabled=true;
+  resultEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Checking who links to your competitors but not you… (~10s)</div>`;
+  try{
+    const res=await fetch('/.netlify/functions/backlink-gap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({blog:activeBlog})});
+    const d=await res.json();
+    if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
+    if(!d.results.length){resultEl.innerHTML=`<div style="font-size:12px;color:var(--text3)">No qualifying gap domains found (scanned ${d.scanned} of ${d.totalFound} candidates). Cost: $${d.cost}.</div>`;return;}
+    let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.qualifying} qualifying domain${d.qualifying===1?'':'s'} (of ${d.scanned} scanned, ${d.totalFound} total found) — link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)}. Cost: $${d.cost}.</div>`;
+    d.results.forEach(r=>{
+      html+=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:var(--text)">${esc(r.domain)}</a>
+          <span style="font-size:11px;color:var(--text3)">rank ${r.rank} · spam ${r.spam} · ${r.totalBacklinks.toLocaleString()} backlinks</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Links to ${r.intersections} of your competitors: ${esc(r.linksTo.join(', '))}</div>
+      </div>`;
+    });
+    resultEl.innerHTML=html;
+  }catch(e){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Error: ${esc(e.message)}</div>`}
+  finally{btn.textContent='Find gap opportunities';btn.disabled=false}
+}
 async function addGapToIdeas(kw){
   const{data,error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:kw,status:'idea',current_step:0,indexed:'no'}).select().single();
   if(error){toast('Error: '+error.message);return}
