@@ -482,10 +482,12 @@ async function bulkDeleteResearch(){
   const ids=checked.map(cb=>cb.dataset.id);
   if(!confirm(`Delete ${ids.length} keyword${ids.length>1?'s':''}? This cannot be undone.`))return;
   for(const id of ids){
-    await sb.from('internal_links').delete().or(`source_post_id.eq.${id},dest_post_id.eq.${id}`);
+    await sb.from('internal_links').delete().or(`from_post_id.eq.${id},to_post_id.eq.${id}`);
     await sb.from('gsc_positions').delete().eq('post_id',id);
     await sb.from('post_checklist').delete().eq('post_id',id);
     await sb.from('social_tracking').delete().eq('post_id',id);
+    await sb.from('body_proposals').delete().eq('post_id',id);
+    await sb.from('post_drafts').delete().eq('post_id',id);
     await sb.from('posts').delete().eq('id',id);
   }
   await loadPosts();renderResearch();
@@ -2396,10 +2398,12 @@ async function deleteCluster(name){
   if(!confirm(msg))return;
   for(const p of posts){
     const id=p.id;
-    await sb.from('internal_links').delete().or(`source_post_id.eq.${id},dest_post_id.eq.${id}`);
+    await sb.from('internal_links').delete().or(`from_post_id.eq.${id},to_post_id.eq.${id}`);
     await sb.from('gsc_positions').delete().eq('post_id',id);
     await sb.from('post_checklist').delete().eq('post_id',id);
     await sb.from('social_tracking').delete().eq('post_id',id);
+    await sb.from('body_proposals').delete().eq('post_id',id);
+    await sb.from('post_drafts').delete().eq('post_id',id);
     await sb.from('posts').delete().eq('id',id);
   }
   await loadPosts();renderClusters();renderResearch();render();

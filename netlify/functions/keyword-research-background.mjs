@@ -56,7 +56,7 @@ function buildPrompt(b, keywords, covered) {
 READER: ${b.reader}
 POSITIONING: ${b.positioning}
 
-Cluster the keywords below into postable blog topics for this reader. Return the 12-18 HIGHEST-OPPORTUNITY clusters — you do NOT need to place every keyword; ignore weak or off-topic ones. Group keywords one article would naturally target into a single cluster. For each cluster pick the strongest primary keyword (exact string from the list), suggest an H1 title in the brand voice, give a one-sentence angle, classify intent, and score the opportunity 0-100 (balance real search volume, low keyword difficulty, AND genuine fit with this reader — a high-volume keyword that is off-brand or that this reader would never search is a LOW opportunity).
+Cluster the keywords below into postable blog topics for this reader. Return the 12-18 HIGHEST-OPPORTUNITY clusters — you do NOT need to place every keyword; ignore weak or off-topic ones. Group keywords one article would naturally target into a single cluster. Keywords that are just reworded versions of the SAME search intent (e.g. "what is a funnel" / "what are funnels" / "funnels definition") MUST become ONE cluster, never two or more — Google won't rank multiple pages from the same site for the same intent, so splitting it only creates posts that compete with each other. For each cluster pick the strongest primary keyword (exact string from the list), suggest an H1 title in the brand voice, give a one-sentence angle, classify intent, and score the opportunity 0-100 (balance real search volume, low keyword difficulty, AND genuine fit with this reader — a high-volume keyword that is off-brand or that this reader would never search is a LOW opportunity).
 
 Set relevant:false for keywords that are off-topic noise (the expansion API sometimes returns unrelated terms). Set overlaps_existing to an existing title if the topic duplicates one of our current posts.
 
@@ -82,7 +82,7 @@ const CLUSTER_TOOL = {
         properties: {
           suggested_title: { type: 'string', description: 'H1 for the pillar — broad and definitive (e.g. "The Complete Guide to ...").' },
           primary_keyword: { type: 'string', description: 'The broad head keyword for the pillar — MUST be copied exactly from the supplied list.' },
-          supporting_keywords: { type: 'array', items: { type: 'string' }, description: 'Other broad keywords the pillar covers (exact strings from the list).' },
+          supporting_keywords: { type: 'array', items: { type: 'string' }, description: 'Other broad keywords the pillar covers (exact strings from the list). Must NOT include any keyword chosen as a supporting post\'s primary_keyword, or one meaning the same thing — those get their own post instead, not double coverage on the pillar.' },
           angle: { type: 'string', description: 'One sentence: the pillar\'s angle for this brand reader.' },
           intent: { type: 'string', enum: ['informational', 'commercial', 'transactional', 'navigational'] },
         },
@@ -90,7 +90,7 @@ const CLUSTER_TOOL = {
       },
       supporting: {
         type: 'array',
-        description: '6-12 supporting posts, each targeting a DISTINCT sub-topic of the pillar (a specific keyword from the list). Each will link up to the pillar.',
+        description: '6-12 supporting posts, each targeting a DISTINCT SEARCH INTENT (not just a distinct keyword string) — keywords that are just reworded versions of the same intent (e.g. "what is a funnel" / "what are funnels" / "funnels definition") must be merged into ONE post, never split across several. Each will link up to the pillar.',
         items: {
           type: 'object',
           properties: {
@@ -126,6 +126,8 @@ A topic cluster = ONE comprehensive PILLAR post on the broad topic, plus 6-12 SU
 Design the cluster from the keywords below:
 - Pick the PILLAR: the broadest, highest-level keyword that a definitive guide would target.
 - Pick 6-12 SUPPORTING posts, each on a DISTINCT sub-topic (a different specific keyword). No two supporting posts should target the same thing. Favour real volume + winnable difficulty + genuine fit with this reader. Flag overlaps_existing for any that duplicate a current post.
+- CRITICAL — don't split one search intent across multiple posts: if several keywords in the list mean essentially the same thing to a searcher (e.g. "what is a funnel" / "what are funnels" / "funnels definition" / "funnels meaning" are ALL the same definitional intent, just reworded), that is ONE supporting-post opportunity, not several — Google will never rank multiple pages from the same site for the same intent, so splitting it creates posts that compete with each other instead of outside competitors. Pick the single best keyword (usually the highest volume) as that post's primary_keyword and fold the rest into ITS supporting_keywords array.
+- CRITICAL — the pillar's supporting_keywords must NOT include any keyword that is also a supporting post's primary_keyword (or means the same thing as one). If a keyword is worth its own dedicated post, it must not ALSO sit on the pillar's list — that makes the pillar compete with its own supporting post for the same search. The pillar's supporting_keywords should only cover secondary terms that are NOT getting a dedicated post of their own.
 - Use ONLY keywords from the list (exact strings) for primary_keyword.
 
 KEYWORDS (with live search volume + difficulty):
