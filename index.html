@@ -321,6 +321,7 @@ input[type=file]{width:100%}
       <button class="nav-i" onclick="switchTab('links')"><span style="width:18px;text-align:center">⇄</span>Links</button>
       <button class="nav-i" onclick="switchTab('calendar')"><span style="width:18px;text-align:center">▦</span>Calendar</button>
       <button class="nav-i" onclick="switchTab('insights')"><span style="width:18px;text-align:center">⬡</span>Insights</button>
+      <button class="nav-i" onclick="switchTab('backlinks')"><span style="width:18px;text-align:center">🔗</span>Backlinks</button>
       <button class="nav-i" onclick="switchTab('keywords')"><span style="width:18px;text-align:center">⌖</span>Planning</button>
       <button class="nav-i" onclick="switchTab('ideas')"><span style="width:18px;text-align:center">💡</span>Ideas</button>
     </nav>
@@ -485,13 +486,6 @@ input[type=file]{width:100%}
           </div>
           <div id="gap-result"></div>
         </div>
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div><div style="font-size:14px;font-weight:700">Backlink gap opportunities</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Sites that already link to your competitors but not to you — real outreach targets, filtered for quality. A few cents per run.</div></div>
-            <button class="btn btn-p btn-sm" id="backlink-gap-btn" onclick="findBacklinkGap()">Find gap opportunities</button>
-          </div>
-          <div id="backlink-gap-result"></div>
-        </div>
         <div class="g2" style="margin-bottom:12px">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -519,6 +513,19 @@ input[type=file]{width:100%}
             <pre id="snapshot-text" style="background:var(--bg2);border-radius:var(--r2);padding:12px;font-size:11px;line-height:1.8;white-space:pre-wrap;font-family:monospace;margin-bottom:8px"></pre>
             <button class="btn btn-sm" onclick="copySnapshot()">Copy to clipboard</button>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- BACKLINKS -->
+    <div id="pane-backlinks" class="pane">
+      <div class="ph"><div><div class="pt">Backlinks</div><div class="ps">Real SEO backlink opportunities — sites that already link to your competitors but not to you</div></div></div>
+      <div class="pb">
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:14px;font-weight:700">Competitor backlink gap</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Finds domains linking to your competitors but not you, then judges which are realistic outreach opportunities vs. dead ends. A few cents per run.</div></div>
+            <button class="btn btn-p btn-sm" id="backlink-gap-btn" onclick="findBacklinkGap()">Find gap opportunities</button>
+          </div>
+          <div id="backlink-gap-result"></div>
         </div>
       </div>
     </div>

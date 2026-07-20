@@ -191,6 +191,7 @@ function refreshActivePane(){
       renderClusters();renderResearch();
       break;}
     case 'calendar':renderCalendar();renderPipeline();break;
+    case 'backlinks':loadBacklinksTab();break;
   }
 }
 function switchTab(name,filter){
@@ -211,6 +212,7 @@ function switchTab(name,filter){
   if(name==='keywords'){initKeywordsTab();renderClusters();renderResearch();}
   if(name==='insights'){renderOpportunities();renderRecentOptimizations();}
   if(name==='ideas')renderRequests();
+  if(name==='backlinks')loadBacklinksTab();
   if(name==='calendar'){setTimeout(()=>{
     const now=new Date();
     const mo=document.getElementById('cal-month');
@@ -232,7 +234,7 @@ function goToNotIndexed(){
 function updateTabs(){
   const isN=activeBlog==='nms';
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('a-esc','a-nms'));
-  ['dashboard','posts','links','calendar','insights','keywords','ideas'].forEach((n,i)=>{
+  ['dashboard','posts','links','calendar','insights','backlinks','keywords','ideas'].forEach((n,i)=>{
     const el=document.querySelectorAll('.nav-i')[i];
     if(el&&n===activeTab)el.classList.add(isN?'a-nms':'a-esc');
   });
@@ -3345,6 +3347,13 @@ Respond ONLY with JSON:
   finally{btn.textContent='Find content gaps';btn.disabled=false}
 }
 
+async function loadBacklinksTab(){
+  const resultEl=document.getElementById('backlink-gap-result');if(!resultEl)return;
+  const{data}=await sb.from('backlink_gap_runs').select('result,cost,status').eq('blog',activeBlog).eq('status','done').order('created_at',{ascending:false}).limit(1);
+  const row=(data||[])[0];
+  if(!row){resultEl.innerHTML='<div style="font-size:12px;color:var(--text3)">No run yet for this blog — click "Find gap opportunities" to check.</div>';return;}
+  renderBacklinkGapResult(row.result,row.cost);
+}
 function _backlinkRow(r){
   return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:6px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
