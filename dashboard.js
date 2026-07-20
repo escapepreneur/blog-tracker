@@ -2464,6 +2464,24 @@ async function renderDraftTab(){
   _curDraft=d;
   el.innerHTML=_dupBanner()+(d?_draftViewHtml(d):_draftEmptyHtml());
   if(d)_wireFeatBgGrid();
+  {const a=d&&d.assets||{};if(a.featured_image_search&&!a.featured_image_url)_pollFeaturedRender(pid);}
+}
+// Auto-refresh the Draft tab's featured-image preview while it's rendering (GitHub Actions
+// dispatch takes ~1-2 min) — previously only updated via a manual "Check again" click, which
+// read as "stuck" even once the render had actually finished.
+let _featPolling={};
+function _pollFeaturedRender(pid){
+  if(_featPolling[pid])return;
+  _featPolling[pid]=true;
+  const t0=Date.now();
+  const poll=async()=>{
+    const d=await loadDraft(pid);
+    const a=d&&d.assets||{};
+    if(a.featured_image_url){delete _featPolling[pid];if(curPost===pid)renderDraftTab();return;}
+    if(Date.now()-t0>180000){delete _featPolling[pid];return;} // manual "Check again" still works
+    setTimeout(poll,6000);
+  };
+  setTimeout(poll,6000);
 }
 function _draftEmptyHtml(){
   return `<div style="text-align:center;padding:2rem 1rem">
