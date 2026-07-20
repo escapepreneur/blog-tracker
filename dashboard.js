@@ -2166,7 +2166,8 @@ async function researchKeywords(){
 }
 function _oppColor(n){return n>=80?'var(--green)':n>=60?'#0891b2':n>=40?'#b45309':'var(--text3)'}
 function _clusterCard(c,i){
-  const dup=c.overlaps_existing?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:6px 9px;margin:8px 0 0;font-size:11px;color:#9a3412">⚠ Looks similar to an existing post: <b>${esc(c.overlaps_existing)}</b></div>`:'';
+  const dupMatch=c.overlaps_existing?bp().find(p=>(p.title||'').trim().toLowerCase()===c.overlaps_existing.trim().toLowerCase()):null;
+  const dup=c.overlaps_existing?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:6px 9px;margin:8px 0 0;font-size:11px;color:#9a3412">⚠ Looks similar to an existing post: ${dupMatch?`<b style="cursor:pointer;text-decoration:underline" onclick="openPost('${dupMatch.id}','draft')">${esc(c.overlaps_existing)}</b>`:`<b>${esc(c.overlaps_existing)}</b>`}</div>`:'';
   const chip=(t)=>`<span style="display:inline-block;background:var(--bg2);border-radius:10px;padding:2px 8px;font-size:11px;color:var(--text2);margin:2px 4px 2px 0">${esc(t)}</span>`;
   const supp=(c.supporting_keywords||[]).slice(0,8).map(chip).join('');
   const action=c.overlaps_existing
