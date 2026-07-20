@@ -1222,6 +1222,7 @@ async function renderBodySection(){
         <div style="display:flex;flex-direction:column;gap:6px;flex:none">
           <button class="${bBtn}" onclick="improveBodyNow()">Analyse &amp; improve</button>
           <button class="btn btn-sm" onclick="checkLinksNow()">Check internal links</button>
+          <button class="btn btn-sm" onclick="checkAffiliateLinkNow()">Check affiliate link</button>
         </div>
       </div>
       ${p&&p.phase==='done'?`<div style="font-size:12px;color:var(--green);margin-top:8px">✓ ${(p.kind==='links'||p.kind==='editorial')?esc(p.summary||'Done.'):'Last improvement is live.'}</div>`:''}
@@ -1322,6 +1323,21 @@ async function checkLinksNow(){
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
+}
+async function checkAffiliateLinkNow(){
+  if(!curPost)return;
+  const st=document.getElementById('body-status');
+  if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Checking the live page for the GoHighLevel affiliate link… (~10-20s)</div>';
+  const before=((await sb.from('body_proposals').select('created_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+  try{await fetch('/.netlify/functions/fix-affiliate-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost})});}catch(e){}
+  const t0=Date.now();
+  const poll=async()=>{
+    const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
+    if(cur&&(cur.phase==='proposed'||cur.phase==='done')&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
+    if(Date.now()-t0>60000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    setTimeout(poll,4000);
+  };
+  setTimeout(poll,4000);
 }
 async function bodyPublish(){
   if(!curPost)return;

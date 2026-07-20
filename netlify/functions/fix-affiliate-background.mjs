@@ -1,0 +1,73 @@
+// POST { post_id } -> read the post's ACTUAL published HTML from GHL and apply the
+// deterministic GoHighLevel/HighLevel affiliate-link wrap (affiliateLinkify) if it's
+// missing. Purely mechanical, no Claude call needed. Saves a body_proposals row
+// (kind:'editorial', phase:'proposed' or 'done') and reuses the same publish/swap steps
+// (temp post + manual delete + slug swap) as the other live-post fix flows — this exists
+// for posts published BEFORE the affiliate-link feature shipped (2026-06-29), since GHL
+// locks body content after publish so the link never reached them automatically.
+import { getBlogPostDetail, getBlogPostBySlug } from './_lib/ghl.mjs';
+import { affiliateLinkify } from './_lib/affiliate.mjs';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
+const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PIT = process.env.GHL_API_TOKEN;
+const json = (c, o) => ({ statusCode: c, headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
+const slugFromUrl = (u) => String(u || '').split(/\/post\//)[1]?.replace(/[?#].*$/, '').replace(/\/+$/, '') || '';
+
+export const handler = async (event) => {
+  if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
+  if (!SKEY || !PIT) return json(500, { error: 'Server not configured.' });
+  let body; try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
+  const { post_id } = body;
+  if (!post_id) return json(400, { error: 'post_id required' });
+
+  const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'content-type': 'application/json' };
+  const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
+
+  try {
+    const [post] = await (await rest(`posts?id=eq.${post_id}&select=*`)).json();
+    if (!post) return json(404, { error: 'post not found' });
+    if (!post.url) return json(400, { error: 'post has no URL' });
+    const brand = post.blog;
+
+    let ghlId = post.ghl_post_id;
+    if (!ghlId) {
+      const f = await getBlogPostBySlug({ brand, slug: slugFromUrl(post.url), pit: PIT });
+      if (!f) return json(404, { error: 'could not find this post in GHL (may have been deleted or renamed there)' });
+      ghlId = f._id || f.id;
+      await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ghl_post_id: ghlId }) });
+    }
+    const detail = await getBlogPostDetail({ ghlPostId: ghlId, pit: PIT });
+    const realSlug = detail.urlSlug || slugFromUrl(post.url);
+    const rawHTML = detail.rawHTML || '';
+
+    await rest(`body_proposals?post_id=eq.${post_id}&phase=neq.temp_published`, { method: 'DELETE', headers: { ...h, Prefer: 'return=minimal' } });
+
+    if (/fp_ref=gsp/i.test(rawHTML)) {
+      await rest('body_proposals', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
+        post_id, blog: brand, ghl_post_id: ghlId, real_slug: realSlug, kind: 'editorial',
+        covered: [], missing: [], added_html: '', new_html: '', summary: 'The affiliate link is already on the live page — nothing to fix.', phase: 'done',
+      }) });
+      return json(200, { ok: true, changed: false, reason: 'already present' });
+    }
+
+    const linked = affiliateLinkify(rawHTML);
+    if (linked === rawHTML) {
+      await rest('body_proposals', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
+        post_id, blog: brand, ghl_post_id: ghlId, real_slug: realSlug, kind: 'editorial',
+        covered: [], missing: [], added_html: '', new_html: '', summary: 'No "GoHighLevel" / "HighLevel" mention found in the live body to link.', phase: 'done',
+      }) });
+      return json(200, { ok: true, changed: false, reason: 'no mention found' });
+    }
+
+    await rest('body_proposals', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({
+      post_id, blog: brand, ghl_post_id: ghlId, real_slug: realSlug, kind: 'editorial',
+      covered: [], missing: [], added_html: '', new_html: linked,
+      summary: 'Wrapped the first GoHighLevel/HighLevel mention in your affiliate link (fp_ref=gsp, rel="sponsored nofollow"). Nothing else changed.',
+      note: null, phase: 'proposed',
+    }) });
+    return json(200, { ok: true, changed: true });
+  } catch (e) {
+    return json(502, { error: String(e && e.message || e) });
+  }
+};
