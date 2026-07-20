@@ -3,6 +3,12 @@
 // reviewer instead of a flagged one. (Same idea as the Software Updates brand-guard.)
 import { BANNED, BANNED_PHRASES } from './brands.mjs';
 
+// Force-capitalise the first letter of every H2-H4 heading. LLMs sometimes slip a lowercase
+// first word into a subheading; this guarantees it rather than just prompting for it.
+export function capitalizeHeadings(html) {
+  return String(html || '').replace(/(<h[2-4][^>]*>)(\s*)([a-z])/g, (m, tag, ws, ch) => tag + ws + ch.toUpperCase());
+}
+
 function bannedHits(text = '') {
   const found = [];
   for (const w of BANNED) {
@@ -15,10 +21,11 @@ function bannedHits(text = '') {
 
 export async function autoFix({ draft, anthropicKey, model = 'claude-opus-4-8' }) {
   const d = { ...draft };
-  // 1. dashes — deterministic
+  // 1. dashes + heading capitalisation — deterministic
   for (const k of ['body_html', 'title', 'meta_title', 'meta_description']) {
     if (typeof d[k] === 'string') d[k] = d[k].replace(/—/g, ' - ').replace(/–/g, '-');
   }
+  if (typeof d.body_html === 'string') d.body_html = capitalizeHeadings(d.body_html);
   // 2. banned words — one targeted rewrite if any remain
   const blob = [d.body_html, d.title, d.meta_title, d.meta_description].filter(Boolean).join(' ');
   const found = bannedHits(blob);

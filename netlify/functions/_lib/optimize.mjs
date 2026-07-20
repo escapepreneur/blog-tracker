@@ -1,6 +1,7 @@
 // Optimise a live post's TITLE + META DESCRIPTION for click-through, using the keywords
 // it already ranks for. Body is not touched (GHL locks it, and it's already ranking).
 import { systemPrompt, BRANDS } from './brands.mjs';
+import { capitalizeHeadings } from './brandguard.mjs';
 
 const MODEL = 'claude-opus-4-8';
 const TOOL = {
@@ -72,6 +73,7 @@ Prefer a genuinely useful FAQ (question-style H2, then H3 question + P answer pe
   const data = await res.json();
   const tu = (data.content || []).find(b => b.type === 'tool_use');
   if (!tu) throw new Error('no tool_use in response');
+  if (tu.input && typeof tu.input.added_html === 'string') tu.input.added_html = capitalizeHeadings(tu.input.added_html);
   return tu.input;
 }
 
@@ -117,6 +119,7 @@ Keep ALL existing content — add or adjust only what the instruction asks; do n
   if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`revision stopped: ${data.stop_reason} (article may be too long)`);
   const tu = (data.content || []).find(b => b.type === 'tool_use');
   if (!tu) throw new Error('no tool_use in response');
+  if (tu.input && typeof tu.input.body_html === 'string') tu.input.body_html = capitalizeHeadings(tu.input.body_html);
   return tu.input;
 }
 
@@ -195,7 +198,7 @@ export function insertBlocks(html, blocks) {
       } else out += frag;
     } else out += frag;
   }
-  return out;
+  return capitalizeHeadings(out);
 }
 
 const WOVEN_TOOL = {
@@ -239,6 +242,7 @@ Return the complete revised article via emit_woven_body.`;
   if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`generation stopped: ${data.stop_reason} (article may be too long)`);
   const tu = (data.content || []).find(b => b.type === 'tool_use');
   if (!tu) throw new Error('no tool_use in response');
+  if (tu.input && typeof tu.input.body_html === 'string') tu.input.body_html = capitalizeHeadings(tu.input.body_html);
   return tu.input;
 }
 
@@ -299,6 +303,7 @@ Return the complete revised article via emit_linked_body.`;
   if (data.stop_reason && data.stop_reason !== 'tool_use') throw new Error(`generation stopped: ${data.stop_reason} (article may be too long)`);
   const tu = (data.content || []).find(b => b.type === 'tool_use');
   if (!tu) throw new Error('no tool_use in response');
+  if (tu.input && typeof tu.input.body_html === 'string') tu.input.body_html = capitalizeHeadings(tu.input.body_html);
   return tu.input;
 }
 
