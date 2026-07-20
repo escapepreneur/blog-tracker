@@ -381,7 +381,7 @@ function renderDashboard(){
   // INDEXING
   const idxGroups={no:posts.filter(p=>p.status==='live'&&(p.indexed==='no'||!p.indexed)),requested:posts.filter(p=>p.indexed==='requested'),'yes':posts.filter(p=>p.indexed==='yes')};
   let idxHtml='';
-  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxGroups[k];idxHtml+=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:14px;font-weight:700">${ps.length}</span></div>${ps.slice(0,2).map(p=>`<div style="font-size:11px;color:var(--text2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>2?`<div style="font-size:10px;color:var(--text3)">+${ps.length-2} more</div>`:''}</div>`});
+  ['no','requested','yes'].forEach(k=>{const x=IDX[k],ps=idxGroups[k];idxHtml+=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span><span style="font-size:14px;font-weight:700">${ps.length}</span></div>${ps.slice(0,2).map(p=>`<div style="font-size:11px;color:var(--text2);padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','draft')">${esc(p.primary_keyword||p.title)}</div>`).join('')}${ps.length>2?`<div style="font-size:10px;color:var(--text3)">+${ps.length-2} more</div>`:''}</div>`});
   const idxEl=document.getElementById('dash-indexing');if(idxEl)idxEl.innerHTML=idxHtml;
 
   // COMPLETE PILL
@@ -2300,7 +2300,7 @@ function renderClusterView(){
   const groups={};posts.forEach(p=>{const c=String(p.cluster).trim();(groups[c]=groups[c]||[]).push(p)});
   const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
   const row=(p)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg2)">
-      <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','${_clusterDrafts[p.id]?'draft':'details'}')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
+      <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','draft')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
       <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${_clusterDrafts[p.id]&&_clusterDrafts[p.id].verdict==='fail'?'<span style="font-size:10px;color:#b45309;font-weight:700" title="Draft has a must-fix issue — open to see it">⚠ fix</span>':''}${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
     </div>`;
   el.innerHTML=names.map(name=>{
@@ -3110,7 +3110,7 @@ function renderPipeline(){
         const isN=activeBlog==='nms';
         const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
         const bg=i%2===0?'var(--bg)':'var(--bg2)';
-        return`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','details')">
+        return`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','draft')">
           <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600;background:${bg};display:flex;align-items:center">${i+1}</div>
           <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">
             <div>
@@ -3154,14 +3154,14 @@ function renderCalendar(){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
       </div>
-      ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','details')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
+      ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','draft')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
       ${dayProp.map(p=>{
         const sc=calcScore(p.ks_score,p.search_volume);
         return`<div draggable="true"
         ondragstart="calDragStart(event,'${p.id}')"
         ondragend="calDragEnd(event)"
         style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px">
-        <span style="flex:1;cursor:pointer" onclick="openPost('${p.id}','details')">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
+        <span style="flex:1;cursor:pointer" onclick="openPost('${p.id}','draft')">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
         <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
           ${sc!=null?`<span style="font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
           <button onclick="event.stopPropagation();clearProposedDate('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;line-height:1;padding:0 1px;font-weight:700" title="Remove from calendar">✕</button>
