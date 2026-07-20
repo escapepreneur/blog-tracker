@@ -90,7 +90,7 @@ export const handler = async (event) => {
         const taken = await slugExists({ brand: blog, slug, pit: PIT });
         if (taken === true) { await finish({ status: 'error', error: `The URL "/${slug}" was taken since you prepared this cluster — re-run Prepare to refresh the links, then publish.` }); return json(200, {}); }
         const draft = { body_html: row.body_html, meta_title: row.meta_title, meta_description: row.meta_description, slug, category: row.category, internal_links: row.internal_links, assets: row.assets || {} };
-        const r = await createBlogPost({ brand: blog, post: p, draft, pit: PIT, status: 'PUBLISHED', imageAltText: (row.assets && row.assets.title) || p.primary_keyword });
+        const r = await createBlogPost({ brand: blog, post: p, draft, pit: PIT, status: 'PUBLISHED', imageUrl: row.assets && row.assets.featured_image_url, imageAltText: (row.assets && row.assets.title) || p.primary_keyword });
         await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ghl_post_id: r.id, url: r.url, status: 'live', published_date: today0, scheduled_date: today0, confirmed_live: true, indexed: 'requested', current_step: 5 }) });
         try { await requestIndexing(r.url); } catch {}
         try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId: p.id, brand: blog, bodyHtml: draft.body_html }); } catch {}
