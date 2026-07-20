@@ -2321,7 +2321,6 @@ function renderClusterView(){
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
           ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${allDrafted?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
           ${ready?`<button class="btn btn-xs" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="publishCluster('${en}')" title="Publish the reviewed drafts live, all at once and interlinked">Publish ${unpub} →</button>`:''}
-          ${unpub?`<button class="btn btn-xs btn-ghost" onclick="launchCluster('${en}')" title="Skip review: generate and publish in one go">⚡ Launch now</button>`:''}
           <button class="btn btn-xs btn-danger" onclick="deleteCluster('${en}')" title="Remove this whole cluster">Remove</button>
         </div>
       </div>
@@ -2377,15 +2376,6 @@ async function publishCluster(name){
   _startClusterJob({name,payload:{publish_prepared:true},
     working:`Publishing <b>${esc(name)}</b> — ${unpub.length} reviewed post${unpub.length===1?'':'s'} going live…`,
     onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Published <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster published — '+n+' live ✓',4000);}});
-}
-// One-shot: generate AND publish in a single pass, skipping the review gate (checker still blocks).
-async function launchCluster(name){
-  const unpub=bp().filter(p=>String(p.cluster||'').trim()===name&&!p.ghl_post_id);
-  if(!unpub.length){toast('Every post in this cluster is already live');return;}
-  if(!confirm(`Launch the "${name}" cluster now?\n\nThis GENERATES and PUBLISHES ${unpub.length} post${unpub.length===1?'':'s'} live in one go — fully interlinked, with no review stop. They go live immediately.\n\n(Prefer to check them first? Use "Prepare for review" instead.) Continue?`))return;
-  _startClusterJob({name,payload:{},
-    working:`Launching <b>${esc(name)}</b> — generating ${unpub.length} posts. A few minutes; you can keep working.`,
-    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Launched <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster launched — '+n+' live ✓',4000);}});
 }
 // Remove a whole cluster: deletes every post tagged with this cluster name (same child-row
 // cleanup as bulkDeleteResearch). Warns if any are already live (they stay published on the blog).
