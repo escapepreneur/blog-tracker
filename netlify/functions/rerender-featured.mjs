@@ -26,9 +26,19 @@ export const handler = async (event) => {
   try {
     const [draft] = await (await rest(`post_drafts?post_id=eq.${post_id}&select=assets`)).json();
     if (!draft) return json(404, { error: 'draft not found' });
+    const [post] = await (await rest(`posts?id=eq.${post_id}&select=subtitle`)).json();
     const a = draft.assets || {};
     if (typeof featured_title === 'string' && featured_title.trim()) a.featured_title = featured_title.trim();
-    if (typeof featured_tagline === 'string') a.featured_tagline = featured_tagline.trim();
+    // The subtitle is the master (the worker renders post.subtitle over assets.featured_tagline
+    // whenever subtitle is set) — without this, editing the tagline here does nothing visible
+    // because the worker keeps falling back to whatever subtitle already held.
+    if (typeof featured_tagline === 'string') {
+      const sub = featured_tagline.trim();
+      a.featured_tagline = sub;
+      if (post && sub !== (post.subtitle || '')) {
+        await rest(`posts?id=eq.${post_id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ subtitle: sub }) });
+      }
+    }
     if (featured_bg_url) {
       a.featured_bg_url = featured_bg_url; // explicit pick from the candidate grid — worker uses this directly
     } else {
