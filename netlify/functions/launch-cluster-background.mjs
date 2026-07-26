@@ -15,6 +15,7 @@ import { searchPexels } from './_lib/pexels.mjs';
 import { syncInternalLinks } from './_lib/links.mjs';
 import { createBlogPost, slugExists, slugify, publicUrl } from './_lib/ghl.mjs';
 import { requestIndexing } from './_lib/google.mjs';
+import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -94,7 +95,7 @@ export const handler = async (event) => {
         await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ghl_post_id: r.id, url: r.url, status: 'live', published_date: today0, scheduled_date: today0, confirmed_live: true, indexed: 'requested', current_step: 5 }) });
         try { await requestIndexing(r.url); } catch {}
         try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId: p.id, brand: blog, bodyHtml: draft.body_html }); } catch {}
-        if (GH_TOKEN) { try { await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' }, body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: p.id } }) }); } catch {} }
+        if (GH_TOKEN) await dispatchFeaturedRender(p.id, GH_TOKEN);
         pubd.push({ title: (row.assets && row.assets.title) || p.title, url: r.url, is_pillar: !!p.is_pillar });
       }
       await finish({ status: 'done', result: { cluster, published: pubd, count: pubd.length, already_live: alreadyLive.length, mode: 'publish_prepared' } });
@@ -166,7 +167,7 @@ export const handler = async (event) => {
     // post sat with a featured_image_search set and no image until something else triggered one.
     if (GH_TOKEN) {
       for (const g of ok) {
-        try { await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' }, body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: g.post.id } }) }); } catch {}
+        await dispatchFeaturedRender(g.post.id, GH_TOKEN);
       }
     }
 
@@ -200,7 +201,7 @@ export const handler = async (event) => {
       await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ghl_post_id: r.id, url: r.url, status: 'live', published_date: today, scheduled_date: today, confirmed_live: true, indexed: 'requested', current_step: 5 }) });
       try { await requestIndexing(r.url); } catch {}
       try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId: p.id, brand: blog, bodyHtml: draft.body_html }); } catch {}
-      if (GH_TOKEN) { try { await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' }, body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: p.id } }) }); } catch {} }
+      if (GH_TOKEN) await dispatchFeaturedRender(p.id, GH_TOKEN);
       published.push({ title: draft.title || p.title, url: r.url, is_pillar: !!p.is_pillar });
     }
 

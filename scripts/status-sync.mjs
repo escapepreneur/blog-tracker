@@ -12,6 +12,7 @@ import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
 import { syncInternalLinks } from '../netlify/functions/_lib/linksync.mjs';
+import { dispatchFeaturedRender } from '../netlify/functions/_lib/dispatch.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -117,6 +118,24 @@ async function verifyLive(url) {
       } catch (e) { /* per-post best-effort */ }
     }
     console.log(`[status-sync] indexing: ${indexedFlipped} flipped to yes, ${reRequested} re-requested`);
+  }
+
+  // Featured-image render self-heal: the render worker is triggered via a one-shot
+  // repository_dispatch right after generation; if that silently failed (bad/expired
+  // GITHUB_DISPATCH_TOKEN, GitHub API hiccup) nothing ever retries since the workflow has
+  // no schedule trigger of its own, so a post can sit stuck indefinitely. Catch anything
+  // still pending after 20+ minutes and re-dispatch. Needs GITHUB_DISPATCH_TOKEN as a repo secret.
+  const GH_TOKEN = process.env.GITHUB_DISPATCH_TOKEN;
+  let reDispatched = 0;
+  if (LIVE && GH_TOKEN) {
+    const cutoff = new Date(Date.now() - 20 * 60000).toISOString();
+    const stuck = await (await rest(`post_drafts?assets->>featured_image_search=not.is.null&assets->>featured_image_url=is.null&generated_at=lt.${cutoff}&select=post_id,generated_at`)).json();
+    for (const row of (Array.isArray(stuck) ? stuck : [])) {
+      await dispatchFeaturedRender(row.post_id, GH_TOKEN);
+      reDispatched++;
+      console.log(`  RE-DISPATCH featured image  ${row.post_id} (pending since ${row.generated_at})`);
+    }
+    if (reDispatched) console.log(`[status-sync] featured images: ${reDispatched} stuck render(s) re-dispatched`);
   }
 
   // Pinterest auto-posting: live posts with a rendered pin that haven't been pinned yet ->

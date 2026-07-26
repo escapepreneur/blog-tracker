@@ -7,6 +7,7 @@ import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
 import { searchPexels } from './_lib/pexels.mjs';
 import { syncInternalLinks } from './_lib/links.mjs';
+import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -76,13 +77,7 @@ export const handler = async (event) => {
     try { await syncInternalLinks({ supabaseUrl: SUPABASE_URL, headers: h, postId, brand, bodyHtml: draft.body_html }); } catch (e) { /* links sync is best-effort */ }
 
     if (GH_TOKEN) { // ask GitHub Actions to render the featured image (await so it sends before the fn returns)
-      try {
-        await fetch('https://api.github.com/repos/escapepreneur/blog-tracker/dispatches', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json' },
-          body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id: postId } }),
-        });
-      } catch (e) { /* non-fatal: featured image can be rendered via the workflow manually */ }
+      await dispatchFeaturedRender(postId, GH_TOKEN); // logs failures instead of swallowing them; status-sync self-heals if this misses
     }
     return json(200, { ok: true, verdict: report.verdict, report, model, usage });
   } catch (e) {
