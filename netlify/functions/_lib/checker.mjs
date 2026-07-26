@@ -88,6 +88,19 @@ export function runChecks({ brand, post, draft }) {
     else PASS('First-person (Karen) voice.');
   }
 
+  // 4.5 Specific elapsed-time framing (NMS) — the reader could be a few months in or many
+  // years in; the tenure itself is never the point, so calling out a specific number/range
+  // ("5 to 8 years later", "5-10 years", "3 years in") signals a false assumption about who's
+  // reading and excludes anyone outside that window. Vague framing ("however long you've been
+  // trying") is fine — only a specific number or numeric range is the problem.
+  if (brand === 'nms') {
+    const timeHits = [];
+    for (const m of text.matchAll(/\b\d+\+?\s*(?:to|-|–|—)\s*\d+\+?\s*(?:years?|yrs?|months?)\b/gi)) timeHits.push(m[0]);
+    for (const m of text.matchAll(/\b\d+\+?\s*(?:years?|yrs?|months?)\s+(?:later|ago|in|down the (?:line|road))\b/gi)) timeHits.push(m[0]);
+    if (timeHits.length) HARD(`Specific elapsed-time framing found (${[...new Set(timeHits)].join(', ')}) — reader could be months or years in; don't name a number/range.`);
+    else PASS('No specific elapsed-time framing.');
+  }
+
   // 5. Forbidden salesy phrases (esc)
   const sell = (b.forbiddenSell || []).filter(p => phraseHits(textLow, p.toLowerCase()));
   if (sell.length) WARN(`Salesy phrasing to remove: ${sell.join(', ')}.`);
