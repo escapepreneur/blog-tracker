@@ -11,7 +11,7 @@ const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND = process.env.RESEND_API_KEY;
 const TO = process.env.REMINDER_EMAIL || 'karen@escapepreneur.com';
 const LEAD = parseInt(process.env.REMINDER_LEAD_DAYS || '2', 10);
-const TRACKER = 'https://bloggingtracker.netlify.app';
+const TRACKER = 'https://blog.escapepreneur.com';
 if (!KEY) { console.error('Missing SUPABASE_SERVICE_ROLE_KEY'); process.exit(1); }
 
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}` };
@@ -42,7 +42,7 @@ const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:
   <p>Heads up — nothing is going live in <b>2 days</b> (${pretty}) on:</p>
   <ul>${gaps.map(g => `<li><b>${g}</b></li>`).join('')}</ul>
   <p>Queue a post so ${gaps.length > 1 ? 'these blogs' : 'this blog'} don't run dry.</p>
-  <p><a href="${TRACKER}" style="display:inline-block;background:#1AA3A0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Open the Content Dashboard →</a></p>
+  <p><a href="${TRACKER}" style="display:inline-block;background:#1AA3A0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Open Blog Studio →</a></p>
   <p style="font-size:12px;color:#5b7373">You get this only when a blog has nothing scheduled ${LEAD} days out.</p>
 </div>`;
 
@@ -51,7 +51,7 @@ if (!RESEND) { console.log(`GAP found for: ${brandsLine}. RESEND_API_KEY not set
 const res = await fetch('https://api.resend.com/emails', {
   method: 'POST',
   headers: { Authorization: `Bearer ${RESEND}`, 'content-type': 'application/json' },
-  body: JSON.stringify({ from: 'ESC Content Dashboard <onboarding@resend.dev>', to: [TO], subject, html }),
+  body: JSON.stringify({ from: 'Blog Studio <onboarding@resend.dev>', to: [TO], subject, html }),
 });
 const out = await res.text();
 if (!res.ok) { console.error('Resend send failed', res.status, out.slice(0, 300)); process.exit(1); }
