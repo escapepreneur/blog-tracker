@@ -6,7 +6,7 @@ import { generateDraft } from './_lib/generate.mjs';
 import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
 import { searchPexels } from './_lib/pexels.mjs';
-import { syncInternalLinks } from './_lib/links.mjs';
+import { syncInternalLinks, countInboundLinks } from './_lib/links.mjs';
 import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -33,8 +33,9 @@ export const handler = async (event) => {
     if (!post) return json(404, { error: 'post not found' });
     const brand = post.blog;
 
-    const live = await (await rest(`posts?blog=eq.${brand}&status=eq.live&url=not.is.null&select=title,primary_keyword,url,cluster,is_pillar`)).json();
-    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar }));
+    const live = await (await rest(`posts?blog=eq.${brand}&status=eq.live&url=not.is.null&select=id,title,primary_keyword,url,cluster,is_pillar`)).json();
+    const inbound = await countInboundLinks({ rest, brand });
+    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar, inbound: inbound.get(p.id) || 0 }));
 
     const gen = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
     const { draft, fixed } = await autoFix({ draft: gen.draft, anthropicKey: AKEY });

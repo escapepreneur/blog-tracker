@@ -34,3 +34,12 @@ export async function syncInternalLinks({ supabaseUrl, headers, postId, brand, b
   }
   return { added: rows.length };
 }
+
+// Map of post id -> how many OTHER posts already link to it. Used to steer generation
+// toward under-linked posts instead of always the same familiar ones (see generate.mjs).
+export async function countInboundLinks({ rest, brand }) {
+  const rows = await (await rest(`internal_links?blog=eq.${brand}&to_post_id=not.is.null&select=to_post_id`)).json();
+  const counts = new Map();
+  for (const r of (rows || [])) counts.set(r.to_post_id, (counts.get(r.to_post_id) || 0) + 1);
+  return counts;
+}

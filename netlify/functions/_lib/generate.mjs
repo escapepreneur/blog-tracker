@@ -48,8 +48,13 @@ function buildBrief(post, brand, liveLinks, clusterLinks) {
   const b = BRANDS[brand];
   const supp = post.supplementary_keywords || '';
   const all = liveLinks || [];
-  const list = all.slice(0, 40)
-    .map(p => `- ${p.title} -> ${p.url}`).join('\n') || '(none available)';
+  // Surface under-linked posts first. Without this, candidates come back in whatever order
+  // the DB happens to return them (in practice, oldest-first) — so every new post kept
+  // linking into the same handful of "founding" posts, and link equity never flowed back
+  // out to newer posts, which is exactly why they weren't getting indexed/crawled well.
+  const sorted = [...all].sort((a, b) => (a.inbound || 0) - (b.inbound || 0));
+  const list = sorted.slice(0, 50)
+    .map(p => `- [${p.inbound || 0} other post(s) already link here] ${p.title} -> ${p.url}`).join('\n') || '(none available)';
 
   // Cluster-aware linking: if this post belongs to a topic cluster, the pillar and sibling
   // posts in the same cluster are mandatory/preferred internal links. clusterLinks (reserved
@@ -83,8 +88,9 @@ ${supp ? `Secondary keywords: ${supp}` : ''}
 ${post.unique_take ? `Unique take / Karen's angle: ${post.unique_take}` : ''}
 ${post.serp_notes ? `SERP notes: ${post.serp_notes}` : ''}
 
-Existing ${b.name} posts you may link to (choose 3 relevant ones for in-body internal links, with descriptive anchor text):
-${list}${clusterBlock}
+Existing ${b.name} posts you may link to (choose 3 relevant ones for in-body internal links, with descriptive anchor text). The bracketed number is how many OTHER posts already link to it:
+${list}
+Internal-linking rule: prioritize posts with a LOW or [0] count above — those aren't getting any internal links yet, which hurts how often Google crawls and ranks them. Only pick a heavily-linked post instead of an under-linked one when it's genuinely the better topical match; don't default to a familiar/well-known post just because it's obviously related.${clusterBlock}
 
 Write the complete post now and return it via the emit_blog_package tool.`;
 }

@@ -12,7 +12,7 @@ import { generateDraft } from './_lib/generate.mjs';
 import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks } from './_lib/checker.mjs';
 import { searchPexels } from './_lib/pexels.mjs';
-import { syncInternalLinks } from './_lib/links.mjs';
+import { syncInternalLinks, countInboundLinks } from './_lib/links.mjs';
 import { createBlogPost, slugExists, slugify, publicUrl } from './_lib/ghl.mjs';
 import { requestIndexing } from './_lib/google.mjs';
 import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
@@ -118,8 +118,9 @@ export const handler = async (event) => {
       ...toPublish.map(p => ({ title: p.title || p.primary_keyword, url: p._url, is_pillar: !!p.is_pillar })),
     ];
     // Live posts (any) for non-cluster internal-link candidates.
-    const live = await (await rest(`posts?blog=eq.${blog}&status=eq.live&url=not.is.null&select=title,primary_keyword,url,cluster,is_pillar`)).json();
-    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar }));
+    const live = await (await rest(`posts?blog=eq.${blog}&status=eq.live&url=not.is.null&select=id,title,primary_keyword,url,cluster,is_pillar`)).json();
+    const inbound = await countInboundLinks({ rest, brand: blog });
+    const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar, inbound: inbound.get(p.id) || 0 }));
 
     await finish({ status: 'working', result: { phase: 'generating', total: toPublish.length } });
 
