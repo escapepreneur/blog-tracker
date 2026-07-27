@@ -46,7 +46,15 @@ export const handler = async (event) => {
 
     // Drop brand + navigational queries — someone searching your brand name already finds
     // you; they aren't content opportunities and they clutter the list across many pages.
-    const brandRx = { esc: /esc\s*hub|eschub/i, nms: /escapepreneur|no\s*more\s*somedays/i }[blog];
+    // Anchored to the WHOLE query (not a substring test) — NMS's brand name IS its
+    // signature content term ("escapepreneur"), so a substring match was excluding real
+    // content queries like "what is an escapepreneur" or "escapepreneur meaning" right
+    // alongside genuine navigational ones like "escapepreneur login". Only exclude when
+    // the query is essentially just the brand name (+ an optional nav-ish suffix).
+    const brandRx = {
+      esc: /^(esc\s*hub|eschub)(\.com)?(\s+(login|log ?in|sign ?in|dashboard|pricing|app))?$/i,
+      nms: /^(escapepreneur|no\s*more\s*somedays)(\.com)?(\s+(login|log ?in|sign ?in|dashboard|central|portal))?$/i,
+    }[blog];
     const navRx = /^(login|log ?in|sign ?in|sign ?up|app|dashboard|pricing login)$/i;
     const content = merged.filter(x => !(brandRx && brandRx.test(x.query)) && !navRx.test((x.query || '').trim()));
 
