@@ -12,6 +12,7 @@ import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
 import { syncInternalLinks } from '../netlify/functions/_lib/linksync.mjs';
+import { syncInternalLinks as reconcileLinksFromBody } from '../netlify/functions/_lib/links.mjs';
 import { dispatchFeaturedRender } from '../netlify/functions/_lib/dispatch.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
@@ -188,6 +189,36 @@ async function verifyLive(url) {
       } catch (e) { /* per-post best-effort */ }
     }
     console.log(`[status-sync] titles: ${titled} backfilled from GHL`);
+  }
+
+  // Internal-links reconciliation self-heal: syncInternalLinks (links.mjs, parses the real
+  // <a href> tags out of the body) runs right after every generate/cluster-publish, but if
+  // that one call ever fails silently — as it did for two historical cluster launches, whose
+  // real in-body links never made it into the tracker — nothing ever retries it, so a post's
+  // links stay invisible to the "Needs Links" widget indefinitely. Catch any live post with
+  // ZERO tracked outbound links and re-sync it straight from the live GHL body, so a future
+  // gap like this self-heals here instead of sitting silent for weeks.
+  let reconciled = 0;
+  if (LIVE && PIT) {
+    const live = await (await rest(`posts?status=eq.live&url=not.is.null&select=id,blog,url,ghl_post_id`)).json();
+    const tracked = await (await rest(`internal_links?from_post_id=not.is.null&select=from_post_id`)).json();
+    const hasOutbound = new Set((Array.isArray(tracked) ? tracked : []).map(r => r.from_post_id));
+    const gaps = (Array.isArray(live) ? live : []).filter(p => !hasOutbound.has(p.id));
+    for (const p of gaps) {
+      try {
+        let ghlId = p.ghl_post_id;
+        if (!ghlId) {
+          const slug = (p.url.split('/post/')[1] || '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+          const f = slug ? await getBlogPostBySlug({ brand: p.blog, slug, pit: PIT }) : null;
+          ghlId = f && (f._id || f.id);
+        }
+        if (!ghlId) continue;
+        const detail = await getBlogPostDetail({ ghlPostId: ghlId, pit: PIT });
+        const { added } = await reconcileLinksFromBody({ supabaseUrl: SUPABASE_URL, headers: h, postId: p.id, brand: p.blog, bodyHtml: detail.rawHTML || '' });
+        if (added) { reconciled += added; console.log(`  RECONCILE-LINKS  [${p.blog}] ${p.url} (+${added})`); }
+      } catch (e) { /* per-post best-effort */ }
+    }
+    if (reconciled) console.log(`[status-sync] links: ${reconciled} untracked link(s) reconciled`);
   }
 
   console.log(`[status-sync] done. published=${published} flipped=${flipped} waiting=${waiting} failed=${failed}`);
