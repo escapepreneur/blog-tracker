@@ -2469,12 +2469,20 @@ async function renderDraftTab(){
   const pid=curPost;
   if(_genPolling[pid]){el.innerHTML=_draftWorkingHtml();return;}
   el.innerHTML='<div class="empty" style="padding:1.5rem">Loading draft…</div>';
-  const d=await loadDraft(pid);
-  if(pid!==curPost)return;
-  _curDraft=d;
-  el.innerHTML=_dupBanner()+(d?_draftViewHtml(d):_draftEmptyHtml());
-  if(d)_wireFeatBgGrid();
-  {const a=d&&d.assets||{};if(a.featured_image_search&&!a.featured_image_url)_pollFeaturedRender(pid);}
+  // Guard against a hung fetch or a data-shape crash in _draftViewHtml ever leaving this
+  // stuck on "Loading draft…" forever with no way to retry short of a page refresh.
+  try{
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timed out loading the draft.')),15000));
+    const d=await Promise.race([loadDraft(pid),timeout]);
+    if(pid!==curPost)return;
+    _curDraft=d;
+    el.innerHTML=_dupBanner()+(d?_draftViewHtml(d):_draftEmptyHtml());
+    if(d)_wireFeatBgGrid();
+    {const a=d&&d.assets||{};if(a.featured_image_search&&!a.featured_image_url)_pollFeaturedRender(pid);}
+  }catch(e){
+    if(pid!==curPost)return;
+    el.innerHTML='<div class="empty" style="padding:1.5rem;color:var(--red-t)">Couldn\'t load the draft: '+esc(String(e&&e.message||e))+' <button class="btn btn-ghost btn-sm" onclick="renderDraftTab()">Retry</button></div>';
+  }
 }
 // Auto-refresh the Draft tab's featured-image preview while it's rendering (GitHub Actions
 // dispatch takes ~1-2 min) — previously only updated via a manual "Check again" click, which
