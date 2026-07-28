@@ -2776,7 +2776,9 @@ function _editorialBlock(d){
     <span style="font-size:11px;color:var(--text3);margin-left:8px">about a minute</span>
   </div>`;
   const sevColor={high:'var(--red-t)',medium:'var(--amber-t)',low:'var(--text3)'},sevRank={high:0,medium:1,low:2};
-  const issues=[...(e.issues||[])].sort((a,b)=>(sevRank[a.severity]??3)-(sevRank[b.severity]??3));
+  // Guard against a malformed editorial response (seen once: strengths/issues came back as a
+  // stray string instead of an array) crashing the whole Draft tab instead of just degrading.
+  const issues=(Array.isArray(e.issues)?[...e.issues]:[]).sort((a,b)=>(sevRank[a.severity]??3)-(sevRank[b.severity]??3));
   _editIssues=issues;
   const issueHtml=issues.length?issues.map((i,idx)=>`<label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;cursor:pointer">
       <input type="checkbox" class="editiss" data-i="${idx}" checked style="width:auto;margin-top:3px;flex:none">
@@ -2790,7 +2792,8 @@ function _editorialBlock(d){
       <button class="btn btn-xs btn-ghost" onclick="_editToggleAll(true)">All</button>
       <button class="btn btn-xs btn-ghost" onclick="_editToggleAll(false)">None</button>
     </div>`:'';
-  const strengths=(e.strengths||[]).length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--text3);cursor:pointer">What's working (${e.strengths.length})</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${e.strengths.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></details>`:'';
+  const strengthsArr=Array.isArray(e.strengths)?e.strengths:[];
+  const strengths=strengthsArr.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--text3);cursor:pointer">What's working (${strengthsArr.length})</summary><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.6">${strengthsArr.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></details>`:'';
   return `<div id="pm-editorial" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:700;color:var(--text)">Editorial review</span>
