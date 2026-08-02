@@ -88,8 +88,13 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
 }
 
 // Flip an existing GHL post to PUBLISHED (used by the scheduled go-live cron).
+// Must explicitly stamp publishedAt = now: GHL never sets it on this transition on its
+// own, so without this the post keeps whatever date its featured image happened to be
+// rendered at (usually days/weeks earlier, right after drafting) — verified 2026-08-01
+// as the real root cause of "posted" dates across the blog not matching when posts
+// actually went live.
 export async function publishBlogPost({ ghlPostId, pit, brand, imageUrl, imageAltText }) {
-  const body = { status: 'PUBLISHED', locationId: LOC, blogId: BRANDS[brand] && BRANDS[brand].blogId };
+  const body = { status: 'PUBLISHED', locationId: LOC, blogId: BRANDS[brand] && BRANDS[brand].blogId, publishedAt: new Date().toISOString() };
   if (imageUrl) { body.imageUrl = imageUrl; body.imageAltText = imageAltText || ''; }
   const res = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
     method: 'PUT',
