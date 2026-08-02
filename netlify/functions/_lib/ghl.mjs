@@ -101,10 +101,20 @@ export async function publishBlogPost({ ghlPostId, pit, brand, imageUrl, imageAl
 }
 
 // Update just the featured image on an existing GHL post (keeps its current status,
-// so a live post stays live and a draft stays a draft). PUT only touches the fields
-// sent; body/title/slug are left as-is.
-export async function updatePostImage({ ghlPostId, pit, brand, status = 'PUBLISHED', imageUrl, imageAltText }) {
+// so a live post stays live and a draft stays a draft).
+// GHL's PUT is NOT a true partial patch for publishedAt: any field left out of the
+// payload gets reset, and publishedAt specifically gets bumped to "now" — verified
+// 2026-08-01 after several already-live posts all started showing the same wrong
+// "posted" date on the real page once their featured image was re-rendered/applied.
+// Always re-fetch and re-send the post's true original publishedAt so a routine image
+// update can never silently corrupt its public posted date.
+export async function updatePostImage({ ghlPostId, pit, brand, status = 'PUBLISHED', imageUrl, imageAltText, publishedAt: publishedAtOverride }) {
+  let publishedAt = publishedAtOverride;
+  if (!publishedAt) {
+    try { publishedAt = (await getBlogPostDetail({ ghlPostId, pit })).publishedAt; } catch { /* best-effort — fall through without it rather than block the image update */ }
+  }
   const body = { status, locationId: LOC, blogId: BRANDS[brand] && BRANDS[brand].blogId, imageUrl, imageAltText: imageAltText || '' };
+  if (publishedAt) body.publishedAt = publishedAt;
   const res = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
