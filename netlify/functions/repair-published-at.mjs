@@ -5,7 +5,7 @@
 // Repairs posts whose publishedAt got stuck at whenever their featured image first
 // rendered (usually right after drafting) instead of their real go-live date — root
 // cause fixed 2026-08-01 in publishBlogPost/updatePostImage (_lib/ghl.mjs).
-import { updatePostImage } from './_lib/ghl.mjs';
+import { updatePostImage, getBlogPostBySlug, getBlogPostDetail } from './_lib/ghl.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,17 +23,32 @@ export const handler = async (event) => {
   const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
 
   try {
-    const [post] = await (await rest(`posts?id=eq.${post_id}&select=blog,ghl_post_id,status`)).json();
+    const [post] = await (await rest(`posts?id=eq.${post_id}&select=blog,url,ghl_post_id,status`)).json();
     if (!post) return json(404, { error: 'post not found' });
-    if (!post.ghl_post_id) return json(400, { error: 'post has no ghl_post_id' });
+
+    let ghlId = post.ghl_post_id;
+    if (!ghlId) {
+      const slug = (post.url || '').split('/post/')[1]?.replace(/[?#].*$/, '').replace(/\/+$/, '');
+      if (!slug) return json(400, { error: 'no ghl_post_id and no url to look one up by' });
+      const f = await getBlogPostBySlug({ brand: post.blog, slug, pit: PIT });
+      if (!f) return json(404, { error: 'could not find this post in GHL by slug either' });
+      ghlId = f._id || f.id;
+    }
+
     const [draft] = await (await rest(`post_drafts?post_id=eq.${post_id}&select=assets`)).json();
     const a = (draft && draft.assets) || {};
-    if (!a.featured_image_url) return json(400, { error: 'no featured_image_url on this draft — cannot resend the minimal PUT' });
+    let imageUrl = a.featured_image_url;
+    let imageAltText = a.featured_title || '';
+    if (!imageUrl) {
+      const detail = await getBlogPostDetail({ ghlPostId: ghlId, pit: PIT });
+      imageUrl = detail.imageUrl; imageAltText = detail.imageAltText || '';
+    }
+    if (!imageUrl) return json(400, { error: 'no image found on the draft or the live GHL post' });
 
     await updatePostImage({
-      ghlPostId: post.ghl_post_id, pit: PIT, brand: post.blog,
+      ghlPostId: ghlId, pit: PIT, brand: post.blog,
       status: post.status === 'live' ? 'PUBLISHED' : 'DRAFT',
-      imageUrl: a.featured_image_url, imageAltText: a.featured_title || '',
+      imageUrl, imageAltText,
       publishedAt: `${date}T12:00:00.000Z`,
     });
     return json(200, { ok: true, post_id, forced_publishedAt: `${date}T12:00:00.000Z` });
