@@ -83,6 +83,10 @@ export const handler = async (event) => {
       striking, lowCtr, growing,
     });
   } catch (e) {
-    return json(502, { error: String(e && e.message || e) });
+    // 502 gets intercepted by Cloudflare (sitting in front of this domain) and replaced
+    // with its own generic HTML error page, which is why the client saw "<!DOCTYPE...
+    // is not valid JSON" instead of the real error. 500 passes through untouched.
+    console.error('gsc-opportunities failed:', e);
+    return json(500, { error: String(e && e.message || e) });
   }
 };
