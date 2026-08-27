@@ -36,6 +36,6 @@ export const handler = async (event) => {
     }));
     return json(200, { blog, url, range, page, queries });
   } catch (e) {
-    return json(502, { error: String(e && e.message || e) });
+    return json(500, { error: String(e && e.message || e) });
   }
 };

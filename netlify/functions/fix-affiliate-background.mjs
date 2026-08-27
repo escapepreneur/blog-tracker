@@ -68,6 +68,6 @@ export const handler = async (event) => {
     }) });
     return json(200, { ok: true, changed: true });
   } catch (e) {
-    return json(502, { error: String(e && e.message || e) });
+    return json(500, { error: String(e && e.message || e) });
   }
 };

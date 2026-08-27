@@ -68,6 +68,6 @@ Return them via the emit_seeds tool.`;
     const seeds = (tu.input.seeds || []).filter(s => s && s.term);
     return json(200, { blog: body.blog, theme, seeds });
   } catch (e) {
-    return json(502, { error: String(e && e.message || e) });
+    return json(500, { error: String(e && e.message || e) });
   }
 };

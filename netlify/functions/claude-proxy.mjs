@@ -24,6 +24,6 @@ export const handler = async (event) => {
     if (!res.ok) return json(res.status, { error: data?.error?.message || `Anthropic ${res.status}` });
     return json(200, data);
   } catch (e) {
-    return json(502, { error: String(e && e.message || e) });
+    return json(500, { error: String(e && e.message || e) });
   }
 };

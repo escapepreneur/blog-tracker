@@ -53,7 +53,7 @@ export const handler = async (event) => {
       headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'content-type': 'application/json', 'User-Agent': 'blog-tracker' },
       body: JSON.stringify({ event_type: 'render-featured', client_payload: { post_id } }),
     });
-    if (!r.ok) return json(502, { error: `GitHub dispatch ${r.status}: ${(await r.text()).slice(0, 200)}` });
+    if (!r.ok) return json(500, { error: `GitHub dispatch ${r.status}: ${(await r.text()).slice(0, 200)}` });
 
     return json(202, { ok: true });
   } catch (e) {

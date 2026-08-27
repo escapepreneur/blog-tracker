@@ -333,6 +333,6 @@ export const handler = async (event) => {
     return json(200, out);
   } catch (e) {
     await finish({ status: 'error', error: String(e && e.message || e) });
-    return json(502, { error: String(e && e.message || e) });
+    return json(500, { error: String(e && e.message || e) });
   }
 };
