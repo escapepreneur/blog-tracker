@@ -13,7 +13,12 @@ const AKEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const json = (c, o) => ({ statusCode: c, headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
-const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+// Strips a trailing plural 's' too — without it, "podia alternative" and "podia
+// alternatives" normalize to different strings and the exact-match dedupe below
+// never sees them as the same keyword. That gap is confirmed as the real cause
+// of 3 live near-duplicate pairs (Podia/Kartra/Dubsado "alternative(s)") slipping
+// past this filter and past Claude's own overlaps_existing judgment call.
+const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/s$/, '');
 
 const TOOL = {
   name: 'emit_keyword_plan',
