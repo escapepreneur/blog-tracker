@@ -43,7 +43,10 @@ export const handler = async (event) => {
       a.featured_bg_url = featured_bg_url; // explicit pick from the candidate grid — worker uses this directly
     } else {
       if (!a.featured_image_search) return json(400, { error: 'no featured image search term on this draft' });
-      if (swap) a.featured_bg_index = (a.featured_bg_index || 0) + 1;
+      if (swap) {
+        a.featured_bg_index = (a.featured_bg_index || 0) + 1;
+        delete a.featured_bg_url; // a previous render leaves this set, which otherwise short-circuits
+      }                            // the worker straight back to the SAME image — swap silently did nothing.
     }
     delete a.featured_image_url; // mark pending so the worker re-renders
 

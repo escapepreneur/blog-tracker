@@ -41,6 +41,9 @@ export const handler = async (event) => {
     a.featured_bg_index = swap ? ((a.featured_bg_index || 0) + 1) : 0;
     a.featured_review = true;      // preview only — worker renders but does NOT push to the live post
     delete a.featured_image_url;   // mark pending so the worker renders it
+    delete a.featured_bg_url;      // a prior render leaves this set, which short-circuits the worker's
+                                    // picker straight back to the same image — this function always
+                                    // means "search again," so any earlier explicit/auto pick must go.
     delete a.pin_image_url;        // let the pin re-render to match too
 
     const w = draft
