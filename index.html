@@ -442,17 +442,17 @@ input[type=file]{width:100%}
       <div class="pb">
         <div class="card">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="shiftCalendarMonth(-1)" aria-label="Previous month" style="padding:6px 10px">‹</button>
+            <button class="btn btn-ghost" onclick="shiftCalendarMonth(-1)" aria-label="Previous month" style="padding:6px 12px;font-size:17px;line-height:1">‹</button>
             <select id="cal-month" onchange="renderCalendar()" style="width:auto;padding:6px 10px;font-size:13px">
               <option value="0">January</option><option value="1">February</option><option value="2">March</option>
               <option value="3">April</option><option value="4">May</option><option value="5">June</option>
               <option value="6">July</option><option value="7">August</option><option value="8">September</option>
               <option value="9">October</option><option value="10">November</option><option value="11">December</option>
             </select>
+            <button class="btn btn-ghost" onclick="shiftCalendarMonth(1)" aria-label="Next month" style="padding:6px 12px;font-size:17px;line-height:1">›</button>
             <select id="cal-year" onchange="renderCalendar()" style="width:auto;padding:6px 10px;font-size:13px">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
-            <button class="btn btn-ghost btn-sm" onclick="shiftCalendarMonth(1)" aria-label="Next month" style="padding:6px 10px">›</button>
             <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 12px">
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="display:inline-block;width:10px;height:10px;background:var(--green-l);border:1.5px solid var(--green);border-radius:2px"></span>Live</span>
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="display:inline-block;width:10px;height:10px;background:var(--blue-l);border:1.5px solid var(--blue);border-radius:2px"></span>Scheduled</span>
