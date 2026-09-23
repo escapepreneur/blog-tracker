@@ -3157,6 +3157,20 @@ function renderPipeline(){
 }
 
 
+// Prev/next arrows next to the month/year dropdowns — shifts by one month,
+// rolling the year over at Dec/Jan, and clamps at the dropdown's own range
+// (2025-2027) rather than landing on a year the select doesn't have.
+function shiftCalendarMonth(delta){
+  const mEl=document.getElementById('cal-month'),yEl=document.getElementById('cal-year');
+  if(!mEl||!yEl)return;
+  let month=parseInt(mEl.value||0),year=parseInt(yEl.value||new Date().getFullYear());
+  month+=delta;
+  if(month<0){month=11;year--}else if(month>11){month=0;year++}
+  const minYear=+yEl.options[0].value,maxYear=+yEl.options[yEl.options.length-1].value;
+  if(year<minYear||year>maxYear)return; // at the edge of what the year picker supports
+  mEl.value=month;yEl.value=year;
+  renderCalendar();
+}
 function renderCalendar(){
   const el=document.getElementById('cal-grid');if(!el)return;
   const fixedPosts=bp().filter(p=>(p.status==='live'||p.status==='scheduled')&&(p.scheduled_date||p.published_date));
