@@ -2208,7 +2208,9 @@ function _clusterCard(c,i){
     </div>
   </div>`;
 }
-function dismissClusterIdea(i){const el=document.getElementById('kwcard-'+i);if(el)el.remove();}
+// "✕ Remove" only hid the card visually before — "Add whole cluster" still looped over
+// _kwClusters and re-inserted it anyway. Mark it dismissed so every add path skips it too.
+function dismissClusterIdea(i){const el=document.getElementById('kwcard-'+i);if(el)el.remove();if(_kwClusters[i])_kwClusters[i]._dismissed=true;}
 function setKwMode(m){
   _kwMode=m;
   const a=document.getElementById('kwmode-ideas'),b=document.getElementById('kwmode-cluster');
@@ -2245,7 +2247,7 @@ async function addClusterIdea(i){
 async function addAllClusters(){
   let added=0;
   for(let i=0;i<_kwClusters.length;i++){
-    const c=_kwClusters[i];if(c.overlaps_existing)continue;
+    const c=_kwClusters[i];if(c.overlaps_existing||c._dismissed)continue;
     if(bp().find(p=>(p.primary_keyword||'').toLowerCase()===(c.primary_keyword||'').toLowerCase()))continue;
     const supp=(c.supporting_keywords||[]).join(', ');
     const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:c.primary_keyword,title:c.suggested_title||null,status:'idea',current_step:0,indexed:'no',ks_score:c.primary_difficulty??null,search_volume:c.primary_volume||null,total_search_volume:c.total_volume||null,supplementary_keywords:supp||null,unique_take:c.angle||null,cluster:_kwActiveCluster||null,is_pillar:false,serp_notes:`Keyword research opportunity ${c.opportunity}/100.`});
