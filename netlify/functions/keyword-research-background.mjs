@@ -53,7 +53,7 @@ const TOOL = {
 
 function buildPrompt(b, keywords, covered) {
   const list = keywords.map((k, i) =>
-    `${i + 1}. "${k.keyword}" — vol ${k.volume ?? '?'}/mo, difficulty ${k.difficulty ?? '?'}/100${k.cpc ? `, $${k.cpc} CPC` : ''}`
+    `${i + 1}. "${k.keyword}" (vol ${k.volume ?? '?'}/mo, difficulty ${k.difficulty ?? '?'}/100${k.competition_level ? `, ad-competition ${k.competition_level}` : ''}${k.cpc ? `, $${k.cpc} CPC` : ''})`
   ).join('\n');
   const cov = covered.length ? covered.map(t => `- ${t}`).join('\n') : '(none provided)';
   return `You are a keyword strategist for ${b.name}.
@@ -63,7 +63,7 @@ POSITIONING: ${b.positioning}
 
 Cluster the keywords below into postable blog topics for this reader. Return the 12-18 HIGHEST-OPPORTUNITY clusters — you do NOT need to place every keyword; ignore weak or off-topic ones. Group keywords one article would naturally target into a single cluster. Keywords that are just reworded versions of the SAME search intent (e.g. "what is a funnel" / "what are funnels" / "funnels definition") MUST become ONE cluster, never two or more — Google won't rank multiple pages from the same site for the same intent, so splitting it only creates posts that compete with each other. For each cluster pick the strongest primary keyword (exact string from the list), suggest an H1 title in the brand voice, give a one-sentence angle, classify intent, and score the opportunity 0-100 (balance real search volume, low keyword difficulty, AND genuine fit with this reader — a high-volume keyword that is off-brand or that this reader would never search is a LOW opportunity).
 
-CRITICAL — sanity-check the stated difficulty, don't just trust it: the difficulty numbers come from an automated API and are known to be unreliable for broad, generic, short head terms (1-3 words, no niche or long-tail qualifier) — it can show an implausibly low difficulty for a term that, in reality, is dominated by major authority publishers (Forbes, NerdWallet, Indeed, HubSpot, etc.) and effectively unwinnable for a small site. If a keyword is broad/generic with very high volume and a suspiciously low stated difficulty, use your own knowledge of who actually ranks for that term today and score it as the low opportunity it really is — do not reward a number that contradicts how competitive you know that term actually is.
+CRITICAL: sanity-check the stated difficulty, don't just trust it. The difficulty numbers come from an automated API and are known to be unreliable for broad, generic, short head terms (1-3 words, no niche or long-tail qualifier). It can show an implausibly low difficulty for a term that, in reality, is dominated by major authority publishers (Forbes, NerdWallet, Indeed, HubSpot, etc.) and effectively unwinnable for a small site. Ad-competition (from real advertisers bidding real money, a separate data source from the difficulty estimate) is a useful cross-check: low difficulty paired with HIGH ad-competition is a strong signal the difficulty number is wrong. If a keyword is broad/generic with very high volume and a suspiciously low stated difficulty, use your own knowledge of who actually ranks for that term today and score it as the low opportunity it really is. Do not reward a number that contradicts how competitive you know that term actually is.
 
 Set relevant:false for keywords that are off-topic noise (the expansion API sometimes returns unrelated terms). Set overlaps_existing to an existing title if the topic duplicates one of our current posts.
 
@@ -120,7 +120,7 @@ const CLUSTER_TOOL = {
 
 function buildClusterPrompt(b, topic, keywords, covered) {
   const list = keywords.map((k, i) =>
-    `${i + 1}. "${k.keyword}" — vol ${k.volume ?? '?'}/mo, difficulty ${k.difficulty ?? '?'}/100`
+    `${i + 1}. "${k.keyword}" (vol ${k.volume ?? '?'}/mo, difficulty ${k.difficulty ?? '?'}/100${k.competition_level ? `, ad-competition ${k.competition_level}` : ''})`
   ).join('\n');
   const cov = covered.length ? covered.map(t => `- ${t}`).join('\n') : '(none provided)';
   return `You are planning a TOPIC CLUSTER for ${b.name} around: "${topic}".
@@ -136,7 +136,7 @@ Design the cluster from the keywords below:
 - CRITICAL — don't split one search intent across multiple posts: if several keywords in the list mean essentially the same thing to a searcher (e.g. "what is a funnel" / "what are funnels" / "funnels definition" / "funnels meaning" are ALL the same definitional intent, just reworded), that is ONE supporting-post opportunity, not several — Google will never rank multiple pages from the same site for the same intent, so splitting it creates posts that compete with each other instead of outside competitors. Pick the single best keyword (usually the highest volume) as that post's primary_keyword and fold the rest into ITS supporting_keywords array.
 - CRITICAL — the pillar's supporting_keywords must NOT include any keyword that is also a supporting post's primary_keyword (or means the same thing as one). If a keyword is worth its own dedicated post, it must not ALSO sit on the pillar's list — that makes the pillar compete with its own supporting post for the same search. The pillar's supporting_keywords should only cover secondary terms that are NOT getting a dedicated post of their own.
 - Use ONLY keywords from the list (exact strings) for primary_keyword.
-- CRITICAL — sanity-check the stated difficulty, don't just trust it: the difficulty numbers come from an automated API and are known to be unreliable for broad, generic, short head terms (1-3 words, no niche/long-tail qualifier) — it can show an implausibly low difficulty for a term that, in reality, is dominated by major authority publishers (Forbes, NerdWallet, Indeed, HubSpot, etc.) and effectively unwinnable for a small site. If a keyword is broad/generic with very high volume and a suspiciously low stated difficulty, use your own knowledge of who actually ranks for it today rather than the number — that keyword is a weak PILLAR/supporting-post choice regardless of what it claims, so prefer a more specific, genuinely winnable variant instead.
+- CRITICAL: sanity-check the stated difficulty, don't just trust it. The difficulty numbers come from an automated API and are known to be unreliable for broad, generic, short head terms (1-3 words, no niche/long-tail qualifier). It can show an implausibly low difficulty for a term that, in reality, is dominated by major authority publishers (Forbes, NerdWallet, Indeed, HubSpot, etc.) and effectively unwinnable for a small site. Ad-competition (from real advertisers bidding real money, a separate data source from the difficulty estimate) is a useful cross-check: low difficulty paired with HIGH ad-competition is a strong signal the difficulty number is wrong. If a keyword is broad/generic with very high volume and a suspiciously low stated difficulty, use your own knowledge of who actually ranks for it today rather than the number. That keyword is a weak PILLAR/supporting-post choice regardless of what it claims, so prefer a more specific, genuinely winnable variant instead.
 
 KEYWORDS (with live search volume + difficulty):
 ${list}
