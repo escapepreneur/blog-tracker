@@ -2334,11 +2334,18 @@ function renderClusterView(){
     const allDrafted=unpub>0&&drafted===unpub;
     const ready=allDrafted&&failing===0; // all unpublished posts drafted AND passing -> safe to publish
     const en=esc(name).replace(/'/g,"\\'");
+    // Unpublished members not yet on the calendar can share one launch date, set
+    // once here — so the Calendar/Pipeline show the whole cluster as one unit for
+    // Sienna instead of Karen dragging each post onto the same day individually.
+    const datable=unpubPosts.filter(p=>!['scheduled','live'].includes(p.status));
+    const dates=new Set(datable.map(p=>p.proposed_date||''));
+    const sharedDate=dates.size===1?[...dates][0]:'';
     return `<div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:700;min-width:0">${esc(name)}${pillar?'':' <span style="font-size:10px;font-weight:600;color:#b45309">· no pillar yet</span>'}</div>
         <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
+          ${datable.length?`<span style="display:flex;align-items:center;gap:4px" title="Sets the same proposed date on all ${datable.length} unpublished post(s) in this cluster, so they show grouped on the Calendar and Pipeline"><input type="date" value="${sharedDate}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-family:Poppins,sans-serif;color:var(--text2)" onchange="setClusterProposedDate('${en}',this.value)"><label style="font-size:10px;color:var(--text3)">launch date</label></span>`:''}
           ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${allDrafted?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
           ${ready?`<button class="btn btn-xs" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="publishCluster('${en}')" title="Publish the reviewed drafts live, all at once and interlinked">Publish ${unpub} →</button>`:''}
           <button class="btn btn-xs btn-danger" onclick="deleteCluster('${en}')" title="Remove this whole cluster">Remove</button>
@@ -2418,6 +2425,18 @@ async function deleteCluster(name){
   }
   await loadPosts();renderClusters();renderResearch();render();
   toast(`"${name}" cluster removed — ${posts.length} post${posts.length===1?'':'s'} deleted`);
+}
+// One date, applied to every not-yet-scheduled/live post in the cluster at once —
+// so a cluster launch shows up as ONE grouped unit on the Calendar/Pipeline (what
+// Sienna actually works from) instead of Karen dragging each post there one by one.
+async function setClusterProposedDate(name,dateVal){
+  const posts=bp().filter(p=>String(p.cluster||'').trim()===name&&!['scheduled','live'].includes(p.status));
+  if(!posts.length)return;
+  const val=dateVal||null;
+  await sb.from('posts').update({proposed_date:val}).in('id',posts.map(p=>p.id));
+  posts.forEach(p=>{const x=allPosts.find(a=>a.id===p.id);if(x)x.proposed_date=val;});
+  renderClusters();renderCalendar();renderPipeline();renderResearch();renderDashboard();
+  toast(val?`"${name}" cluster: launch date set on ${posts.length} post${posts.length===1?'':'s'} ✓`:`"${name}" cluster: launch date cleared`);
 }
 // Suggest the best existing cluster for the OPEN post (or a new cluster name if none fit).
 // Fills the suggestion in as a one-click "Use this" — never auto-saves; Karen still hits Save.
@@ -3135,24 +3154,46 @@ function renderPipeline(){
         <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2)">Status</div>
         <div style="padding:10px 12px;border-bottom:2px solid var(--border);background:var(--bg2);text-align:center">Score</div>
       </div>
-      ${posts.map((p,i)=>{
-        const score=calcScore(p.ks_score,p.search_volume);
+      ${(()=>{
+        // Same-cluster posts sharing a proposed date collapse into one grouped row
+        // — same reasoning as the calendar grid: a cluster launch should read as
+        // one unit here, not N rows that happen to share a date.
+        const rows=[];const seen=new Set();
+        posts.forEach(p=>{
+          const c=String(p.cluster||'').trim();
+          const key=c?c+'|'+p.proposed_date:null;
+          if(key){if(seen.has(key))return;seen.add(key);rows.push({cluster:c,date:p.proposed_date,posts:posts.filter(x=>String(x.cluster||'').trim()===c&&x.proposed_date===p.proposed_date)});}
+          else rows.push({post:p});
+        });
         const isN=activeBlog==='nms';
-        const badgeStyle=isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)';
-        const bg=i%2===0?'var(--bg)':'var(--bg2)';
-        return`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','draft')">
-          <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600;background:${bg};display:flex;align-items:center">${i+1}</div>
-          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
-              ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+        return rows.map((r,i)=>{
+          const bg=i%2===0?'var(--bg)':'var(--bg2)';
+          if(r.cluster){
+            return`<div style="display:contents;cursor:pointer" onclick="switchTab('keywords')" title="Open Planning to review this cluster">
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600;background:${bg};display:flex;align-items:center">${i+1}</div>
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">
+                <div style="font-size:13px;font-weight:700;color:var(--teal-d)">📦 ${esc(r.cluster)} <span style="font-weight:400;color:var(--text3)">(${r.posts.length} posts)</span></div>
+              </div>
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(r.date)}</div>
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center"><span style="font-size:11px;color:var(--text3)">cluster</span></div>
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">—</div>
+            </div>`;
+          }
+          const p=r.post,score=calcScore(p.ks_score,p.search_volume);
+          return`<div style="display:contents;cursor:pointer" onclick="openPost('${p.id}','draft')">
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3);font-weight:600;background:${bg};display:flex;align-items:center">${i+1}</div>
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
+                ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
+              </div>
             </div>
-          </div>
-          <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(p.proposed_date)}</div>
-          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">${sbadge(p.status)}</div>
-          <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">${score!=null?`<span style="font-size:12px;font-weight:700;color:${isN?'var(--purple-t)':'var(--teal-d)'}">${score}</span>`:'—'}</div>
-        </div>`;
-      }).join('')}
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(p.proposed_date)}</div>
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">${sbadge(p.status)}</div>
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">${score!=null?`<span style="font-size:12px;font-weight:700;color:${isN?'var(--purple-t)':'var(--teal-d)'}">${score}</span>`:'—'}</div>
+          </div>`;
+        }).join('');
+      })()}
     </div>`;
 }
 
@@ -3199,19 +3240,32 @@ function renderCalendar(){
         <span style="font-size:10px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--teal-d)':'var(--text3)'}">${day}</span>
       </div>
       ${dayFixed.map(p=>`<div onclick="openPost('${p.id}','draft')" style="font-size:9px;background:${p.status==='live'?'var(--green-l)':'var(--blue-l)'};color:${p.status==='live'?'var(--green)':'var(--blue)'};border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word">${esc(titleCase(p.primary_keyword||p.title||''))}</div>`).join('')}
-      ${dayProp.map(p=>{
-        const sc=calcScore(p.ks_score,p.search_volume);
-        return`<div draggable="true"
-        ondragstart="calDragStart(event,'${p.id}')"
-        ondragend="calDragEnd(event)"
-        style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px">
-        <span style="flex:1;cursor:pointer" onclick="openPost('${p.id}','draft')">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
-        <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-          ${sc!=null?`<span style="font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
-          <button onclick="event.stopPropagation();clearProposedDate('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;line-height:1;padding:0 1px;font-weight:700" title="Remove from calendar">✕</button>
-        </div>
-        </div>`;
-      }).join('')}
+      ${(()=>{
+        // Same-cluster posts proposed for the same day render as ONE grouped badge
+        // instead of N identical-looking dashed chips — so a cluster launch reads
+        // as a single unit on the Calendar (what Sienna actually works from), not
+        // a coincidence of several posts sharing a date.
+        const clustered={},solo=[];
+        dayProp.forEach(p=>{const c=String(p.cluster||'').trim();if(c)(clustered[c]=clustered[c]||[]).push(p);else solo.push(p);});
+        const clusterHtml=Object.keys(clustered).map(name=>{
+          const posts=clustered[name];
+          return`<div onclick="switchTab('keywords')" title="${posts.length} posts in the &quot;${esc(name)}&quot; cluster, launching together — click to open Planning" style="font-size:9px;background:var(--teal-l);color:var(--teal-d);border:1px solid var(--teal);border-radius:3px;padding:3px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word;font-weight:700">📦 ${esc(name)} <span style="font-weight:400">(${posts.length})</span></div>`;
+        }).join('');
+        const soloHtml=solo.map(p=>{
+          const sc=calcScore(p.ks_score,p.search_volume);
+          return`<div draggable="true"
+          ondragstart="calDragStart(event,'${p.id}')"
+          ondragend="calDragEnd(event)"
+          style="font-size:9px;background:var(--bg2);color:var(--text2);border:1px dashed var(--border-d);border-radius:3px;padding:2px 4px;margin-bottom:2px;cursor:grab;line-height:1.3;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:3px">
+          <span style="flex:1;cursor:pointer" onclick="openPost('${p.id}','draft')">${esc(titleCase(p.primary_keyword||p.title||''))}</span>
+          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+            ${sc!=null?`<span style="font-weight:700;color:var(--teal-d);font-size:8px">${sc}</span>`:''}
+            <button onclick="event.stopPropagation();clearProposedDate('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;line-height:1;padding:0 1px;font-weight:700" title="Remove from calendar">✕</button>
+          </div>
+          </div>`;
+        }).join('');
+        return clusterHtml+soloHtml;
+      })()}
       <div style="display:flex;justify-content:center;margin-top:2px">
         <button onclick="calAddPost('${dateStr}')" style="opacity:0;transition:opacity .15s;background:none;border:1px solid var(--teal);border-radius:50%;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700" class="cal-plus" title="Add post to this date">+</button>
       </div>
