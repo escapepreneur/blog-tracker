@@ -26,7 +26,21 @@ async function getPending() {
   });
 }
 
-async function processOne(row) {
+// Every already-used featured background, blogwide (live + drafted) — so the auto-picker
+// below stops handing out the same top Pexels result to every post that happens to share
+// a similar search term (this is exactly how a cluster like "Vision Board" ended up with
+// the same photo on several posts: same term -> same #1 result -> same image, every time).
+async function getUsedBgUrls() {
+  const rows = await (await rest('post_drafts?select=assets')).json();
+  const used = new Set();
+  for (const r of (rows || [])) {
+    const u = r.assets && r.assets.featured_bg_url;
+    if (u) used.add(u);
+  }
+  return used;
+}
+
+async function processOne(row, usedBg) {
   const [post] = await (await rest(`posts?id=eq.${row.post_id}&select=blog,status,ghl_post_id,title,primary_keyword,subtitle`)).json();
   const brand = (post && post.blog) || 'esc'; // selects the per-brand logo (esc / nms)
   const a = row.assets || {};
@@ -34,11 +48,22 @@ async function processOne(row) {
   let bgUrl = a.featured_bg_url; // an explicit pick from the candidate grid takes priority
   if (!bgUrl) {
     const term = a.featured_image_search;
-    const idx = a.featured_bg_index || 0;
-    const cands = await searchPexels(term, PEXELS, 5);
+    let cands = await searchPexels(term, PEXELS, 8);
     if (!cands.length) { console.log('  no Pexels results for:', term); return; }
-    bgUrl = cands[idx % cands.length].url;
+    let pick = cands.find(c => c.url && !usedBg.has(c.url));
+    if (!pick) { // first page is all taken -> try a second page before giving up on variety
+      const more = await searchPexels(term, PEXELS, 8, 2);
+      pick = more.find(c => c.url && !usedBg.has(c.url));
+      if (pick) cands = more;
+    }
+    if (!pick) {
+      console.log('  every candidate for "' + term + '" is already used elsewhere — reusing the closest match');
+      const idx = a.featured_bg_index || 0;
+      pick = cands[idx % cands.length];
+    }
+    bgUrl = pick.url;
   }
+  usedBg.add(bgUrl); // claim it immediately so the next post processed THIS run can't also pick it
   const bg = Buffer.from(await (await fetch(bgUrl)).arrayBuffer()).toString('base64');
   const jpeg = await renderFeatured({ title: a.featured_title || '', tagline, bgBase64: bg, brand });
   const up = await uploadMedia({ buffer: jpeg, filename: `featured-${row.post_id}.jpg`, pit: PIT });
@@ -129,7 +154,8 @@ if (ONLY && ONLY.startsWith('PIN_')) {
   await pinBackfill(lim, mode);
 } else {
   const pending = await getPending();
+  const usedBg = await getUsedBgUrls();
   console.log(`${pending.length} draft(s) need a featured image${ONLY ? ` (post ${ONLY})` : ''}`);
-  for (const r of pending) { try { await processOne(r); } catch (e) { console.error('  FAIL', r.post_id, e.message); } }
+  for (const r of pending) { try { await processOne(r, usedBg); } catch (e) { console.error('  FAIL', r.post_id, e.message); } }
 }
 console.log('done');
