@@ -5,7 +5,7 @@ const GSC_URLS={esc:'https://search.google.com/search-console/inspect?resource_i
 let sb=null,activeBlog='esc',activeTab='dashboard',activePTab='details';
 let sfilt='live',curPost=null,curSocId=null;
 let allPosts=[],allDests=[],_links=[],_clChecked={},_gscOpps=[],_kwClusters=[],_seedSuggestions=[],_kwMode='ideas',_kwCluster=null,_kwActiveCluster=null;
-const BM={esc:{name:'ESC Hub',sub:'ESC Hub — eschub.com/blog'},nms:{name:'No More Somedays',sub:'No More Somedays — escapepreneur.com/blog'}};
+const BM={esc:{name:'ESC Hub',sub:'ESC Hub (eschub.com/blog)'},nms:{name:'No More Somedays',sub:'No More Somedays (escapepreneur.com/blog)'}};
 const IDX={no:{cls:'idx-no',dc:'idc-no',label:'Not indexed'},requested:{cls:'idx-req',dc:'idc-req',label:'Index requested'},'yes':{cls:'idx-yes',dc:'idc-yes',label:'Indexed'}};
 
 // TIMEZONE
@@ -114,14 +114,14 @@ async function loadDfsBalance(){
     const r=await fetch('/.netlify/functions/dataforseo-balance');const j=await r.json().catch(()=>({}));
     if(!j||j.configured===false){el.style.display='none';return;}
     el.style.display='inline-block';
-    if(j.error){el.textContent='🔎 balance —';el.title='DataForSEO balance unavailable: '+j.error;el.style.color='var(--text3)';return;}
+    if(j.error){el.textContent='🔎 balance unavailable';el.title='DataForSEO balance unavailable: '+j.error;el.style.color='var(--text3)';return;}
     const bal=j.balance;
-    el.textContent='🔎 DataForSEO $'+(bal!=null?Number(bal).toFixed(2):'—');
+    el.textContent='🔎 DataForSEO $'+(bal!=null?Number(bal).toFixed(2):'n/a');
     const low=bal!=null&&bal<5, mid=bal!=null&&bal>=5&&bal<15;
     el.style.color=low?'#b42318':mid?'#8a5a00':'var(--text3)';
     el.style.borderColor=low?'#f3c0c0':mid?'#f2d9a0':'var(--border)';
     el.style.background=low?'#fff5f5':mid?'#fff7e6':'var(--bg2)';
-    el.title=(low?'Low balance — top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
+    el.title=(low?'Low balance, top up at app.dataforseo.com. ':'')+'DataForSEO keyword-research balance · click to refresh';
   }catch(e){el.style.display='none';}
 }
 async function loginSB(){
@@ -260,7 +260,7 @@ function bd(){return allDests.filter(d=>d.blog===activeBlog)}
 function gp(id){return allPosts.find(p=>p.id===id)}
 function gt(id){const p=allPosts.find(x=>x.id===id);if(p)return{label:p.title||p.primary_keyword,url:p.url,type:'post'};const d=allDests.find(x=>x.id===id);if(d)return{label:d.label,url:d.url,type:'dest'};return null}
 function fl(n){return n===0?'red':n<3?'amber':'green'}
-function fd(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
+function fd(d){if(!d)return'n/a';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function sbadge(s){
   const m={live:'b-live',scheduled:'b-scheduled',approved:'b-approved',review:'b-review','pending-review':'b-review',drafted:'b-drafted',idea:'b-idea'};
@@ -279,7 +279,7 @@ async function copyToClipboard(text){
 function buildBriefPrompt(kw,ks,vol,supp,take,serpLink,blog){
   const blogName=blog==='esc'?'ESC Hub Blog (blog.eschub.com)':'No More Somedays (escapepreneur.com/blog)';
   const urlSlug=(kw||'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
-  return`Blog: ${blogName}\nPrimary keyword: ${kw||''}\nSuggested URL slug: ${urlSlug}\nKS Score: ${ks||'not provided'}\nMonthly search volume: ${vol||'not provided'}\nSecondary keywords: ${supp||'not provided'}\nUnique take / Karen's story: ${take||'not provided — please suggest the best fit'}\n${serpLink?'SERP analysis doc: '+serpLink:'SERP analysis: not provided'}\n\nPlease generate the complete blog post brief.`;
+  return`Blog: ${blogName}\nPrimary keyword: ${kw||''}\nSuggested URL slug: ${urlSlug}\nKS Score: ${ks||'not provided'}\nMonthly search volume: ${vol||'not provided'}\nSecondary keywords: ${supp||'not provided'}\nUnique take / Karen's story: ${take||'not provided, please suggest the best fit'}\n${serpLink?'SERP analysis doc: '+serpLink:'SERP analysis: not provided'}\n\nPlease generate the complete blog post brief.`;
 }
 function getSuppString(){
   const rows=document.querySelectorAll('.np-supp-row');
@@ -403,7 +403,7 @@ async function approvePost(id,sendBack=false,note=''){
   const nextDate=calcNextAvailableDate();
   await sb.from('posts').update({status:'approved',scheduled_date:nextDate}).eq('id',id);
   await loadPosts();render();closeModal('approve-modal');
-  toast('✓ Approved — proposed date: '+(nextDate||'none available'),3000);
+  toast('✓ Approved. Proposed date: '+(nextDate||'none available'),3000);
 }
 
 function openApproveModal(id){
@@ -413,7 +413,7 @@ function openApproveModal(id){
   document.getElementById('approve-note').value='';
   // Show next available date
   const nd=calcNextAvailableDate();
-  document.getElementById('approve-date-preview').textContent=nd?'Proposed date: '+nd:'No available slots — check cadence in Settings';
+  document.getElementById('approve-date-preview').textContent=nd?'Proposed date: '+nd:'No available slots, check cadence in Settings';
   document.getElementById('approve-modal').classList.add('on');
 }
 
@@ -447,7 +447,7 @@ function renderResearch(){
     +`<button class="btn btn-danger btn-xs" id="research-bulk-delete-btn" style="display:none;margin-left:8px" onclick="bulkDeleteResearch()">Delete selected</button>`;
   }
 
-  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':all.length?'No unplanned keywords — all have a proposed date (see the Calendar).':'No keywords yet. Use + Log keyword to add some.'}</div>`;return}
+  if(!filtered.length){el.innerHTML=`<div class="empty">${search?'No keywords match.':all.length?'No unplanned keywords, all have a proposed date (see the Calendar).':'No keywords yet. Use + Log keyword to add some.'}</div>`;return}
 
   el.innerHTML=filtered.map((p,i)=>{
     const score=calcScore(p.ks_score,p.search_volume);
@@ -502,7 +502,7 @@ async function saveProposedDate(id,val){
   await sb.from('posts').update({proposed_date:val||null}).eq('id',id);
   const p=allPosts.find(x=>x.id===id);if(p)p.proposed_date=val;
   await loadPosts();renderResearch();renderPipeline();renderDashboard();
-  toast(val?'Added to pipeline — '+fd(val):'Proposed date cleared');
+  toast(val?'Added to pipeline: '+fd(val):'Proposed date cleared');
 }
 function dragStart(e,id){_dragSrcId=id;e.currentTarget.style.opacity='0.4';e.dataTransfer.effectAllowed='move'}
 function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';return false}
@@ -612,7 +612,7 @@ function addSuppRow(kw='',ks='',vol=''){
 // NEW POST
 function openNewPost(){
   const isN=activeBlog==='nms';
-  document.getElementById('np-title').textContent='Log keyword — '+BM[activeBlog].name;
+  document.getElementById('np-title').textContent='Log keyword: '+BM[activeBlog].name;
   document.getElementById('np-save-btn').className='btn '+(isN?'btn-pp':'btn-p');
   document.getElementById('np-brief-btn').className='btn btn-ghost';
   ['np-kw','np-ks','np-vol','np-serp','np-take','np-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
@@ -667,7 +667,7 @@ async function saveAndGetBrief(){
   const prompt=buildBriefPrompt(d.kw,d.ks,d.vol,d.supp,d.take,d.serp,activeBlog);
   await copyToClipboard(prompt);
   closeModal('new-post-modal');
-  toast('Saved + brief copied — opening Blogging project…');
+  toast('Saved + brief copied, opening Blogging project…');
   setTimeout(()=>window.open(BLOGGING_PROJECT_URL,'_blank'),600);
   btn.textContent='Get brief now →';btn.disabled=false;
 }
@@ -675,7 +675,7 @@ async function getBriefForPost(id){
   const p=gp(id);if(!p)return;
   const prompt=buildBriefPrompt(p.primary_keyword,p.ks_score,p.search_volume,p.supplementary_keywords,p.unique_take,p.serp_notes,p.blog);
   await copyToClipboard(prompt);
-  toast('Brief copied — opening Blogging project…');
+  toast('Brief copied, opening Blogging project…');
   setTimeout(()=>window.open(BLOGGING_PROJECT_URL,'_blank'),600);
 }
 async function reCopyBrief(){
@@ -811,7 +811,7 @@ async function addClusterAsPost(ci){
   }).select().single();
   if(error){toast('Error: '+error.message);return}
   await sb.from('social_tracking').insert({post_id:data.id});
-  await loadPosts();toast(`✓ Cluster added — "${titleCase(primary.keyword)}" as primary, ${cluster.length-1} supplementary`);
+  await loadPosts();toast(`✓ Cluster added: "${titleCase(primary.keyword)}" as primary, ${cluster.length-1} supplementary`);
   // Mark the button as done
   const btns=document.querySelectorAll('.kw-cluster button');
   btns.forEach(b=>{if(b.textContent.includes('Add cluster')&&b.getAttribute('onclick')===`addClusterAsPost(${ci})`){b.textContent='✓ Added';b.disabled=true;b.style.cssText='background:var(--green-l);color:var(--green);border:1px solid #b8dfc6;border-radius:30px;font-size:10px;padding:3px 10px'}});
@@ -822,7 +822,7 @@ async function openPost(id,tab){
   curPost=id; // Progress checklist removed; _links cached + Links tab loads lazily
   const post=gp(id);if(!post)return;
   const kw=post.primary_keyword||'',title=post.title||'';
-  document.getElementById('pm-title').textContent=kw&&title?`${kw} — ${title}`:(kw||title||'Post');
+  document.getElementById('pm-title').textContent=kw&&title?`${kw}: ${title}`:(kw||title||'Post');
   document.getElementById('pm-kw-display').textContent=(kw&&!title)?'No title yet':'';
   document.getElementById('pm-title-i').value=title;
   {const st=document.getElementById('pm-subtitle');if(st)st.value=post.subtitle||'';}
@@ -939,13 +939,13 @@ async function renderGscHistory(){
   if(!curPost)return;
   const{data}=await sb.from('gsc_positions').select('*').eq('post_id',curPost).order('recorded_date',{ascending:false});
   const rows=data||[];
-  if(!rows.length){document.getElementById('gsc-tbody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text3)">No rankings yet — the weekly auto-snapshot will fill this in.</td></tr>`;return}
-  document.getElementById('gsc-tbody').innerHTML=rows.map((r,i)=>{const pv=rows[i+1];let ch='—';if(pv&&r.position&&pv.position){const d=pv.position-r.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'—'}
+  if(!rows.length){document.getElementById('gsc-tbody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text3)">No rankings yet. The weekly auto-snapshot will fill this in.</td></tr>`;return}
+  document.getElementById('gsc-tbody').innerHTML=rows.map((r,i)=>{const pv=rows[i+1];let ch='n/a';if(pv&&r.position&&pv.position){const d=pv.position-r.position;ch=d>0?`<span class="pos-up">▲${d.toFixed(1)}</span>`:d<0?`<span class="pos-dn">▼${Math.abs(d).toFixed(1)}</span>`:'no change'}
   const n=r.notes||'';
   const src=n.includes('GSC-auto')?'Auto':n.startsWith('SerpRobot')?'SerpRobot':n.startsWith('GSC')?'GSC':'Manual';
   const srcColor=src==='Auto'?'var(--green)':src==='SerpRobot'?'var(--teal-d)':src==='GSC'?'var(--blue)':'var(--text3)';
-  const ctr=(r.impressions&&r.clicks!=null)?((r.clicks/r.impressions)*100).toFixed(1)+'%':'—';
-  return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'—'}</td><td>${r.impressions?.toLocaleString()||'—'}</td><td>${r.clicks?.toLocaleString()||'—'}</td><td>${ctr}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
+  const ctr=(r.impressions&&r.clicks!=null)?((r.clicks/r.impressions)*100).toFixed(1)+'%':'n/a';
+  return`<tr><td>${fd(r.recorded_date)}</td><td style="font-weight:700">${r.position||'n/a'}</td><td>${r.impressions?.toLocaleString()||'n/a'}</td><td>${r.clicks?.toLocaleString()||'n/a'}</td><td>${ctr}</td><td>${ch}</td><td style="font-size:10px;font-weight:600;color:${srcColor}">${src}</td><td><button class="btn btn-danger btn-xs" onclick="delGsc('${r.id}')">✕</button></td></tr>`}).join('');
 }
 async function saveGsc(){
   const e={post_id:curPost,recorded_date:document.getElementById('gsc-date').value||localToday(),position:parseFloat(document.getElementById('gsc-pos').value)||null,impressions:parseInt(document.getElementById('gsc-impr').value)||null,clicks:parseInt(document.getElementById('gsc-clicks').value)||null,notes:document.getElementById('gsc-notes').value.trim()||null};
@@ -973,7 +973,7 @@ function _cooldownActive(){return !!(_optCooldown&&_optCooldown.inCooldown&&!_co
 function overrideCooldown(){_cooldownOverride[curPost]=true;renderOptimizeSection();renderBodySection();}
 async function markAsOptimised(){
   if(!curPost)return;
-  if(!confirm('Mark this post as optimised? Use this when you changed it yourself in GHL — it starts the 30-day cooldown and shows the post as "measuring".'))return;
+  if(!confirm('Mark this post as optimised? Use this when you changed it yourself in GHL: it starts the 30-day cooldown and shows the post as "measuring".'))return;
   const post=allPosts.find(p=>p.id===curPost);
   const pg=_gscMetrics&&_gscMetrics.page;
   const baseline=pg?{position:pg.position,impressions:pg.impressions,clicks:pg.clicks,ctr:pg.ctr,window:'90d',captured:localToday(),source:'manual'}:null;
@@ -986,7 +986,7 @@ function _cooldownCard(label){
   const c=_optCooldown||{days:0};
   return `<div class="card" style="padding:14px">
     <div style="font-size:13px;font-weight:700">${label}</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:6px">Optimised ${c.days===0?'today':c.days+' day'+(c.days!==1?'s':'')+' ago'}. Give it until <b>${fd(c.until)}</b> (${COOLDOWN_DAYS} days) to prove itself before changing it again — that lets Google re-rank it and keeps the before/after measurement clean.</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:6px">Optimised ${c.days===0?'today':c.days+' day'+(c.days!==1?'s':'')+' ago'}. Give it until <b>${fd(c.until)}</b> (${COOLDOWN_DAYS} days) to prove itself before changing it again, so Google can re-rank it and the before/after measurement stays clean.</div>
     <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" onclick="overrideCooldown()">Optimise anyway</button></div>
   </div>`;
 }
@@ -1033,7 +1033,7 @@ async function renderOptimizeSection(){
   }
   const kwStr=(prop.keywords||[]).slice(0,8).map(k=>esc(k.query)).join(', ');
   el.innerHTML=`<div class="card" style="padding:14px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Proposed optimisation — edit anything before applying</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Proposed optimisation: edit anything before applying</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${prop.rationale?esc(prop.rationale):''}</div>
     <div style="margin-bottom:12px">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)">Current title</div>
@@ -1051,7 +1051,7 @@ async function renderOptimizeSection(){
     </div>
     ${kwStr?`<div style="font-size:11px;color:var(--text3);margin-top:8px">Keywords to work in: ${kwStr}</div>`:''}
     <div style="display:flex;gap:6px;margin-top:10px">
-      <input id="opt-instruction" placeholder="Tell it what to change — e.g. lead with the definition, drop 'Explained Simply', shorten the meta" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();optimizeRefine();}">
+      <input id="opt-instruction" placeholder="Tell it what to change, e.g. lead with the definition, drop 'Explained Simply', shorten the meta" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();optimizeRefine();}">
       <button class="btn btn-sm" onclick="optimizeRefine()">Ask</button>
     </div>
     <div id="opt-review" style="margin-top:10px"></div>
@@ -1082,7 +1082,7 @@ async function reviewMyVersion(){
   const rv=document.getElementById('opt-review');if(!t){if(rv)rv.innerHTML='<span style="font-size:12px;color:var(--red-t)">Add a title first.</span>';return;}
   if(rv)rv.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Reviewing your version…</div>';
   try{const r=await fetch('/.netlify/functions/review-optimization',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,title:t,meta:m})});const j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
-    const map={strong:['✓ Strong — good to apply','#1c6b3a','#e9f7ee','#b6e0c4'],ok:['Looks OK — minor notes','#8a5a00','#fff7e6','#f2d9a0'],weak:['Needs work','#b3261e','#fdecec','#f3c0c0']};
+    const map={strong:['✓ Strong, good to apply','#1c6b3a','#e9f7ee','#b6e0c4'],ok:['Looks OK, minor notes','#8a5a00','#fff7e6','#f2d9a0'],weak:['Needs work','#b3261e','#fdecec','#f3c0c0']};
     const c=map[j.verdict]||map.ok;
     const notesArr=Array.isArray(j.notes)?j.notes:(j.notes?[j.notes]:[]);
     const notes=notesArr.map(n=>`<li>${esc(typeof n==='string'?n:JSON.stringify(n))}</li>`).join('');
@@ -1102,7 +1102,7 @@ async function optimizeNow(){
   const poll=async()=>{
     const{data}=await sb.from('optimization_proposals').select('id').eq('post_id',curPost).eq('status','proposed').order('created_at',{ascending:false}).limit(1);
     if((data||[]).length){renderOptimizeSection();return;}
-    if(Date.now()-t0>100000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';if(btn)btn.disabled=false;return;}
+    if(Date.now()-t0>100000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';if(btn)btn.disabled=false;return;}
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
@@ -1129,7 +1129,7 @@ async function optimizeRefine(){
     const ti=document.getElementById('opt-title-edit');if(ti)ti.value=j.title||t;
     const me=document.getElementById('opt-meta-edit');if(me)me.value=j.meta_description||m;
     if(ib)ib.value='';updateOptCounters();
-    if(rv)rv.innerHTML='<div style="font-size:12px;color:var(--green)">Updated ✓ — tweak by hand, ask for another change, or Review.</div>';
+    if(rv)rv.innerHTML='<div style="font-size:12px;color:var(--green)">Updated ✓. Tweak by hand, ask for another change, or Review.</div>';
   }catch(e){if(rv)rv.innerHTML='<span style="font-size:12px;color:var(--red-t)">Change failed: '+esc(String(e&&e.message||e))+'</span>';}
 }
 
@@ -1152,8 +1152,8 @@ async function renderFeaturedRefresh(){
   const srch=esc(a.featured_image_search||post.primary_keyword||'');
   el.innerHTML=`<div class="card" style="padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:13px;font-weight:700">Featured image</div><button class="btn btn-xs btn-ghost" onclick="renderFeaturedRefresh()" title="Check for the latest rendered image">↻ Refresh</button></div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">The graphic has the headline drawn onto it. Render a preview, review it here, then push it onto the live post — nothing goes live until you approve it.</div>
-    ${img?`<div style="margin-bottom:8px">${preview?'<div style="font-size:11px;font-weight:700;color:#8a5a00;background:#fff7e6;border:1px solid #f2d9a0;border-radius:6px;padding:3px 8px;display:inline-block;margin-bottom:6px">PREVIEW — not live yet</div>':''}<img src="${esc(img)}" alt="featured image" style="display:block;width:100%;max-width:460px;border-radius:8px"></div>`:'<div style="font-size:12px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px">No image rendered yet — set the text below and render a preview.</div>'}
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">The graphic has the headline drawn onto it. Render a preview, review it here, then push it onto the live post. Nothing goes live until you approve it.</div>
+    ${img?`<div style="margin-bottom:8px">${preview?'<div style="font-size:11px;font-weight:700;color:#8a5a00;background:#fff7e6;border:1px solid #f2d9a0;border-radius:6px;padding:3px 8px;display:inline-block;margin-bottom:6px">PREVIEW (not live yet)</div>':''}<img src="${esc(img)}" alt="featured image" style="display:block;width:100%;max-width:460px;border-radius:8px"></div>`:'<div style="font-size:12px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px">No image rendered yet. Set the text below and render a preview.</div>'}
     ${preview?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px">
         <button class="${bBtn}" onclick="applyFeatured()">✓ Use this on the live post</button>
         <button class="btn btn-sm" onclick="refreshFeatured(true)">Swap background</button>
@@ -1235,7 +1235,7 @@ async function renderBodySection(){
   if(p.phase==='analysed'){
     const cov=(p.covered||[]).length,miss=(p.missing||[]);
     if(!miss.length){
-      el.innerHTML=`<div class="card" style="padding:14px"><div style="font-size:13px;font-weight:700">Improve the article</div><div style="font-size:12px;color:var(--green);margin-top:6px">🎉 All ${cov} ranking keywords are already covered in the article — nothing to add.</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button><button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button></div></div>`;
+      el.innerHTML=`<div class="card" style="padding:14px"><div style="font-size:13px;font-weight:700">Improve the article</div><div style="font-size:12px;color:var(--green);margin-top:6px">🎉 All ${cov} ranking keywords are already covered in the article. Nothing to add.</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" onclick="improveBodyNow()">Re-analyse</button><button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Dismiss</button></div></div>`;
       return;
     }
     _bodyPicker(p,el,bBtn);
@@ -1249,7 +1249,7 @@ async function renderBodySection(){
       :`<span style="display:inline-block;font-size:11px;background:#fff7e6;color:#8a5a00;border:1px solid #f2d9a0;border-radius:20px;padding:2px 9px;margin:0 5px 5px 0">${esc(k.query)}</span>`
     ).join('');
     const hasAdd=!!(p.new_html&&p.new_html.trim());
-    const headTitle=isLinks?'Internal links — woven in':isEditorial?'Editorial fixes — woven in':'Article improvement — woven in';
+    const headTitle=isLinks?'Internal links: woven in':isEditorial?'Editorial fixes: woven in':'Article improvement: woven in';
     const subLine=isLinks?`${miss.length} tracked link${miss.length===1?'':'s'} weren't actually on the live page. Woven in:`
       :isEditorial?''
       :`${cov} of ${cov+miss.length} ranking keywords already in the article.${miss.length?' Woven in coverage for:':' Nothing missing 🎉'}`;
@@ -1259,11 +1259,11 @@ async function renderBodySection(){
       ${miss.length?`<div style="margin-bottom:10px">${chips}</div>`:''}
       ${p.note?`<div style="font-size:12px;color:var(--amber-t);background:#fff7e6;border:1px solid #f2d9a0;border-radius:8px;padding:6px 10px;margin-bottom:8px">⚠ ${esc(p.note)} Review the full article below before publishing.</div>`:''}
       ${hasAdd?`<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${esc(p.summary||'')}</div>
-        <label class="fl">Revised article — ${isLinks?'links':isEditorial?'fixes':'coverage'} woven in; edit the HTML if you like</label>
+        <label class="fl">Revised article: ${isLinks?'links':isEditorial?'fixes':'coverage'} woven in; edit the HTML if you like</label>
         <textarea id="body-add-edit" rows="12" oninput="_bodyPreview()" style="width:100%;font-size:12px;font-family:monospace;line-height:1.5;resize:vertical;margin-bottom:6px"></textarea>
         <details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:600">Preview full article</summary><div id="body-add-preview" style="margin-top:8px;font-size:13px;line-height:1.6;max-height:400px;overflow:auto;border-top:1px solid var(--bg2);padding-top:8px"></div></details>`:''}
       ${hasAdd?`<div style="display:flex;gap:6px;margin-bottom:10px">
-        <input id="body-instruction" placeholder="Tell it what to change — e.g. make it shorter, add a question about pricing, less formal" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();bodyRefine();}">
+        <input id="body-instruction" placeholder="Tell it what to change, e.g. make it shorter, add a question about pricing, less formal" style="flex:1;font-size:12px;padding:6px 8px" onkeydown="if(event.key==='Enter'){event.preventDefault();bodyRefine();}">
         <button class="btn btn-sm" onclick="bodyRefine()">Ask</button>
       </div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1279,18 +1279,18 @@ async function renderBodySection(){
   if(p.phase==='temp_published'){
     const tempUrl='https://'+dom+'/post/'+(p.temp_slug||'');
     el.innerHTML=`<div class="card" style="padding:14px;border-color:var(--teal)">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px">Improved version is live — finish the swap</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">Improved version is live: finish the swap</div>
       ${p.note?`<div style="font-size:12px;color:var(--amber-t);background:#fff7e6;border:1px solid #f2d9a0;border-radius:8px;padding:6px 10px;margin-bottom:8px">${esc(p.note)}</div>`:''}
       <ol style="font-size:12px;color:var(--text2);line-height:1.7;margin:0 0 10px;padding-left:18px">
         <li><b>Review it:</b> <a href="${esc(tempUrl)}" target="_blank" rel="noopener" style="color:var(--teal-d);font-weight:600">open the new version</a> (temporary URL).</li>
-        <li><b>Delete the OLD post</b> at <code>/${esc(p.real_slug)}</code> in GHL — Sites → Blogs → <b>delete</b> (not archive).</li>
+        <li><b>Delete the OLD post</b> at <code>/${esc(p.real_slug)}</code> in GHL: Sites → Blogs → <b>delete</b> (not archive).</li>
         <li>Then click <b>Finish swap</b>: it moves the new version onto the real URL.</li>
       </ol>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="${bBtn}" onclick="bodySwap()">Finish swap →</button>
         <button class="btn btn-danger btn-sm" onclick="dismissBody('${p.id}')">Cancel</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px">If the old post isn't fully deleted, Finish swap stops and tells you — nothing breaks.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">If the old post isn't fully deleted, Finish swap stops and tells you. Nothing breaks.</div>
       <div id="body-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
     </div>`;
     return;
@@ -1306,7 +1306,7 @@ async function improveBodyNow(){
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(cur&&cur.phase==='analysed'&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
-    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';return;}
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
@@ -1321,7 +1321,7 @@ async function checkLinksNow(){
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(cur&&(cur.phase==='proposed'||cur.phase==='done')&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
-    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';return;}
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
@@ -1336,7 +1336,7 @@ async function checkAffiliateLinkNow(){
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(cur&&(cur.phase==='proposed'||cur.phase==='done')&&(!before||cur.created_at!==before.created_at)){renderBodySection();return;}
-    if(Date.now()-t0>60000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    if(Date.now()-t0>60000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';return;}
     setTimeout(poll,4000);
   };
   setTimeout(poll,4000);
@@ -1371,7 +1371,7 @@ function _bodyPicker(p,el,bBtn){
     </label>`).join('');
   el.innerHTML=`<div class="card" style="padding:14px">
     <div style="font-size:13px;font-weight:700;margin-bottom:2px">Improve the article</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${cov} of ${cov+miss.length} ranking keywords already in the article. Tick the missing ones worth targeting — untick anything off-topic:</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${cov} of ${cov+miss.length} ranking keywords already in the article. Tick the missing ones worth targeting, untick anything off-topic:</div>
     <div style="margin-bottom:10px">${rows}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="${bBtn}" onclick="bodyGenerate()">Generate section for selected →</button>
@@ -1398,7 +1398,7 @@ async function bodyRefine(){
   const poll=async()=>{
     const c=((await sb.from('body_proposals').select('updated_at,phase').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(c&&c.phase==='proposed'&&c.updated_at!==beforeU){renderBodySection();return;}
-    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';return;}
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
@@ -1415,7 +1415,7 @@ async function bodyGenerate(){
   const poll=async()=>{
     const cur=((await sb.from('body_proposals').select('phase,updated_at').eq('post_id',curPost).order('created_at',{ascending:false}).limit(1)).data||[])[0];
     if(cur&&cur.phase==='proposed'&&cur.updated_at!==beforeU){renderBodySection();return;}
-    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';return;}
+    if(Date.now()-t0>110000){if(st)st.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';return;}
     setTimeout(poll,6000);
   };
   setTimeout(poll,6000);
@@ -1430,14 +1430,14 @@ function _statTile(label,val,sub){return`<div style="flex:1;min-width:0;backgrou
 function _chip(text,tone){const c={amber:['#8a5a00','#fff7e6','#f2d9a0'],blue:['#1a4d8f','var(--blue-l)','#b8ccf0'],green:['#1c6b3a','#e9f7ee','#b6e0c4'],grey:['var(--text2)','var(--bg2)','var(--border)']}[tone||'grey'];return`<span style="display:inline-block;font-size:11px;font-weight:600;color:${c[0]};background:${c[1]};border:1px solid ${c[2]};border-radius:20px;padding:3px 10px;margin:0 6px 6px 0">${text}</span>`}
 function _healthFlags(page,post){
   const f=[];
-  if(!page||!page.impressions){f.push(_chip('No search impressions yet — give it time / check indexing','grey'));}
+  if(!page||!page.impressions){f.push(_chip('No search impressions yet, give it time / check indexing','grey'));}
   else{
     const pos=page.position,ctr=page.ctr||0,impr=page.impressions;
     if(pos<=5&&ctr>=0.03)f.push(_chip('✓ Performing well','green'));
-    if(pos<=10&&ctr<0.02&&impr>=50)f.push(_chip('Page 1 but low CTR — sharpen title/meta','amber'));
-    if(pos>10&&pos<=20)f.push(_chip('Just off page 1 — push it up','blue'));
-    if(pos>20&&pos<=50&&impr>=50)f.push(_chip('Page 2–3 with real demand — needs a lift','blue'));
-    if(pos>50&&impr>=50)f.push(_chip('Ranking far back — big rewrite or new post','grey'));
+    if(pos<=10&&ctr<0.02&&impr>=50)f.push(_chip('Page 1 but low CTR, sharpen title/meta','amber'));
+    if(pos>10&&pos<=20)f.push(_chip('Just off page 1, push it up','blue'));
+    if(pos>20&&pos<=50&&impr>=50)f.push(_chip('Page 2-3 with real demand, needs a lift','blue'));
+    if(pos>50&&impr>=50)f.push(_chip('Ranking far back, big rewrite or new post','grey'));
   }
   if(post&&post.indexed&&post.indexed!=='yes')f.push(_chip('Not confirmed indexed','amber'));
   return f.length?f.join(''):_chip('No flags','grey');
@@ -1446,7 +1446,7 @@ async function renderGscMetrics(){
   _gscMetrics=null;
   const el=document.getElementById('pm-gsc-metrics');if(!el)return;
   const post=allPosts.find(p=>p.id===curPost);
-  if(!post||!post.url){el.innerHTML='<div class="empty" style="padding:1rem">No live URL yet — publish this post to start tracking Search Console results.</div>';return}
+  if(!post||!post.url){el.innerHTML='<div class="empty" style="padding:1rem">No live URL yet. Publish this post to start tracking Search Console results.</div>';return}
   el.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:.5rem"><div class="spinner"></div>Loading Search Console data…</div>';
   let j;
   try{const r=await fetch('/.netlify/functions/gsc-metrics?blog='+encodeURIComponent(post.blog||activeBlog)+'&url='+encodeURIComponent(post.url));j=await r.json();if(!r.ok)throw new Error(j.error||('HTTP '+r.status));}
@@ -1463,7 +1463,7 @@ async function renderGscMetrics(){
   const qList=q.length?`<div style="margin-top:6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:4px">Top queries</div>${q.map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--bg2)"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.query)}</span><span style="color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums">pos ${x.position.toFixed(1)} · ${x.impressions.toLocaleString()} impr · ${(x.ctr*100).toFixed(1)}%</span></div>`).join('')}</div>`:'';
   el.innerHTML=`<div class="card" style="padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700">Search Console — last 90 days</div>
+      <div style="font-size:13px;font-weight:700">Search Console: last 90 days</div>
       <div style="font-size:10px;color:var(--text3)">${j.range?esc(j.range.start+' → '+j.range.end):''}</div>
     </div>
     ${tiles}
@@ -1484,14 +1484,14 @@ async function saveOptimization(){
   const{error}=await sb.from('optimizations').insert({post_id:curPost,blog:post?post.blog:activeBlog,opt_date,kind,note,baseline});
   if(error){toast('Save failed: '+error.message,4000);return;}
   // drop a marker on the position history so the "before" point is visible on the trend
-  if(baseline)await sb.from('gsc_positions').insert({post_id:curPost,recorded_date:opt_date,position:baseline.position,impressions:baseline.impressions,clicks:baseline.clicks,notes:'optimization: '+kind+(note?' — '+note:'')});
+  if(baseline)await sb.from('gsc_positions').insert({post_id:curPost,recorded_date:opt_date,position:baseline.position,impressions:baseline.impressions,clicks:baseline.clicks,notes:'optimization: '+kind+(note?', '+note:'')});
   ['opt-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   hideOptForm();renderOptLog();renderGscHistory();toast('Optimization logged ✓');
 }
 async function delOpt(id){if(!confirm('Delete this optimization log entry?'))return;await sb.from('optimizations').delete().eq('id',id);renderOptLog();}
 function _optKindLabel(k){return{'title-meta':'Title / meta','content':'Content','links':'Internal links','featured':'Featured image','keywords':'Keyword targeting','other':'Other'}[k]||k;}
 function _delta(before,after,lowerBetter){
-  if(before==null||after==null)return '<span style="color:var(--text3)">—</span>';
+  if(before==null||after==null)return '<span style="color:var(--text3)">n/a</span>';
   const d=after-before;const good=lowerBetter?d<0:d>0;
   if(Math.abs(d)<(lowerBetter?0.1:0.0005))return '<span style="color:var(--text3)">no change</span>';
   const arrow=good?'▲':'▼';const col=good?'var(--green)':'var(--red-t)';
@@ -1639,7 +1639,7 @@ async function renderModalLinks(){
     if(pageLinks.length){html+=`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:10px">Pages (${pgl}/2)</div>`;pageLinks.forEach(l=>{const t=gt(l.to_post_id||l.to_dest_id);if(!t)return;html+=`<div class="lr"><div style="flex:1;font-size:12px;font-weight:500">${esc(t.label)} <span class="pill pill-g">page</span></div><button class="btn btn-danger btn-xs" onclick="removeLink('${l.id}')">Remove</button></div>`})}
   }
   document.getElementById('pm-link-list').innerHTML=html;
-  const sel=document.getElementById('pm-link-sel');sel.innerHTML='<option value="">— select —</option>';
+  const sel=document.getElementById('pm-link-sel');sel.innerHTML='<option value="">Select...</option>';
   const li=new Set(out.map(l=>l.to_post_id||l.to_dest_id));
   const ap=bp().filter(p=>p.id!==curPost&&!li.has(p.id));
   const ad=bd().filter(d=>!li.has(d.id));
@@ -1766,7 +1766,7 @@ function checkMilestone(){
   for(const m of milestones){
     if(completePosts>=m&&reached<m){
       localStorage.setItem(key,m);
-      const msgs={5:'5 posts fully complete — great start!',10:'10 posts done — you are building momentum!',25:'25 posts complete — a quarter century! 🌟',50:'50 posts fully complete — halfway hero! 🏆',100:'100 posts complete — absolutely incredible! 🚀'};
+      const msgs={5:'5 posts fully complete, great start!',10:'10 posts done, you are building momentum!',25:'25 posts complete, a quarter century! 🌟',50:'50 posts fully complete, halfway hero! 🏆',100:'100 posts complete, absolutely incredible! 🚀'};
       showMilestone(msgs[m]||`${m} posts complete!`);
       break;
     }
@@ -1785,7 +1785,7 @@ async function requestIndexing(id){
   await loadPosts();render();
   const gscUrl=GSC_URLS[p.blog]+encodeURIComponent(p.url);
   window.open(gscUrl,'_blank');
-  toast('Marked as index requested — submit in GSC');
+  toast('Marked as index requested, submit in GSC');
 }
 async function checkIndexing(id){
   const p=gp(id);if(!p||!p.url){toast('No URL set for this post');return}
@@ -1793,7 +1793,7 @@ async function checkIndexing(id){
   window.open(gscUrl,'_blank');
   // Copy URL to clipboard as fallback in case GSC doesn't pre-fill
   try{await navigator.clipboard.writeText(p.url)}catch(e){}
-  toast('Post URL copied to clipboard — paste into GSC URL inspection if needed',3500);
+  toast('Post URL copied to clipboard, paste into GSC URL inspection if needed',3500);
 }
 async function confirmIndexed(id){
   await sb.from('posts').update({indexed:'yes'}).eq('id',id);
@@ -1830,7 +1830,7 @@ function openSerpRobotImport(){
 
 async function handleSerpRobotFile(e){
   const file=e.target.files[0];if(!file)return;
-  document.getElementById('sr-file-label').textContent=file.name+' — processing…';
+  document.getElementById('sr-file-label').textContent=file.name+': processing…';
   const importDate=document.getElementById('sr-import-date').value||localToday();
   // SerpRobot CSV is UTF-16 tab-separated: Keyword, Rank, Change, Volume
   const buffer=await file.arrayBuffer();
@@ -1876,7 +1876,7 @@ async function handleSerpRobotFile(e){
 // Updated GSC import with source label
 async function handleGscFile(e){
   const file=e.target.files[0];if(!file)return;
-  document.getElementById('gsc-file-label').textContent=file.name+' — processing…';
+  document.getElementById('gsc-file-label').textContent=file.name+': processing…';
   const importDate=document.getElementById('gsc-import-date').value||localToday();
   const text=await file.text();
   const lines=text.split('\n').filter(l=>l.trim());
@@ -1909,7 +1909,7 @@ async function handleGscFile(e){
 
 async function handleGscFileWeekly(e){
   const file=e.target.files[0];if(!file)return;
-  document.getElementById('gsc-file-label2').textContent=file.name+' — processing…';
+  document.getElementById('gsc-file-label2').textContent=file.name+': processing…';
   const importDate=document.getElementById('gsc-import-date2').value||localToday();
   // Reuse same logic but output to weekly modal result div
   const text=await file.text();
@@ -2003,7 +2003,7 @@ async function renderOpportunities(){
     // Always keep a way into the post (measuring gates re-doing title/meta, not opening
     // it or improving the body). Show the badge alongside, never instead of, the button.
     const action=`<div style="display:flex;align-items:center;gap:8px;flex:none">
-      ${cd?`<span title="Title/meta optimised — measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ Measuring</span>`:''}
+      ${cd?`<span title="Title/meta optimised: measuring until ${cd.until}" style="font-size:11px;font-weight:600;color:#1c6b3a;background:#e9f7ee;border:1px solid #b6e0c4;border-radius:20px;padding:3px 10px;white-space:nowrap">✓ Measuring</span>`:''}
       <button class="btn btn-xs" style="flex:none" onclick="openPost('${p.id}','gsc')">${cd?'Open':'Optimise'}</button>
     </div>`;
     const collapsed=_oppsCollapsedSet().has(p.id);
@@ -2033,7 +2033,7 @@ async function renderOpportunities(){
   };
   el.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">${j.range.start} to ${j.range.end} · ${j.counts.rows} queries analysed · <span style="color:#1a4d8f;font-weight:600">near page 1</span> · <span style="color:#8a5a00;font-weight:600">low CTR</span> · <span style="color:var(--text2);font-weight:600">page 2–3</span></div>`
     +(postGroups.length?`<div class="sh" style="margin-top:12px">Your posts with ranking opportunities</div><div style="font-size:11px;color:var(--text3);margin:2px 0 10px">Each post and the keywords it's close on. Optimise the post to lift them together.</div>${postGroups.map(postCard).join('')}`:'')
-    +(otherGroups.length?`<div class="sh" style="margin-top:16px">Other ranking pages — a dedicated post could win these</div><div style="font-size:11px;color:var(--text3);margin:2px 0 10px">Keywords ranking on pages that aren't blog posts. Add one as an idea to target it properly.</div>${otherGroups.map(otherCard).join('')}`:'')
+    +(otherGroups.length?`<div class="sh" style="margin-top:16px">Other ranking pages: a dedicated post could win these</div><div style="font-size:11px;color:var(--text3);margin:2px 0 10px">Keywords ranking on pages that aren't blog posts. Add one as an idea to target it properly.</div>${otherGroups.map(otherCard).join('')}`:'')
     +((!postGroups.length&&!otherGroups.length)?'<div class="empty" style="padding:1rem">No clear opportunities in this window yet.</div>':'');
 }
 // ── IDEAS / REQUESTS BOARD (Ideas tab) ── Karen drops tool ideas/requests here as she
@@ -2051,7 +2051,7 @@ async function renderRequests(){
       <div style="flex:none;font-size:10px;color:var(--text3);white-space:nowrap">${fd((r.created_at||'').slice(0,10))}</div>
       <button class="btn btn-danger btn-xs" title="Delete" onclick="delRequest('${r.id}')" style="flex:none">✕</button>
     </div>`;
-  openEl.innerHTML=open.length?`<div class="sh">Open (${open.length})</div>`+open.map(card).join(''):'<div class="empty" style="padding:1rem">No open ideas yet. Add one above — I’ll pick it up next time we work on the tool.</div>';
+  openEl.innerHTML=open.length?`<div class="sh">Open (${open.length})</div>`+open.map(card).join(''):'<div class="empty" style="padding:1rem">No open ideas yet. Add one above, I’ll pick it up next time we work on the tool.</div>';
   if(doneEl){
     doneEl.innerHTML=done.length?`<div class="sh">Done (${done.length})</div>`+done.map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--bg2);opacity:.6">
         <button class="btn btn-xs btn-ghost" title="Reopen" onclick="toggleRequestDone('${r.id}',false)" style="flex:none">↺</button>
@@ -2105,7 +2105,7 @@ async function addOpportunityKeyword(i){
   const x=_gscOpps[i];if(!x)return;
   const exists=bp().find(p=>(p.primary_keyword||'').toLowerCase()===x.query.toLowerCase());
   if(exists){toast('Already in your list');return;}
-  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:x.query,status:'idea',current_step:0,indexed:'no',serp_notes:`GSC opportunity: pos ${x.position.toFixed(1)}, ${x.impressions} impr, ${(x.ctr*100).toFixed(1)}% CTR — ${x.page||''}`});
+  const{error}=await sb.from('posts').insert({blog:activeBlog,primary_keyword:x.query,status:'idea',current_step:0,indexed:'no',serp_notes:`GSC opportunity: pos ${x.position.toFixed(1)}, ${x.impressions} impr, ${(x.ctr*100).toFixed(1)}% CTR, ${x.page||''}`});
   if(error){toast('Add failed: '+error.message,4000);return;}
   await loadPosts();render();toast('Added "'+x.query+'" as an idea ✓',3000);
 }
@@ -2127,9 +2127,9 @@ async function suggestSeeds(){
 function renderSeedSuggestions(seeds){
   _seedSuggestions=seeds||[];
   const box=document.getElementById('kw-seed-suggestions');if(!box)return;
-  if(!_seedSuggestions.length){box.innerHTML='<div class="empty" style="padding:.5rem">No suggestions — try a different focus.</div>';return;}
+  if(!_seedSuggestions.length){box.innerHTML='<div class="empty" style="padding:.5rem">No suggestions. Try a different focus.</div>';return;}
   const groups={};_seedSuggestions.forEach((s,i)=>{const g=s.category||'Other';(groups[g]=groups[g]||[]).push(i)});
-  let html='<div class="card" style="padding:12px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700">Suggested seeds — click to add</div><button class="btn btn-xs btn-ghost" onclick="addAllSeeds()">+ Add all</button></div>';
+  let html='<div class="card" style="padding:12px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700">Suggested seeds: click to add</div><button class="btn btn-xs btn-ghost" onclick="addAllSeeds()">+ Add all</button></div>';
   for(const g in groups){
     html+=`<div style="margin-bottom:8px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:4px">${esc(g)}</div>`;
     html+=groups[g].map(i=>`<button class="btn btn-xs" id="seedchip-${i}" onclick="addSeed(${i})" style="margin:2px 4px 2px 0">+ ${esc(_seedSuggestions[i].term)}</button>`).join('');
@@ -2225,7 +2225,7 @@ function renderResearchResults(out){
   _kwClusters=(out&&out.clusters)||[];
   const status=document.getElementById('kw-research-status');if(status)status.innerHTML='';
   const el=document.getElementById('kw-research-results');if(!el)return;
-  if(!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc((out&&out.note)||'No new post ideas found — those seeds may already be well covered. Try different or broader seeds.')}</div>`;return;}
+  if(!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc((out&&out.note)||'No new post ideas found. Those seeds may already be well covered. Try different or broader seeds.')}</div>`;return;}
   const fresh=_kwClusters.filter(c=>!c.overlaps_existing);
   const cnt=(out&&out.counts)||{};
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
@@ -2274,7 +2274,7 @@ function renderContentCluster(out){
   _kwClusters=(out.supporting||[]);          // reuse the idea-card path for supporting posts
   const status=document.getElementById('kw-research-status');if(status)status.innerHTML='';
   const el=document.getElementById('kw-research-results');if(!el)return;
-  if(!out.pillar&&!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc(out.note||'No cluster found — try a broader topic.')}</div>`;return;}
+  if(!out.pillar&&!_kwClusters.length){el.innerHTML=`<div class="empty" style="padding:1.5rem">${esc(out.note||'No cluster found. Try a broader topic.')}</div>`;return;}
   const fresh=_kwClusters.filter(c=>!c.overlaps_existing).length+(out.pillar?1:0);
   const cnt=out.counts||{};
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:4px 2px 12px">
@@ -2282,7 +2282,7 @@ function renderContentCluster(out){
       ${fresh?`<button class="btn btn-p btn-sm" onclick="addContentCluster()">+ Add whole cluster (${fresh})</button>`:''}
     </div>`;
   if(out.pillar)html+=_pillarCard(out.pillar);
-  html+=`<div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin:14px 2px 6px">Supporting posts — each links up to the pillar</div>`;
+  html+=`<div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin:14px 2px 6px">Supporting posts: each links up to the pillar</div>`;
   html+=_kwClusters.map((c,i)=>_clusterCard(c,i)).join('');
   el.innerHTML=html;
 }
@@ -2302,7 +2302,7 @@ async function addContentCluster(){
 // CONTENT CLUSTER VIEW (Insights): existing posts grouped by their cluster tag.
 function _statusPill(s){
   const m={idea:['#6b7280','Idea'],drafted:['#b45309','Draft'],'pending-review':['#b45309','Review'],approved:['#0891b2','Approved'],scheduled:['#0891b2','Scheduled'],live:['var(--green)','Live']};
-  const x=m[s]||['#6b7280',esc(s||'—')];
+  const x=m[s]||['#6b7280',esc(s||'n/a')];
   return `<span style="font-size:10px;font-weight:700;color:${x[0]}">${x[1]}</span>`;
 }
 let _clusterDrafts={}; // post_id -> draft meta for unpublished clustered posts (drives Prepare/Publish state)
@@ -2322,7 +2322,7 @@ function renderClusterView(){
   const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
   const row=(p)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bg2)">
       <div style="min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="openPost('${p.id}','draft')">${p.is_pillar?'★ ':''}${esc(p.title||p.primary_keyword||'Untitled')}</div>
-      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${_clusterDrafts[p.id]&&_clusterDrafts[p.id].verdict==='fail'?'<span style="font-size:10px;color:#b45309;font-weight:700" title="Draft has a must-fix issue — open to see it">⚠ fix</span>':''}${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
+      <div style="display:flex;gap:10px;align-items:center;white-space:nowrap">${_clusterDrafts[p.id]&&_clusterDrafts[p.id].verdict==='fail'?'<span style="font-size:10px;color:#b45309;font-weight:700" title="Draft has a must-fix issue, open to see it">⚠ fix</span>':''}${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="font-size:11px">view</a>`:''}${_statusPill(p.status)}</div>
     </div>`;
   el.innerHTML=names.map(name=>{
     const arr=groups[name];
@@ -2348,13 +2348,13 @@ function renderClusterView(){
         <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">
           <span style="font-size:11px;color:var(--text3)">${arr.length} post${arr.length===1?'':'s'} · ${live} live</span>
           ${datable.length?`<span style="display:flex;align-items:center;gap:4px" title="Sets the same proposed date on all ${datable.length} unpublished post(s) in this cluster, so they show grouped on the Calendar and Pipeline"><input type="date" value="${sharedDate}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-family:Poppins,sans-serif;color:var(--text2)" onchange="setClusterProposedDate('${en}',this.value)"><label style="font-size:10px;color:var(--text3)">launch date</label></span>`:''}
-          ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review — nothing goes live">${allDrafted?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
+          ${unpub?`<button class="btn btn-xs btn-p" onclick="prepareCluster('${en}')" title="Generate all posts as interlinked drafts to review (nothing goes live)">${allDrafted?'Re-prepare':'Prepare '+unpub+' for review'}</button>`:''}
           ${ready?`<button class="btn btn-xs" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="publishCluster('${en}')" title="Publish the reviewed drafts live, all at once and interlinked">Publish ${unpub} →</button>`:''}
           <button class="btn btn-xs btn-danger" onclick="deleteCluster('${en}')" title="Remove this whole cluster">Remove</button>
         </div>
       </div>
-      ${ready?`<div style="font-size:11px;color:var(--green);margin-bottom:4px">✓ ${unpub} draft${unpub===1?'':'s'} ready — open each post's Draft tab to review, then Publish</div>`
-        :allDrafted&&failing?`<div style="font-size:11px;color:#b45309;margin-bottom:4px">⚠ ${drafted-failing} of ${unpub} ready · ${failing} need fixing before you can publish — open the ⚠ post(s) below, then Re-prepare</div>`:''}
+      ${ready?`<div style="font-size:11px;color:var(--green);margin-bottom:4px">✓ ${unpub} draft${unpub===1?'':'s'} ready. Open each post's Draft tab to review, then Publish</div>`
+        :allDrafted&&failing?`<div style="font-size:11px;color:#b45309;margin-bottom:4px">⚠ ${drafted-failing} of ${unpub} ready · ${failing} need fixing before you can publish. Open the ⚠ post(s) below, then Re-prepare</div>`:''}
       ${pillar?row(pillar):''}${supp.map(row).join('')}
     </div>`;
   }).join('');
@@ -2382,7 +2382,7 @@ async function _startClusterJob({name,payload,working,onDone}){
     if(!data)return;
     if(data.status==='done'){clearInterval(iv);await loadPosts();onDone(data.result||{},{bn,same:activeBlog===jobBlog});}
     else if(data.status==='error'){clearInterval(iv);bn('⚠ '+esc(data.error||'Failed.'),'error');}
-    if(Date.now()-start>840000){clearInterval(iv);bn('Still working — refresh shortly to see the result.','working');}
+    if(Date.now()-start>840000){clearInterval(iv);bn('Still working. Refresh shortly to see the result.','working');}
   },6000);
 }
 // Step 1 of the reviewed launch: generate every post as an interlinked DRAFT (nothing goes live).
@@ -2391,20 +2391,20 @@ async function prepareCluster(name){
   if(!unpub.length){toast('Every post in this cluster is already live');return;}
   if(!confirm(`Prepare the "${name}" cluster?\n\nThis writes all ${unpub.length} post${unpub.length===1?'':'s'} as drafts, fully interlinked (pillar ↔ supporting), so you can review every one before anything goes live. Nothing is published yet.\n\nTakes a few minutes; you can keep working. Continue?`))return;
   _startClusterJob({name,payload:{dry_run:true},
-    working:`Preparing <b>${esc(name)}</b> — writing ${unpub.length} interlinked drafts. A few minutes; nothing goes live.`,
+    working:`Preparing <b>${esc(name)}</b>: writing ${unpub.length} interlinked drafts. A few minutes; nothing goes live.`,
     onDone:(res,ui)=>{renderClusters();if(!ui.same)return;
       const ready=(res.ready!=null?res.ready:(res.would_publish||[]).length);const nf=res.needs_fixing||[];
-      if(nf.length){ui.bn(`Prepared <b>${esc(name)}</b> — ${ready} ready, ${nf.length} need fixing: ${nf.map(f=>esc(f.title)).join(', ')}. Open the ⚠ post's <b>Draft</b> tab, then <b>Re-prepare</b>.`,'error');toast(`Prepared — ${nf.length} need fixing`,4500);}
-      else{ui.bn(`✓ Prepared <b>${esc(name)}</b> — ${ready} draft${ready===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');toast('Cluster prepared — review then publish ✓',4000);}}});
+      if(nf.length){ui.bn(`Prepared <b>${esc(name)}</b>: ${ready} ready, ${nf.length} need fixing: ${nf.map(f=>esc(f.title)).join(', ')}. Open the ⚠ post's <b>Draft</b> tab, then <b>Re-prepare</b>.`,'error');toast(`Prepared, ${nf.length} need fixing`,4500);}
+      else{ui.bn(`✓ Prepared <b>${esc(name)}</b>: ${ready} draft${ready===1?'':'s'} ready. Open each post's <b>Draft</b> tab to review, then click <b>Publish</b>.`,'done');toast('Cluster prepared, review then publish ✓',4000);}}});
 }
 // Step 2: publish the reviewed drafts, all at once, to their reserved URLs (links stay intact).
 async function publishCluster(name){
   const unpub=bp().filter(p=>String(p.cluster||'').trim()===name&&!p.ghl_post_id);
   if(!unpub.length){toast('Every post in this cluster is already live');return;}
-  if(!confirm(`Publish the "${name}" cluster?\n\nThis takes the ${unpub.length} reviewed draft${unpub.length===1?'':'s'} and publishes them live — all at once, fully interlinked. Continue?`))return;
+  if(!confirm(`Publish the "${name}" cluster?\n\nThis takes the ${unpub.length} reviewed draft${unpub.length===1?'':'s'} and publishes them live, all at once, fully interlinked. Continue?`))return;
   _startClusterJob({name,payload:{publish_prepared:true},
-    working:`Publishing <b>${esc(name)}</b> — ${unpub.length} reviewed post${unpub.length===1?'':'s'} going live…`,
-    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Published <b>${esc(name)}</b> — ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster published — '+n+' live ✓',4000);}});
+    working:`Publishing <b>${esc(name)}</b>: ${unpub.length} reviewed post${unpub.length===1?'':'s'} going live…`,
+    onDone:(res,ui)=>{renderClusters();if(!ui.same)return;const n=res.count||0;ui.bn(`✓ Published <b>${esc(name)}</b>: ${n} post${n===1?'':'s'} now live and interlinked. Featured images are rendering and will appear shortly.`,'done');toast('Cluster published, '+n+' live ✓',4000);}});
 }
 // Remove a whole cluster: deletes every post tagged with this cluster name (same child-row
 // cleanup as bulkDeleteResearch). Warns if any are already live (they stay published on the blog).
@@ -2413,7 +2413,7 @@ async function deleteCluster(name){
   if(!posts.length)return;
   const live=posts.filter(p=>p.status==='live').length;
   let msg=`Remove the "${name}" cluster?\n\nThis deletes all ${posts.length} post${posts.length===1?'':'s'} in it from the tracker. This cannot be undone.`;
-  if(live)msg+=`\n\n⚠ ${live} ${live===1?'is':'are'} already LIVE — removing here deletes them from this tracker but they STAY published on your blog. Unpublish those in GHL first if you want them gone.`;
+  if(live)msg+=`\n\n⚠ ${live} ${live===1?'is':'are'} already LIVE. Removing here deletes them from this tracker but they STAY published on your blog. Unpublish those in GHL first if you want them gone.`;
   if(!confirm(msg))return;
   for(const p of posts){
     const id=p.id;
@@ -2426,7 +2426,7 @@ async function deleteCluster(name){
     await sb.from('posts').delete().eq('id',id);
   }
   await loadPosts();renderClusters();renderResearch();render();
-  toast(`"${name}" cluster removed — ${posts.length} post${posts.length===1?'':'s'} deleted`);
+  toast(`"${name}" cluster removed: ${posts.length} post${posts.length===1?'':'s'} deleted`);
 }
 // One date, applied to every not-yet-scheduled/live post in the cluster at once —
 // so a cluster launch shows up as ONE grouped unit on the Calendar/Pipeline (what
@@ -2454,7 +2454,7 @@ async function suggestClusterForPost(){
     if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
     _suggestedCluster=d.cluster_name||'';
     if(out)out.innerHTML=_suggestedCluster
-      ?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${d.matches_existing?'Suggested: <b>'+esc(_suggestedCluster)+'</b> (existing cluster)':'No strong existing fit — suggested new cluster: <b>'+esc(_suggestedCluster)+'</b>'} — ${esc(d.rationale||'')} <button type="button" class="btn btn-xs" onclick="_useSuggestedCluster()">Use this</button></div>`
+      ?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${d.matches_existing?'Suggested: <b>'+esc(_suggestedCluster)+'</b> (existing cluster)':'No strong existing fit, suggested new cluster: <b>'+esc(_suggestedCluster)+'</b>'} · ${esc(d.rationale||'')} <button type="button" class="btn btn-xs" onclick="_useSuggestedCluster()">Use this</button></div>`
       :`<div style="font-size:11px;color:var(--text3);margin-top:4px">${esc(d.rationale||'No suggestion.')}</div>`;
   }catch(e){if(out)out.innerHTML='<span style="font-size:11px;color:var(--red-t)">'+esc(String(e&&e.message||e))+'</span>';}
   finally{if(btn)btn.disabled=false;}
@@ -2546,7 +2546,7 @@ function copyDraftField(k){
   navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
 }
 function _bodyImageSlot(slot,i){
-  const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:180px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches — edit the term and Regenerate</span>';
+  const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:180px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches, edit the term and Regenerate</span>';
   return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
     <input id="bterm-${i}" value="${esc(slot.term||'')}" onkeydown="if(event.key==='Enter')regenSlotImages(${i})" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)" title="Edit the search term, then Regenerate">
     <button id="bregen-${i}" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="regenSlotImages(${i})">Regenerate</button>
@@ -2573,7 +2573,7 @@ async function regenSlotImages(i){
     slot.candidates=d.candidates||[];slot.term=d.term||slot.term;slot.page=d.page;
     if(slot.chosen&&!slot.candidates.some(c=>c.url===slot.chosen))slot.chosen=null;
     const el=document.getElementById('bslot-'+i);if(el)el.innerHTML=_bodyImageSlot(slot,i);
-    toast(slot.candidates.length?'New photos loaded':'No more results — try a different term',2500);
+    toast(slot.candidates.length?'New photos loaded':'No more results, try a different term',2500);
   }catch(e){toast('Regenerate error: '+e.message,4000)}
   finally{const b=document.getElementById('bregen-'+i);if(b){b.disabled=false;b.textContent='Regenerate';}}
 }
@@ -2582,8 +2582,8 @@ async function scheduleNow(override){
   const brand=(BM[p.blog]||{}).name||'the blog';
   const date=p.proposed_date||p.scheduled_date;
   if(!date){toast('Set a proposed date in the Details tab first');return}
-  if(date<localToday()){toast('That date ('+fd(date)+') is in the past — update the date in the Details tab before scheduling.',5000);return}
-  const warn=override?'\n\n⚠ This has a flagged check — you are scheduling it anyway.':'';
+  if(date<localToday()){toast('That date ('+fd(date)+') is in the past. Update the date in the Details tab before scheduling.',5000);return}
+  const warn=override?'\n\n⚠ This has a flagged check, you are scheduling it anyway.':'';
   if(!confirm('Schedule "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' for '+fd(date)+'?\n\nIt is created now and goes live automatically on that date.'+warn))return;
   toast('Scheduling…',3000);
   try{
@@ -2612,7 +2612,7 @@ async function rerenderFeatured(swap,bgUrl){
     const d=await loadDraft(pid);
     const url=d&&d.assets&&d.assets.featured_image_url;
     if(url&&url!==old){clearInterval(iv);if(curPost===pid){_curDraft=d;renderDraftTab();}toast('Featured image updated ✓',3000);}
-    else if(Date.now()-start>240000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Still rendering — hit Check again in a moment',4500);}
+    else if(Date.now()-start>240000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Still rendering, hit Check again in a moment',4500);}
   },4000);
 }
 // FEATURED BACKGROUND PICKER — a grid of Pexels candidates (like the body-images picker)
@@ -2655,7 +2655,7 @@ async function loadFeaturedBgOptions(){
     _curDraft.assets.featured_image_search=d.term||_curDraft.assets.featured_image_search;
     const grid=document.getElementById('feat-bg-picker');if(grid&&curPost===pid)grid.outerHTML=_featBgGrid(_curDraft.assets);
     _wireFeatBgGrid();
-    toast((d.candidates||[]).length?'Options loaded — click one to use it':'No results — try a different term',3000);
+    toast((d.candidates||[]).length?'Options loaded, click one to use it':'No results, try a different term',3000);
   }catch(e){toast('Error: '+e.message,4000)}
   finally{const b=document.getElementById('feat-bg-load-btn');if(b){b.disabled=false;b.textContent='More options';}}
 }
@@ -2676,7 +2676,7 @@ Post topic: "${post.primary_keyword||post.title||''}"
 Current image title: "${curTitle||'(none set)'}"
 Current image tagline: "${curTag||'(none set)'}"
 
-Rules for the TITLE: 2-3 words, punchy, the single keyword/phrase a reader would recognise — short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness. Mix the lengths across the 5 — don't make them all the same word count; aim for at least two at 3 words, not all clipped down to 2.
+Rules for the TITLE: 2-3 words, punchy, the single keyword/phrase a reader would recognise. Short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness. Mix the lengths across the 5, don't make them all the same word count; aim for at least two at 3 words, not all clipped down to 2.
 Rules for the TAGLINE: one short supporting line (under 8 words) that adds context the title doesn't cover.
 Vary the angle across the 5 (e.g. benefit-led, curiosity-led, direct/plain, question, contrast) so they're genuinely different from each other, not minor rewordings.
 
@@ -2686,7 +2686,7 @@ Respond ONLY with JSON: [{"title":"...","tagline":"..."}]`;
     const rd=await res.json();
     if(!res.ok)throw new Error(rd.error||'proxy error');
     const opts=JSON.parse(rd.content?.[0]?.text?.replace(/```json|```/g,'').trim()||'[]');
-    if(!opts.length){area.innerHTML='<div style="font-size:12px;color:var(--text3);margin-top:6px">No suggestions came back — try again.</div>';return}
+    if(!opts.length){area.innerHTML='<div style="font-size:12px;color:var(--text3);margin-top:6px">No suggestions came back. Try again.</div>';return}
     area.innerHTML=`<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">${opts.map((o,i)=>`
       <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:7px 9px">
         <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">${esc(o.title||'')}</div><div style="font-size:11px;color:var(--text3)">${esc(o.tagline||'')}</div></div>
@@ -2702,21 +2702,21 @@ Respond ONLY with JSON: [{"title":"...","tagline":"..."}]`;
 function useFeatSuggestion(title,tagline){
   const t=document.getElementById('feat-title'),g=document.getElementById('feat-tag');
   if(t)t.value=title;if(g)g.value=tagline;
-  toast('Filled in — click Re-render image to apply');
+  toast('Filled in, click Re-render image to apply');
 }
 async function resetSent(){
   const p=gp(curPost);if(!p)return;
-  if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted — it does NOT change anything in GHL.'))return;
+  if(!confirm('Reset this post so you can regenerate or publish again?\n\nUse this if you deleted the post in GHL, or want to re-do it. This clears the link to the GHL post and sets it back to Drafted. It does NOT change anything in GHL.'))return;
   try{
     await sb.from('posts').update({ghl_post_id:null,status:'drafted',scheduled_date:null,url:null,published_date:null,confirmed_live:false}).eq('id',curPost);
     await loadPosts();if(typeof renderPosts==='function')renderPosts();if(curPost===p.id)await openPost(curPost,activePTab||'draft');
-    toast('Reset — you can publish or schedule again',3000);
+    toast('Reset, you can publish or schedule again',3000);
   }catch(e){toast('Reset failed: '+e.message,4000)}
 }
 async function publishNow(override){
   const p=gp(curPost);if(!p)return;
   const brand=(BM[p.blog]||{}).name||'the blog';
-  const warn=override?'\n\n⚠ This has a flagged check — you are publishing it anyway.':'';
+  const warn=override?'\n\n⚠ This has a flagged check, you are publishing it anyway.':'';
   if(!confirm('Publish "'+(p.primary_keyword||p.title||'this post')+'" to '+brand+' NOW?\n\nIt goes live immediately.'+warn))return;
   toast('Publishing…',3000);
   try{
@@ -2747,7 +2747,7 @@ async function aiEditRun(instruction,clearEditorial){
       if(clearEditorial)await sb.from('post_drafts').update({editorial:null}).eq('post_id',pid);
       if(curPost===pid)renderDraftTab();toast('Draft updated by Claude ✓',3000);
     }
-    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out — try again',4000);}
+    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out, try again',4000);}
   },6000);
 }
 // Run the editorial pass on the current draft (background fn + poll for the result).
@@ -2764,7 +2764,7 @@ async function runEditorialReview(){
     const d=await loadDraft(pid);
     const ts=d&&d.editorial?d.editorial.checked_at:null;
     if(ts&&ts!==prev){clearInterval(iv);if(curPost===pid){_curDraft=d;renderDraftTab();}toast('Editorial review ready ✓',3000);}
-    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Editorial review timed out — try again',4000);}
+    else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('Editorial review timed out, try again',4000);}
   },5000);
 }
 // Bold section header + divider for the Draft tab, so each part of the page reads as
@@ -2792,7 +2792,7 @@ function _editorialBlock(d){
   const e=d.editorial;
   if(!e)return `<div id="pm-editorial" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">Editorial review</div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:9px">A Claude read for what the checks can't see — voice, audience fit, substance, the right CTA, and links that won't resolve.</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:9px">A Claude read for what the checks can't see: voice, audience fit, substance, the right CTA, and links that won't resolve.</div>
     <button class="btn btn-p btn-sm" onclick="runEditorialReview()">Run editorial review</button>
     <span style="font-size:11px;color:var(--text3);margin-left:8px">about a minute</span>
   </div>`;
@@ -2832,7 +2832,7 @@ function _editorialBlock(d){
 let _editIssues=[];
 function _editToggleAll(v){document.querySelectorAll('.editiss').forEach(c=>{c.checked=v;});}
 function _editorialInstruction(sel){
-  return 'Address these editorial issues, changing only what each needs:\n'+sel.map(i=>`- [${i.area||'general'}] ${i.detail||''}${i.fix?` — Fix: ${i.fix}`:''}`).join('\n');
+  return 'Address these editorial issues, changing only what each needs:\n'+sel.map(i=>`- [${i.area||'general'}] ${i.detail||''}${i.fix?`. Fix: ${i.fix}`:''}`).join('\n');
 }
 async function fixEditorialSelected(){
   const sel=[...document.querySelectorAll('.editiss:checked')].map(c=>_editIssues[+c.getAttribute('data-i')]).filter(Boolean);
@@ -2841,7 +2841,7 @@ async function fixEditorialSelected(){
   const pid=curPost;
   const instruction=_editorialInstruction(sel);
   if(post.status==='live'){
-    if(!confirm(`This post is already published, so fixing it here weaves the changes into a NEW temp version for you to review — nothing on the live page changes until you publish it and finish the swap.\n\nStart fixing ${sel.length} issue${sel.length>1?'s':''}?`))return;
+    if(!confirm(`This post is already published, so fixing it here weaves the changes into a NEW temp version for you to review. Nothing on the live page changes until you publish it and finish the swap.\n\nStart fixing ${sel.length} issue${sel.length>1?'s':''}?`))return;
     const st=document.getElementById('edit-fix-status');
     if(st)st.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div>Weaving the fix into a new version… (~30-60s)</div>';
     const before=((await sb.from('body_proposals').select('created_at').eq('post_id',pid).order('created_at',{ascending:false}).limit(1)).data||[])[0];
@@ -2849,8 +2849,8 @@ async function fixEditorialSelected(){
     const t0=Date.now();
     const poll=async()=>{
       const cur=((await sb.from('body_proposals').select('created_at,phase').eq('post_id',pid).order('created_at',{ascending:false}).limit(1)).data||[])[0];
-      if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){if(curPost===pid){toast('Fix ready — switching to the Rankings tab to review',3500);switchPTab('gsc');}return;}
-      if(Date.now()-t0>110000){if(curPost===pid){const s=document.getElementById('edit-fix-status');if(s)s.innerHTML='<span style="color:var(--red-t)">Timed out — try again.</span>';}return;}
+      if(cur&&cur.phase==='proposed'&&(!before||cur.created_at!==before.created_at)){if(curPost===pid){toast('Fix ready, switching to the Rankings tab to review',3500);switchPTab('gsc');}return;}
+      if(Date.now()-t0>110000){if(curPost===pid){const s=document.getElementById('edit-fix-status');if(s)s.innerHTML='<span style="color:var(--red-t)">Timed out. Try again.</span>';}return;}
       setTimeout(poll,6000);
     };
     setTimeout(poll,6000);
@@ -2867,9 +2867,9 @@ function _draftViewHtml(d){
   const futureDate=tdate&&tdate>localToday();
   const il=(d.internal_links||[]).map(l=>`<li><a href="${esc(l.url)}" target="_blank">${esc(l.anchor)}</a></li>`).join('');
   const bimg=(a.body_images||[]);
-  const imgPick=bimg.length?bimg.map((slot,i)=>`<div id="bslot-${i}" style="margin-bottom:12px">${_bodyImageSlot(slot,i)}</div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'—'} (connect Pexels to fetch photos)</span>`;
+  const imgPick=bimg.length?bimg.map((slot,i)=>`<div id="bslot-${i}" style="margin-bottom:12px">${_bodyImageSlot(slot,i)}</div>`).join(''):`<span style="color:var(--text3)">Search terms: ${(a.body_image_searches||[]).map(esc).join('; ')||'n/a'} (connect Pexels to fetch photos)</span>`;
   return `
-  ${post.status==='live'?`<div style="background:#fff7e6;border:1px solid #f2d9a0;border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;color:#8a5a00">This post is already published — GHL locks the body once a post is live, so edits here would only change this unpublished copy and never reach the real page. Use <b>Rankings → Improve the article</b> to actually revise a live post (the editorial review's "Fix selected" button below routes there for you).</div>`:`
+  ${post.status==='live'?`<div style="background:#fff7e6;border:1px solid #f2d9a0;border-radius:var(--r2);padding:10px 12px;margin-bottom:12px;font-size:12px;color:#8a5a00">This post is already published. GHL locks the body once a post is live, so edits here would only change this unpublished copy and never reach the real page. Use <b>Rankings → Improve the article</b> to actually revise a live post (the editorial review's "Fix selected" button below routes there for you).</div>`:`
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px;margin-bottom:12px">
     <div style="display:flex;gap:6px">
       <input id="ai-instr" placeholder="Ask Claude to revise - e.g. trim the keyword, cut the salesy line" style="flex:1;font-size:12px;border:1px solid var(--border);border-radius:var(--r2);padding:6px 8px;background:#fff;color:var(--text)" onkeydown="if(event.key==='Enter')aiEditAsk()">
@@ -2904,34 +2904,34 @@ function _draftViewHtml(d){
     <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
   </div>`:''}
   ${_secHead('🏷️','Titles &amp; Meta')}
-  ${_draftRow('Title (H1)',esc(a.title||'—'))}
+  ${_draftRow('Title (H1)',esc(a.title||'n/a'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
   ${_draftRow('Slug',esc(d.slug||''))}
-  ${_draftRow('Category',esc(d.category||'—'))}
-  ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'— (footer CTAs only)')}
+  ${_draftRow('Category',esc(d.category||'n/a'))}
+  ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'None (footer CTAs only)')}
   ${_secHead('📷','Body Images &amp; Captions')}
   <details style="margin-bottom:6px;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2);padding:2px 13px" open><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600;padding:9px 0">Images &amp; captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:2px;padding-bottom:11px">
       <div style="margin-bottom:4px"><b>Body images</b> - click a photo to choose it:</div>
       ${imgPick}
-      <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'—')}<br>
-      <b>Instagram:</b> ${esc(a.instagram_caption||'—')}<br>
-      <b>Pinterest:</b> ${esc(a.pinterest_description||'—')}</div>
+      <div style="margin-top:10px"><b>Facebook:</b> ${esc(a.facebook_caption||'n/a')}<br>
+      <b>Instagram:</b> ${esc(a.instagram_caption||'n/a')}<br>
+      <b>Pinterest:</b> ${esc(a.pinterest_description||'n/a')}</div>
     </div>
   </details>
   ${_secHead('🔗','Internal Links')}
   <div style="margin-bottom:10px"><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;line-height:1.6">${il||'<li style="color:var(--text3)">none</li>'}</ul></div>
   <details style="margin:14px 0;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2)">
-    <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words — click to expand</span></summary>
+    <summary style="cursor:pointer;padding:11px 13px;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">📄 Read the full article <span style="font-weight:400;font-size:11px;color:var(--text3)">${r.wordCount||'?'} words, click to expand</span></summary>
     <div style="max-height:440px;overflow-y:auto;border-top:1px solid var(--border);padding:14px 16px;background:#fff;font-size:13px;line-height:1.7">${d.body_html||''}</div>
   </details>
   ${_editorialBlock(d)}
   <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
     ${post.ghl_post_id
-      ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>${post.url?`<div style="margin-top:4px"><a href="${esc(post.url)}" target="_blank" style="font-size:11px;color:var(--text2)">${esc(post.url)}</a></div>`:''}<button class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:8px" onclick="resetSent()">Reset — re-publish / deleted in GHL</button>`
+      ? `<div style="font-size:12px;color:var(--green);font-weight:600">${post.status==='live'?('✓ Published to '+esc(brandNm)):('✓ Scheduled to '+esc(brandNm)+(post.scheduled_date?(' · '+fd(post.scheduled_date)):''))}</div>${post.url?`<div style="margin-top:4px"><a href="${esc(post.url)}" target="_blank" style="font-size:11px;color:var(--text2)">${esc(post.url)}</a></div>`:''}<button class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:8px" onclick="resetSent()">Reset (re-publish / deleted in GHL)</button>`
       : r.verdict==='fail'
-        ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above — or if you've reviewed it and it's fine, override the check:</div>
+        ? `<div style="font-size:12px;color:var(--red-t)">Fix the must-fix items above, or if you've reviewed it and it's fine, override the check:</div>
            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
              ${futureDate?`<button class="btn btn-ghost btn-sm" onclick="scheduleNow(true)">Schedule anyway →</button>`:''}
              <button class="btn btn-ghost btn-sm" onclick="publishNow(true)">Publish anyway</button>
@@ -2942,7 +2942,7 @@ function _draftViewHtml(d){
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:6px">${futureDate
             ? ('“Schedule” creates it now and it goes live on '+esc(brandNm)+' automatically on '+fd(tdate)+'. “Publish now” makes it live immediately.')
-            : ('“Publish now” makes it live on '+esc(brandNm)+' immediately.'+(datePast?(' The date '+fd(tdate)+' is in the past — set a future date to schedule instead.'):' To schedule for later, set a future date in the Details tab.'))}</div>`}
+            : ('“Publish now” makes it live on '+esc(brandNm)+' immediately.'+(datePast?(' The date '+fd(tdate)+' is in the past. Set a future date to schedule instead.'):' To schedule for later, set a future date in the Details tab.'))}</div>`}
   </div>`;
 }
 async function generateDraftNow(){
@@ -2992,7 +2992,7 @@ function renderPostList(){
   const el=document.getElementById('post-list-content');if(!el)return;
   const posts=bp().filter(p=>p.status==='live'||p.status==='scheduled').sort((a,b)=>new Date(b.published_date||b.scheduled_date||0)-new Date(a.published_date||a.scheduled_date||0));
   if(!posts.length){el.innerHTML='<div class="empty">No live or scheduled posts yet.</div>';return}
-  const text=posts.map(p=>`${titleCase(p.primary_keyword||p.title||'Untitled')} — ${p.url||'no URL'}`).join('\n');
+  const text=posts.map(p=>`${titleCase(p.primary_keyword||p.title||'Untitled')}: ${p.url||'no URL'}`).join('\n');
   el.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-p btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('post-list-text').value);toast('Post list copied')">Copy all</button></div><textarea id="post-list-text" rows="15" style="width:100%;font-size:11px;font-family:monospace;border:1px solid var(--border);border-radius:var(--r2);padding:10px;resize:vertical;color:var(--text2);background:var(--bg2)">${esc(text)}</textarea>`;
 }
 // PINTEREST TEMPLATE LOG (localStorage based)
@@ -3005,7 +3005,7 @@ function renderPinTemplates(){
 function logPinterestTemplate(){
   const inp=document.getElementById('pin-template-input');if(!inp||!inp.value.trim())return;
   const t=getPinTemplates();
-  const entry=`${inp.value.trim()} — ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+  const entry=`${inp.value.trim()}: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
   t.unshift(entry);
   localStorage.setItem('pin-templates-'+activeBlog,JSON.stringify(t.slice(0,50)));
   inp.value='';renderPinTemplates();toast('Template logged');
@@ -3073,13 +3073,13 @@ Report findings clearly. If everything looks good say so. Keep it brief.`;
     showReviewModal(p,text);
   }catch(e){
     window.open(p.url,'_blank');
-    toast('Could not auto-review — opened in new tab');
+    toast('Could not auto-review, opened in new tab');
   }
 }
 
 function showReviewModal(post,reviewText){
   // Reuse the post modal with a review pane
-  document.getElementById('pm-title').textContent=(post.primary_keyword||post.title||'Post')+' — Review';
+  document.getElementById('pm-title').textContent=(post.primary_keyword||post.title||'Post')+': Review';
   document.getElementById('pm-kw-display').textContent=post.url||'';
   // Show in details pane temporarily
   const detailsEl=document.getElementById('pm-details');
@@ -3178,7 +3178,7 @@ function renderPipeline(){
               </div>
               <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(r.date)}</div>
               <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center"><span style="font-size:11px;color:var(--text3)">cluster</span></div>
-              <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">—</div>
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">·</div>
             </div>`;
           }
           const p=r.post,score=calcScore(p.ks_score,p.search_volume);
@@ -3192,7 +3192,7 @@ function renderPipeline(){
             </div>
             <div style="padding:14px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;background:${bg};display:flex;align-items:center">${fd(p.proposed_date)}</div>
             <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center">${sbadge(p.status)}</div>
-            <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">${score!=null?`<span style="font-size:12px;font-weight:700;color:${isN?'var(--purple-t)':'var(--teal-d)'}">${score}</span>`:'—'}</div>
+            <div style="padding:14px 12px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;justify-content:center">${score!=null?`<span style="font-size:12px;font-weight:700;color:${isN?'var(--purple-t)':'var(--teal-d)'}">${score}</span>`:'·'}</div>
           </div>`;
         }).join('');
       })()}
@@ -3251,7 +3251,7 @@ function renderCalendar(){
         dayProp.forEach(p=>{const c=String(p.cluster||'').trim();if(c)(clustered[c]=clustered[c]||[]).push(p);else solo.push(p);});
         const clusterHtml=Object.keys(clustered).map(name=>{
           const posts=clustered[name];
-          return`<div onclick="switchTab('keywords')" title="${posts.length} posts in the &quot;${esc(name)}&quot; cluster, launching together — click to open Planning" style="font-size:9px;background:var(--teal-l);color:var(--teal-d);border:1px solid var(--teal);border-radius:3px;padding:3px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word;font-weight:700">📦 ${esc(name)} <span style="font-weight:400">(${posts.length})</span></div>`;
+          return`<div onclick="switchTab('keywords')" title="${posts.length} posts in the &quot;${esc(name)}&quot; cluster, launching together, click to open Planning" style="font-size:9px;background:var(--teal-l);color:var(--teal-d);border:1px solid var(--teal);border-radius:3px;padding:3px 4px;margin-bottom:2px;cursor:pointer;line-height:1.3;word-break:break-word;font-weight:700">📦 ${esc(name)} <span style="font-weight:400">(${posts.length})</span></div>`;
         }).join('');
         const soloHtml=solo.map(p=>{
           const sc=calcScore(p.ks_score,p.search_volume);
@@ -3286,7 +3286,7 @@ async function clearProposedDate(id){
   await sb.from('posts').update({proposed_date:null}).eq('id',id);
   const p=allPosts.find(x=>x.id===id);if(p)p.proposed_date=null;
   await loadPosts();renderCalendar();renderPipeline();renderResearch();renderDashboard();
-  toast('Removed from calendar — back in Planning');
+  toast('Removed from calendar, back in Planning');
 }
 
 // Calendar drag and drop for proposed entries
@@ -3372,7 +3372,7 @@ async function calAddNewKw(dateStr){
   if(error){toast('Error: '+error.message);return}
   await sb.from('social_tracking').insert({post_id:data.id});
   await loadPosts();renderCalendar();renderPipeline();renderDashboard();
-  closeModal('cal-popup-modal');toast('Added to pipeline — '+fd(dateStr));
+  closeModal('cal-popup-modal');toast('Added to pipeline: '+fd(dateStr));
 }
 
 // ── CONTENT GAP FINDER ──────────────────────────────────────────
@@ -3380,7 +3380,7 @@ async function findContentGaps(){
   const resultEl=document.getElementById('gap-result');
   if(!resultEl)return;
   const posts=bp().filter(p=>p.status==='live'||p.status==='drafted'||p.status==='scheduled');
-  if(posts.length<3){document.getElementById('gap-result').innerHTML='<div style="font-size:12px;color:var(--text3)">Add more posts first — need at least 3 to find gaps.</div>';return}
+  if(posts.length<3){document.getElementById('gap-result').innerHTML='<div style="font-size:12px;color:var(--text3)">Add more posts first: you need at least 3 to find gaps.</div>';return}
   const btn=document.getElementById('gap-btn');
   btn.textContent='Analysing…';btn.disabled=true;
   document.getElementById('gap-result').innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><div class="spinner"></div>Claude is analysing your content for gaps…</div>`;
@@ -3392,7 +3392,7 @@ async function findContentGaps(){
 Existing posts cover these keywords/topics:
 ${kwList}
 
-Based on this content, identify 8-10 specific keyword gaps — topics that:
+Based on this content, identify 8-10 specific keyword gaps: topics that:
 1. A reader of this blog would naturally search for
 2. Connect logically to the existing content
 3. Have realistic ranking potential (not mega competitive)
@@ -3432,7 +3432,7 @@ async function loadBacklinksTab(){
   const resultEl=document.getElementById('backlink-gap-result');if(!resultEl)return;
   const{data}=await sb.from('backlink_gap_runs').select('result,cost,status').eq('blog',activeBlog).eq('status','done').order('created_at',{ascending:false}).limit(1);
   const row=(data||[])[0];
-  if(!row){resultEl.innerHTML='<div style="font-size:12px;color:var(--text3)">No run yet for this blog — click "Find gap opportunities" to check.</div>';return;}
+  if(!row){resultEl.innerHTML='<div style="font-size:12px;color:var(--text3)">No run yet for this blog, click "Find gap opportunities" to check.</div>';return;}
   renderBacklinkGapResult(row.result,row.cost);
 }
 function _backlinkRow(r){
@@ -3461,7 +3461,7 @@ async function findBacklinkGap(){
       const{data:cur}=await sb.from('backlink_gap_runs').select('status,result,error,cost').eq('id',run.id).single();
       if(cur&&cur.status==='done'){renderBacklinkGapResult(cur.result,cur.cost);return;}
       if(cur&&cur.status==='error'){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Error: ${esc(cur.error||'unknown')}</div>`;return;}
-      if(Date.now()-t0>110000){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Timed out — try again.</div>`;return;}
+      if(Date.now()-t0>110000){resultEl.innerHTML=`<div style="font-size:12px;color:var(--red-t)">Timed out. Try again.</div>`;return;}
       setTimeout(poll,4000);
     };
     setTimeout(poll,4000);
@@ -3473,7 +3473,7 @@ function renderBacklinkGapResult(d,cost){
   if(!d||!d.results||!d.results.length){resultEl.innerHTML=`<div style="font-size:12px;color:var(--text3)">No qualifying gap domains found. Cost: $${cost}.</div>`;return;}
   const actionable=d.results.filter(r=>r.actionable);
   const skip=d.results.filter(r=>!r.actionable);
-  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.results.length} domain${d.results.length===1?'':'s'} link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)} — <b>${actionable.length} look like real opportunities</b>, ${skip.length} are not worth outreach.${d.deadCount?` (${d.deadCount} confirmed-dead domain${d.deadCount===1?'':'s'} already filtered out — no longer resolve.)`:''} Cost: $${cost}.</div>`;
+  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${d.results.length} domain${d.results.length===1?'':'s'} link to ${esc(d.competitors.join(', '))} but not ${esc(d.ownDomain)}: <b>${actionable.length} look like real opportunities</b>, ${skip.length} are not worth outreach.${d.deadCount?` (${d.deadCount} confirmed-dead domain${d.deadCount===1?'':'s'} already filtered out, no longer resolve.)`:''} Cost: $${cost}.</div>`;
   if(actionable.length){
     html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">Worth pursuing (${actionable.length})</div>`;
     actionable.forEach(r=>{html+=_backlinkRow(r);});
@@ -3524,7 +3524,7 @@ async function generateSnapshot(){
   const indexed=posts.filter(p=>p.indexed==='yes');
   const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   
-  const snap=`${BM[activeBlog].name} — Monthly Snapshot
+  const snap=`${BM[activeBlog].name}: Monthly Snapshot
 ${months[thisMonth]} ${thisYear}
 ${'─'.repeat(40)}
 

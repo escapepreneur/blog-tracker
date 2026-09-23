@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Blog Studio">
 <meta name="mobile-web-app-capable" content="yes"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog Studio — Escapepreneur™</title>
+<title>Blog Studio: Escapepreneur™</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -348,7 +348,7 @@ input[type=file]{width:100%}
         <div style="margin-bottom:14px">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div class="sh" style="margin:0">Pipeline — next up</div>
+              <div class="sh" style="margin:0">Pipeline: next up</div>
               <button class="btn btn-xs" onclick="switchTab('calendar')" style="font-size:10px">Calendar →</button>
             </div>
             <div id="nextup-list" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
@@ -408,7 +408,7 @@ input[type=file]{width:100%}
           <span id="bulk-count" style="font-size:12px;font-weight:600;color:var(--teal-d)">0 selected</span>
           <span style="font-size:12px;color:var(--text2)">Change status to:</span>
           <select id="bulk-status-sel" style="width:auto;padding:5px 10px;font-size:12px">
-            <option value="">— select —</option>
+            <option value="">Select...</option>
             <option value="idea">Idea</option>
             <option value="drafted">Drafted</option>
             <option value="pending-review">Pending Review</option>
@@ -461,7 +461,7 @@ input[type=file]{width:100%}
           </div>
           <div id="cal-grid"></div>
         </div>
-        <div style="margin-top:16px"><div class="sh" style="margin-bottom:10px">Upcoming — posts with a proposed date</div><div id="pipeline-list"></div></div>
+        <div style="margin-top:16px"><div class="sh" style="margin-bottom:10px">Upcoming: posts with a proposed date</div><div id="pipeline-list"></div></div>
       </div>
     </div>
     <!-- INSIGHTS -->
@@ -477,7 +477,7 @@ input[type=file]{width:100%}
         </div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div><div style="font-size:14px;font-weight:700">Recently optimized</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Posts you've improved — and whether the numbers have moved since. Open a post's Rankings tab to log an optimization.</div></div>
+            <div><div style="font-size:14px;font-weight:700">Recently optimized</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Posts you've improved, and whether the numbers have moved since. Open a post's Rankings tab to log an optimization.</div></div>
           </div>
           <div id="opt-recent"><div class="empty" style="padding:1rem">Loading…</div></div>
         </div>
@@ -497,7 +497,7 @@ input[type=file]{width:100%}
             <div id="post-list-content"></div>
           </div>
           <div class="card">
-            <div style="margin-bottom:10px"><div style="font-size:14px;font-weight:700">Pinterest template tracker</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Track which Canva templates have been used — paste into Claude when requesting a template recommendation</div></div>
+            <div style="margin-bottom:10px"><div style="font-size:14px;font-weight:700">Pinterest template tracker</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Track which Canva templates have been used, paste into Claude when requesting a template recommendation</div></div>
             <div style="margin-bottom:8px"><label class="fl">Template used (e.g. #53 square)</label>
               <div style="display:flex;gap:6px"><input type="text" id="pin-template-input" placeholder="e.g. #53 square" style="flex:1"><button class="btn btn-p btn-sm" onclick="logPinterestTemplate()">Log</button></div>
             </div>
@@ -520,7 +520,7 @@ input[type=file]{width:100%}
     </div>
     <!-- BACKLINKS -->
     <div id="pane-backlinks" class="pane">
-      <div class="ph"><div><div class="pt">Backlinks</div><div class="ps">Real SEO backlink opportunities — sites that already link to your competitors but not to you</div></div></div>
+      <div class="ph"><div><div class="pt">Backlinks</div><div class="ps">Real SEO backlink opportunities: sites that already link to your competitors but not to you</div></div></div>
       <div class="pb">
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -533,7 +533,7 @@ input[type=file]{width:100%}
     </div>
     <!-- IDEAS / REQUESTS -->
     <div id="pane-ideas" class="pane">
-      <div class="ph"><div><div class="pt">Ideas &amp; requests</div><div class="ps">Drop ideas or changes you want for this tool as you work — Claude reads this board directly and actions them.</div></div></div>
+      <div class="ph"><div><div class="pt">Ideas &amp; requests</div><div class="ps">Drop ideas or changes you want for this tool as you work. Claude reads this board directly and actions them.</div></div></div>
       <div class="pb">
         <div class="card" style="margin-bottom:14px">
           <label class="fl">New idea / request</label>
@@ -558,18 +558,18 @@ input[type=file]{width:100%}
             <button class="btn btn-xs btn-p" id="kwmode-ideas" onclick="setKwMode('ideas')">Post ideas</button>
             <button class="btn btn-xs" id="kwmode-cluster" onclick="setKwMode('cluster')">Content cluster</button>
           </div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Enter a few seed terms — topics, products, or competitor names. Short head terms work best (e.g. <b>gohighlevel</b>, <b>email marketing</b>, <b>sales funnel</b>), one per line. I pull live search volume + difficulty from DataForSEO, then Claude clusters them into post ideas scored for this brand and drops anything you've already covered.</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Enter a few seed terms: topics, products, or competitor names. Short head terms work best (e.g. <b>gohighlevel</b>, <b>email marketing</b>, <b>sales funnel</b>), one per line. I pull live search volume + difficulty from DataForSEO, then Claude clusters them into post ideas scored for this brand and drops anything you've already covered.</div>
           <textarea id="kw-seeds" rows="4" style="resize:vertical;width:100%;font-size:13px;margin-bottom:8px" placeholder="gohighlevel&#10;email marketing for coaches&#10;sales funnel&#10;crm"></textarea>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
             <span style="font-size:12px;color:var(--text3)">Not sure what to seed?</span>
-            <input id="kw-seed-theme" placeholder="Optional focus — e.g. pricing, email, mindset" style="flex:1;min-width:200px;font-size:12px;padding:6px 8px">
+            <input id="kw-seed-theme" placeholder="Optional focus, e.g. pricing, email, mindset" style="flex:1;min-width:200px;font-size:12px;padding:6px 8px">
             <button class="btn btn-sm" id="kw-suggest-btn" onclick="suggestSeeds()">&#10024; Suggest seed words</button>
           </div>
           <div id="kw-seed-suggestions"></div>
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
             <button class="btn btn-p" id="kw-research-btn" onclick="researchKeywords()">&#10022; Research keywords</button>
             <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px">Min searches/mo <input type="number" id="kw-minvol" value="100" min="0" step="10" style="width:72px;padding:4px 6px;font-size:12px"></label>
-            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px" title="Keywords harder than this are excluded before Claude even sees them — not just scored low.">Max difficulty <input type="number" id="kw-maxkd" value="35" min="0" max="100" step="5" style="width:64px;padding:4px 6px;font-size:12px"></label>
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px" title="Keywords harder than this are excluded before Claude even sees them, not just scored low.">Max difficulty <input type="number" id="kw-maxkd" value="35" min="0" max="100" step="5" style="width:64px;padding:4px 6px;font-size:12px"></label>
             <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="kw-broaden" style="width:auto;margin:0"> Broaden the net <span style="color:var(--text3)">(more ideas, a little noisier)</span></label>
             <span style="font-size:11px;color:var(--text3)">Live Google data · ~1–4&cent; per run</span>
           </div>
@@ -590,7 +590,7 @@ input[type=file]{width:100%}
         <!-- IDEA BACKLOG (your queued keywords, not yet scheduled) -->
         <div style="margin-top:22px;border-top:1px solid var(--border);padding-top:18px">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <div><div style="font-size:14px;font-weight:700">Your idea backlog</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Keywords you've queued but not yet scheduled — pick the next one to write.</div></div>
+            <div><div style="font-size:14px;font-weight:700">Your idea backlog</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Keywords you've queued but not yet scheduled: pick the next one to write.</div></div>
             <div style="display:flex;gap:8px;align-items:center">
               <div style="position:relative;display:inline-flex;align-items:center">
                 <input type="text" id="research-search" class="srch" placeholder="Search keywords…" oninput="renderResearch()" style="width:200px;padding-right:28px;font-size:12px">
@@ -621,7 +621,7 @@ input[type=file]{width:100%}
 <div class="modal" style="max-width:600px">
   <div class="mhdr"><div class="mtitle" id="np-title">Log keyword</div><button class="xbtn" onclick="closeModal('new-post-modal')">✕</button></div>
   <div style="background:var(--teal-l);border:1px solid #c5e6e6;border-radius:var(--r2);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--teal-t);line-height:1.6">
-    Fill in what you know. A priority score is calculated automatically. The brief prompt is built from this data — click "Save to Ideas" to queue it, or "Get brief now" to go straight to Claude.
+    Fill in what you know. A priority score is calculated automatically. The brief prompt is built from this data. Click "Save to Ideas" to queue it, or "Get brief now" to go straight to Claude.
   </div>
   <div id="dup-warning" style="display:none;background:var(--amber-l);border:1px solid #f0d8a0;border-radius:var(--r2);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--amber-t);line-height:1.6"></div>
   <div class="row">
@@ -644,8 +644,8 @@ input[type=file]{width:100%}
   <div class="row">
     <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="np-serp" placeholder="Google Drive link to SERP export"></div>
   </div>
-  <div style="margin-bottom:10px"><label class="fl">Unique take / Karen's angle <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— leave blank and Claude will suggest</span></label><textarea id="np-take" rows="2" style="resize:none" placeholder="e.g. Karen's experience testing every CRM before building ESC Hub"></textarea></div>
-  <div style="margin-bottom:16px"><label class="fl">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— context, angle, anything to flag</span></label><textarea id="np-notes" rows="2" style="resize:none" placeholder="e.g. This is a pillar post — make sure it links to the other funnel posts. Target Kajabi audience."></textarea></div>
+  <div style="margin-bottom:10px"><label class="fl">Unique take / Karen's angle <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(leave blank and Claude will suggest)</span></label><textarea id="np-take" rows="2" style="resize:none" placeholder="e.g. Karen's experience testing every CRM before building ESC Hub"></textarea></div>
+  <div style="margin-bottom:16px"><label class="fl">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(context, angle, anything to flag)</span></label><textarea id="np-notes" rows="2" style="resize:none" placeholder="e.g. This is a pillar post, make sure it links to the other funnel posts. Target Kajabi audience."></textarea></div>
   <div style="display:flex;gap:8px">
     <button class="btn btn-p" id="np-save-btn" onclick="saveToIdeas()" style="flex:2;justify-content:center">Save to Ideas</button>
     <button class="btn btn-ghost" id="np-brief-btn" onclick="saveAndGetBrief()" style="flex:1;justify-content:center">Get brief now →</button>
@@ -686,7 +686,7 @@ input[type=file]{width:100%}
       </div>
     </div>
     <div class="row">
-      <div class="fd w3"><label class="fl">Subtitle <span style="text-transform:none;font-weight:400;color:var(--text3)">— the tagline on the pin/featured image + article subheading</span></label><input type="text" id="pm-subtitle" placeholder="e.g. Which one works for you?"></div>
+      <div class="fd w3"><label class="fl">Subtitle <span style="text-transform:none;font-weight:400;color:var(--text3)">(the tagline on the pin/featured image + article subheading)</span></label><input type="text" id="pm-subtitle" placeholder="e.g. Which one works for you?"></div>
     </div>
     <div class="row">
       <div class="fd"><label class="fl">URL</label><input type="url" id="pm-url"></div>
@@ -707,7 +707,7 @@ input[type=file]{width:100%}
     </div>
     <div style="margin-bottom:10px"><label class="fl">Supplementary keywords</label><textarea id="pm-supp" rows="2" style="resize:none" placeholder="keyword (vol/KD), keyword (vol/KD)..."></textarea></div>
     <div class="row">
-      <div class="fd w2"><label class="fl">Topic cluster <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— group related posts for internal linking</span></label>
+      <div class="fd w2"><label class="fl">Topic cluster <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(group related posts for internal linking)</span></label>
         <div style="display:flex;gap:6px;align-items:center">
           <input type="text" id="pm-cluster" list="pm-cluster-list" placeholder="e.g. GoHighLevel" style="flex:1">
           <button type="button" id="cluster-suggest-btn" class="btn btn-xs btn-ghost" onclick="suggestClusterForPost()" style="flex:none;white-space:nowrap">✨ Suggest</button>
@@ -715,7 +715,7 @@ input[type=file]{width:100%}
         <datalist id="pm-cluster-list"></datalist>
         <div id="cluster-suggest-out"></div>
       </div>
-      <div class="fd"><label class="fl">Pillar?</label><select id="pm-pillar"><option value="">No</option><option value="yes">Yes — pillar post</option></select></div>
+      <div class="fd"><label class="fl">Pillar?</label><select id="pm-pillar"><option value="">No</option><option value="yes">Yes, pillar post</option></select></div>
     </div>
     <div class="row">
       <div class="fd w2"><label class="fl">SERP doc link</label><input type="url" id="pm-serp-link"></div>
@@ -730,12 +730,12 @@ input[type=file]{width:100%}
       <div class="fd"><label class="fl">Added to The Weekly</label>
         <select id="pm-email-mentioned">
           <option value="">Not yet</option>
-          <option value="yes">Yes — added to The Weekly</option>
+          <option value="yes">Yes, added to The Weekly</option>
         </select>
       </div>
       <div class="fd w2"><label class="fl">Newsletter date</label><input type="date" id="pm-email-date"></div>
     </div>
-    <div style="margin-bottom:14px"><label class="fl">Publishing notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— reminders, update flags, review notes</span></label><textarea id="pm-notes" rows="2" style="resize:none" placeholder="e.g. Update pricing section when ESC Hub plans change. Review in 6 months."></textarea></div>
+    <div style="margin-bottom:14px"><label class="fl">Publishing notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(reminders, update flags, review notes)</span></label><textarea id="pm-notes" rows="2" style="resize:none" placeholder="e.g. Update pricing section when ESC Hub plans change. Review in 6 months."></textarea></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button id="pm-save-btn" class="btn btn-p" onclick="savePost()">Save changes</button>
       <button class="btn btn-ghost btn-sm" onclick="reCopyBrief()">Copy brief prompt</button>
@@ -808,7 +808,7 @@ input[type=file]{width:100%}
         </div>
         <div class="fd"><label class="fl">Date</label><input type="date" id="opt-date"></div>
       </div>
-      <div style="margin-bottom:8px"><label class="fl">Note (optional) — what exactly did you do?</label><input type="text" id="opt-note" placeholder="e.g. Rewrote title to lead with 'FG Funnels Review 2026' + sharper meta"></div>
+      <div style="margin-bottom:8px"><label class="fl">Note (optional): what exactly did you do?</label><input type="text" id="opt-note" placeholder="e.g. Rewrote title to lead with 'FG Funnels Review 2026' + sharper meta"></div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:8px">The current Search Console numbers are captured as the "before" so the lift can be measured automatically.</div>
       <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveOptimization()">Save optimization</button><button class="btn btn-sm" onclick="hideOptForm()">Cancel</button></div>
     </div>
@@ -830,13 +830,13 @@ input[type=file]{width:100%}
       <div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="saveGsc()">Save</button><button class="btn btn-sm" onclick="hideAddGsc()">Cancel</button></div>
     </div>
     <table class="gsc-t"><thead><tr><th>Date</th><th>Position</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Change</th><th>Source</th><th></th></tr></thead><tbody id="gsc-tbody"></tbody></table>
-    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">Rankings now update automatically each week from Search Console — no CSV needed. Use "Add manually" only for a one-off backfill.</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">Rankings now update automatically each week from Search Console, no CSV needed. Use "Add manually" only for a one-off backfill.</div>
   </div>
   <!-- LINKS -->
   <div id="pm-links" class="pane">
-    <div class="sh">Links out — <span id="lc-badge" style="text-transform:none;letter-spacing:0;font-weight:400">0/3</span></div>
+    <div class="sh">Links out: <span id="lc-badge" style="text-transform:none;letter-spacing:0;font-weight:400">0/3</span></div>
     <div id="pm-link-list" style="margin-bottom:1rem"></div>
-    <div style="margin-bottom:8px"><label class="fl">Add a link to:</label><select id="pm-link-sel"><option value="">— select —</option></select></div>
+    <div style="margin-bottom:8px"><label class="fl">Add a link to:</label><select id="pm-link-sel"><option value="">Select...</option></select></div>
     <button id="pm-add-link-btn" class="btn btn-p btn-sm" onclick="addLink()" style="margin-bottom:1.25rem">Add link</button>
     <div style="border-top:1px solid var(--border);padding-top:1rem">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -858,7 +858,7 @@ input[type=file]{width:100%}
   <div class="mhdr"><div class="mtitle">Settings</div><button class="xbtn" onclick="closeModal('settings-modal')">✕</button></div>
   <div style="margin-bottom:1.5rem">
     <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Account</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Signed in as <strong id="acct-email">—</strong></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Signed in as <strong id="acct-email">...</strong></div>
     <button class="btn btn-sm" onclick="logoutSB()">Log out</button>
   </div>
   <div style="margin-bottom:1.5rem">
@@ -974,12 +974,12 @@ input[type=file]{width:100%}
 <div class="modal" style="max-width:500px">
   <div class="mhdr"><div class="mtitle">Import keywords</div><button class="xbtn" onclick="closeModal('kw-import-modal')">✕</button></div>
   <div style="background:var(--blue-l);border:1px solid #b8ccf0;border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1a4d8f;line-height:1.7">
-    For a keyword list you've already researched elsewhere (Keysearch, GKP, etc.) — added straight to your idea backlog with no DataForSEO lookup.<br><br>
+    For a keyword list you've already researched elsewhere (Keysearch, GKP, etc.), added straight to your idea backlog with no DataForSEO lookup.<br><br>
     <strong>CSV columns:</strong> a column containing <code>keyword</code>, one containing <code>volume</code>, and one containing <code>score</code>/<code>difficulty</code>/<code>KS</code> (any order, matched by header name). Export your sheet as CSV first if it's Excel/Sheets.
   </div>
   <div style="border:2px dashed var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="document.getElementById('kw-import-file').click()">
     <div style="font-size:13px;color:var(--text2)" id="kw-import-file-label">Click to upload keywords CSV</div>
-    <div style="font-size:11px;color:var(--text3);margin-top:4px">Added to the current brand's idea backlog — duplicates are skipped</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Added to the current brand's idea backlog, duplicates are skipped</div>
   </div>
   <input type="file" id="kw-import-file" accept=".csv" style="display:none" onchange="handleKeywordCsvFile(event)">
   <div id="kw-import-result"></div>
@@ -997,7 +997,7 @@ input[type=file]{width:100%}
   <div style="background:var(--teal-l);border:1px solid var(--teal);border-radius:var(--r2);padding:10px 14px;font-size:12px;color:var(--teal-t);margin:12px 0" id="approve-date-preview"></div>
   <div style="margin-bottom:14px"><label class="fl">Send back note (optional)</label><textarea id="approve-note" rows="2" style="resize:none" placeholder="What needs changing?"></textarea></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-p" onclick="approvePost(curPost,false)">✓ Approve — assign date</button>
+    <button class="btn btn-p" onclick="approvePost(curPost,false)">✓ Approve: assign date</button>
     <button class="btn btn-danger" onclick="approvePost(curPost,true,document.getElementById('approve-note').value)">← Send back to Drafted</button>
     <button class="btn" onclick="closeModal('approve-modal')">Cancel</button>
   </div>
