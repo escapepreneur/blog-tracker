@@ -3051,7 +3051,7 @@ Check for:
 1. Any broken or suspicious links (links with typos, wrong domains, 404s)
 2. Missing or duplicate meta title/description
 3. Missing alt text on images
-4. CTA present and linking to eschub.com (ESC Hub posts) or escapepreneur.com/freedom-blueprint (No More Somedays)
+4. CTA present and linking to eschub.com (ESC Hub posts) or escapepreneur.com/reality-check (No More Somedays)
 5. Internal links present (at least 2)
 6. Any obvious content issues
 

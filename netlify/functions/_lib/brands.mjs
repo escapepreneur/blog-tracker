@@ -123,12 +123,12 @@ export const BRANDS = {
     gscProperty: 'sc-domain:escapepreneur.com',
     person: 'first',           // I / me / my (Karen)
     personRule: 'Write in the FIRST person as Karen King throughout (I / me / my). Her personal story, travel and founder journey are welcome where they add genuine relevance, not as decoration.',
-    cta: 'Download The Freedom Blueprint at escapepreneur.com/freedom-blueprint',
-    ctaUrl: 'escapepreneur.com/freedom-blueprint',
-    // Lead magnets for the in-body contextual link (the footer carries the book/standard CTA).
+    cta: 'Take The Reality Check at escapepreneur.com/reality-check',
+    ctaUrl: 'escapepreneur.com/reality-check',
+    // Lead magnet for the in-body contextual link (the footer carries the book/standard CTA).
+    // The Freedom Blueprint was retired as a No More Somedays CTA: the reader is already in business and stuck.
     leadMagnets: [
-      { key: 'blueprint', label: 'The Freedom Blueprint', url: 'https://escapepreneur.com/freedom-blueprint', when: 'Earlier-stage readers: getting started, designing the freedom business/life, planning the first version, foundational mindset.' },
-      { key: 'reality-check', label: 'The Reality Check', url: 'https://escapepreneur.com/reality-check', when: 'Already-trying-but-stuck readers, whatever their timeframe (a few months in or several years): diagnosing where they are stuck, what is not working, course-correcting an existing business.' },
+      { key: 'reality-check', label: 'The Reality Check', url: 'https://escapepreneur.com/reality-check', when: 'Always. Every reader is already trying but stuck, whatever their timeframe (a few months in or several years): diagnosing where they are stuck, what is not working, course-correcting an existing business.' },
     ],
     allowedLinkDomains: ['escapepreneur.com', 'jointheescapeclub.com', 'eschub.com'],
     forbiddenLinkDomains: [],
