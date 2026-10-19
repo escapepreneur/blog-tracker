@@ -1,0 +1,24 @@
+name: Search Console snapshot
+
+# Saves a per-post Search Console snapshot (position, impressions, clicks) into
+# gsc_positions so the tool has a real trend line. The script only writes a post
+# once every 6 days, so running daily is safe and means a failed day retries itself.
+
+on:
+  schedule:
+    - cron: '30 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Take Search Console snapshot
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SA_KEY: ${{ secrets.GOOGLE_SA_KEY }}
+        run: node scripts/gsc-snapshot.mjs

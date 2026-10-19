@@ -12,7 +12,8 @@ import { searchAnalytics, getServiceAccount } from '../netlify/functions/_lib/go
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!KEY) { console.error('[gsc-snapshot] Missing SUPABASE_SERVICE_ROLE_KEY'); process.exit(1); }
-if (!getServiceAccount()) { console.log('[gsc-snapshot] GOOGLE_SA_KEY not set — skipping (no-op).'); process.exit(0); }
+if (!getServiceAccount()) { console.error('[gsc-snapshot] GOOGLE_SA_KEY is missing or not valid JSON, so no snapshot can be taken.'); process.exit(1); }
+let failures = 0;
 
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
 const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
@@ -41,7 +42,7 @@ const ymd = (d) => d.toISOString().slice(0, 10);
 
     let rows;
     try { rows = await searchAnalytics({ siteUrl: prop, startDate: ymd(start), endDate: ymd(end), dimensions: ['page'], rowLimit: 2000 }); }
-    catch (e) { console.error(`  [${blog}] GSC error: ${e.message}`); continue; }
+    catch (e) { console.error(`  [${blog}] GSC error: ${e.message}`); failures++; continue; }
 
     // GSC lists in-page anchor links (…/post/x#uuid) as separate pages; strip the
     // #fragment and merge so a post's snapshot includes all its impressions.
@@ -68,10 +69,11 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     for (let i = 0; i < inserts.length; i += 50) {
       const batch = inserts.slice(i, i + 50);
       const res = await rest('gsc_positions', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(batch) });
-      if (!res.ok) console.error(`  [${blog}] insert failed: ${res.status} ${await res.text()}`);
+      if (!res.ok) { console.error(`  [${blog}] insert failed: ${res.status} ${await res.text()}`); failures++; }
     }
     console.log(`  [${blog}] ${inserts.length} post snapshot(s) written`);
     total += inserts.length;
   }
   console.log(`[gsc-snapshot] done. ${total} snapshot(s) total.`);
+  if (failures) { console.error(`[gsc-snapshot] ${failures} step(s) failed, marking this run as failed so it is visible.`); process.exit(1); }
 })().catch(e => { console.error('[gsc-snapshot] FAILED:', e.message); process.exit(1); });
