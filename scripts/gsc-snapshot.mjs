@@ -7,7 +7,7 @@
 // last 6 days, so running daily from the status-sync cron yields ~one row/post/week.
 //   env: SUPABASE_SERVICE_ROLE_KEY, GOOGLE_SA_KEY
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
-import { searchAnalytics, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
+import { searchAnalytics, getServiceAccount, inspectIndexDetail } from '../netlify/functions/_lib/google.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,7 +35,7 @@ const ymd = (d) => d.toISOString().slice(0, 10);
   for (const blog of Object.keys(BRANDS)) {
     const prop = BRANDS[blog] && BRANDS[blog].gscProperty;
     if (!prop) continue;
-    const posts = await (await rest(`posts?status=eq.live&blog=eq.${blog}&url=not.is.null&select=id,url`)).json();
+    const posts = await (await rest(`posts?status=eq.live&blog=eq.${blog}&url=not.is.null&select=id,url,indexed`)).json();
     if (!Array.isArray(posts) || !posts.length) { console.log(`  [${blog}] no live posts with urls`); continue; }
 
     // The same page can appear as http/https, www, with a trailing slash, a ?query or a
@@ -60,12 +60,12 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     // One row for EVERY live post. Search Console only lists pages that had at least one
     // impression, so a post missing from its report gets an explicit zero row instead of
     // silently dropping out of the trend.
-    const inserts = [], noData = [];
+    const inserts = [];
+    const noData = posts.filter(p => !byPage.get(keyOf(p.url)));
     for (const p of posts) {
       if (recentSet.has(p.id)) continue; // one row per post per run
       recentSet.add(p.id);
       const a = byPage.get(keyOf(p.url));
-      if (!a) noData.push(p.url);
       inserts.push({
         post_id: p.id, recorded_date: today,
         position: a && a.impressions ? Math.round((a.posw / a.impressions) * 10) / 10 : null,
@@ -73,7 +73,31 @@ const ymd = (d) => d.toISOString().slice(0, 10);
         notes: 'GSC-auto',
       });
     }
-    if (noData.length) console.log(`  [${blog}] ${noData.length} live post(s) had no Search Console data in this window:\n    ` + noData.join('\n    '));
+    // Audit every post Search Console has nothing on: is the page actually up, and does Google
+    // actually index it? Corrects posts.indexed when it was wrong, and fails the run if a
+    // "live" post is really a broken page.
+    if (noData.length) {
+      console.log(`  [${blog}] ${noData.length} live post(s) with no Search Console data, checking each:`);
+      let notIndexed = 0, broken = 0, corrected = 0;
+      for (const p of noData) {
+        let code = 0;
+        try { code = (await fetch(p.url, { redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (compatible; blog-tracker-audit)' } })).status; } catch { code = 0; }
+        const d = await inspectIndexDetail(prop, p.url).catch(() => null);
+        const why = d ? `${d.coverage || 'unknown'}${d.lastCrawled ? ', last crawled ' + d.lastCrawled.slice(0, 10) : ''}` : 'could not inspect';
+        if (code === 0 || code >= 400) { broken++; failures++; console.error(`    BROKEN  http ${code}  ${p.url}  (${why})`); }
+        else if (d && d.indexed === 'no') { notIndexed++; console.log(`    NOT INDEXED  ${p.url}  (${why})`); }
+        else console.log(`    indexed, no impressions yet  ${p.url}`);
+        let fix = null;
+        if (d && d.indexed === 'yes' && p.indexed !== 'yes') fix = 'yes';
+        if (d && d.indexed === 'no' && p.indexed === 'yes') fix = 'no';
+        if (fix) {
+          const r = await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: fix }) });
+          if (r.ok) corrected++; else { console.error(`    could not update indexed flag for ${p.url}: ${r.status}`); failures++; }
+        }
+        await new Promise(r => setTimeout(r, 200)); // stay well under the URL Inspection rate limit
+      }
+      console.log(`  [${blog}] audit: ${notIndexed} not indexed, ${broken} broken, ${corrected} indexed flag(s) corrected`);
+    }
     // insert in batches
     for (let i = 0; i < inserts.length; i += 50) {
       const batch = inserts.slice(i, i + 50);

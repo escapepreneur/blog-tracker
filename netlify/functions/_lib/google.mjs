@@ -66,8 +66,12 @@ export async function searchAnalytics({ siteUrl, startDate, endDate, dimensions 
   return data.rows || [];
 }
 
-// Inspect a URL's index status. Returns 'yes' | 'no' | null (no key / error).
-export async function inspectIndexed(siteUrl, pageUrl, sa) {
+// Inspect a URL's index status in detail. Returns { indexed: 'yes'|'no', coverage, lastCrawled }
+// or null (no key / error). The old check was /indexed/.test(coverage), which also matched
+// "Crawled - currently NOT indexed" and "Discovered - currently NOT indexed", so pages Google
+// had refused to index were recorded as indexed. Trust Google's verdict, and only accept a
+// coverage text that STARTS with "indexed" / "submitted and indexed".
+export async function inspectIndexDetail(siteUrl, pageUrl, sa) {
   sa = sa || getServiceAccount();
   if (!sa) return null;
   const token = await getAccessToken(sa, 'https://www.googleapis.com/auth/webmasters.readonly');
@@ -77,6 +81,14 @@ export async function inspectIndexed(siteUrl, pageUrl, sa) {
   });
   if (!res.ok) return null;
   const data = await res.json().catch(() => ({}));
-  const cov = data?.inspectionResult?.indexStatusResult?.coverageState || '';
-  return /indexed/i.test(cov) ? 'yes' : 'no';
+  const r = data?.inspectionResult?.indexStatusResult || {};
+  const coverage = String(r.coverageState || '').trim();
+  const indexed = (r.verdict === 'PASS' || /^(submitted and )?indexed\b/i.test(coverage)) ? 'yes' : 'no';
+  return { indexed, coverage, lastCrawled: r.lastCrawlTime || null };
+}
+
+// Inspect a URL's index status. Returns 'yes' | 'no' | null (no key / error).
+export async function inspectIndexed(siteUrl, pageUrl, sa) {
+  const d = await inspectIndexDetail(siteUrl, pageUrl, sa);
+  return d ? d.indexed : null;
 }
