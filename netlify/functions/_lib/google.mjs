@@ -78,6 +78,17 @@ export async function listSitemaps(siteUrl, sa) {
   return data.sitemap || [];
 }
 
+// Resubmit a sitemap so Google fetches it again. Needs the service account to be an owner of
+// the property (it is) and the read/write webmasters scope.
+export async function submitSitemap(siteUrl, feedUrl, sa) {
+  sa = sa || getServiceAccount();
+  if (!sa) return false;
+  const token = await getAccessToken(sa, 'https://www.googleapis.com/auth/webmasters');
+  const res = await fetch(`https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/sitemaps/${encodeURIComponent(feedUrl)}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`submit sitemap ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return true;
+}
+
 // Inspect a URL's index status in detail. Returns { indexed: 'yes'|'no', coverage, lastCrawled }
 // or null (no key / error). The old check was /indexed/.test(coverage), which also matched
 // "Crawled - currently NOT indexed" and "Discovered - currently NOT indexed", so pages Google

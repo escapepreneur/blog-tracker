@@ -7,7 +7,7 @@
 // last 6 days, so running daily from the status-sync cron yields ~one row/post/week.
 //   env: SUPABASE_SERVICE_ROLE_KEY, GOOGLE_SA_KEY
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
-import { searchAnalytics, getServiceAccount, inspectIndexDetail, listSitemaps } from '../netlify/functions/_lib/google.mjs';
+import { searchAnalytics, getServiceAccount, inspectIndexDetail, listSitemaps, submitSitemap } from '../netlify/functions/_lib/google.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -52,6 +52,13 @@ const ymd = (d) => d.toISOString().slice(0, 10);
       for (const m of maps) {
         const posts = (m.contents || []).map(c => `${c.type}: ${c.submitted} submitted, ${c.indexed} indexed`).join('; ');
         console.log(`  [${blog}] sitemap ${m.path} | last downloaded ${m.lastDownloaded || 'never'} | errors ${m.errors || 0}, warnings ${m.warnings || 0}${posts ? ' | ' + posts : ''}`);
+        // Google had stopped reading the No More Somedays sitemap after 27 July, so every post
+        // published since was "unknown to Google". If it has not been read in 14 days, resubmit it.
+        const ageDays = m.lastDownloaded ? (Date.now() - Date.parse(m.lastDownloaded)) / 86400000 : Infinity;
+        if (ageDays > 14) {
+          try { await submitSitemap(prop, m.path); console.log(`  [${blog}] RESUBMITTED ${m.path} (Google last read it ${m.lastDownloaded || 'never'})`); }
+          catch (e) { console.error(`  [${blog}] could not resubmit ${m.path}: ${e.message}`); failures++; }
+        }
       }
     } catch (e) { console.error(`  [${blog}] could not read sitemaps: ${e.message}`); }
 
