@@ -7,7 +7,7 @@
 // last 6 days, so running daily from the status-sync cron yields ~one row/post/week.
 //   env: SUPABASE_SERVICE_ROLE_KEY, GOOGLE_SA_KEY
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
-import { searchAnalytics, getServiceAccount, inspectIndexDetail } from '../netlify/functions/_lib/google.mjs';
+import { searchAnalytics, getServiceAccount, inspectIndexDetail, listSitemaps } from '../netlify/functions/_lib/google.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -45,6 +45,15 @@ const ymd = (d) => d.toISOString().slice(0, 10);
       const m = clean.match(/\/post\/([^/]+)$/);
       return m ? 'post:' + m[1] : clean.replace(/^https?:\/\/(www\.)?/, '');
     };
+
+    try {
+      const maps = await listSitemaps(prop);
+      if (!maps.length) { console.error(`  [${blog}] NO SITEMAP is submitted in Search Console for ${prop}`); failures++; }
+      for (const m of maps) {
+        const posts = (m.contents || []).map(c => `${c.type}: ${c.submitted} submitted, ${c.indexed} indexed`).join('; ');
+        console.log(`  [${blog}] sitemap ${m.path} | last downloaded ${m.lastDownloaded || 'never'} | errors ${m.errors || 0}, warnings ${m.warnings || 0}${posts ? ' | ' + posts : ''}`);
+      }
+    } catch (e) { console.error(`  [${blog}] could not read sitemaps: ${e.message}`); }
 
     let rows;
     try { rows = await searchAnalytics({ siteUrl: prop, startDate: ymd(start), endDate: ymd(end), dimensions: ['page'], rowLimit: 2000 }); }
