@@ -17,7 +17,6 @@ let failures = 0;
 
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
 const rest = (q, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: h, ...opts });
-const norm = (u) => (u || '').replace(/\/+$/, '').toLowerCase();
 const ymd = (d) => d.toISOString().slice(0, 10);
 
 (async () => {
@@ -38,33 +37,43 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     if (!prop) continue;
     const posts = await (await rest(`posts?status=eq.live&blog=eq.${blog}&url=not.is.null&select=id,url`)).json();
     if (!Array.isArray(posts) || !posts.length) { console.log(`  [${blog}] no live posts with urls`); continue; }
-    const byUrl = new Map(posts.map(p => [norm(p.url), p.id]));
+
+    // The same page can appear as http/https, www, with a trailing slash, a ?query or a
+    // #fragment. Key every address the same way so they all merge into one post.
+    const keyOf = (u) => {
+      const clean = String(u || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+      const m = clean.match(/\/post\/([^/]+)$/);
+      return m ? 'post:' + m[1] : clean.replace(/^https?:\/\/(www\.)?/, '');
+    };
 
     let rows;
     try { rows = await searchAnalytics({ siteUrl: prop, startDate: ymd(start), endDate: ymd(end), dimensions: ['page'], rowLimit: 2000 }); }
     catch (e) { console.error(`  [${blog}] GSC error: ${e.message}`); failures++; continue; }
 
-    // GSC lists in-page anchor links (…/post/x#uuid) as separate pages; strip the
-    // #fragment and merge so a post's snapshot includes all its impressions.
     const byPage = new Map();
     for (const r of (rows || [])) {
-      const page = norm((r.keys[0] || '').split('#')[0]);
+      const page = keyOf(r.keys[0]);
       const a = byPage.get(page) || { clicks: 0, impressions: 0, posw: 0 };
       a.clicks += r.clicks; a.impressions += r.impressions; a.posw += (r.position || 0) * r.impressions;
       byPage.set(page, a);
     }
-    const inserts = [];
-    for (const [page, a] of byPage) {
-      const pid = byUrl.get(page);
-      if (!pid || recentSet.has(pid)) continue;
-      recentSet.add(pid); // one row per post per run
+    // One row for EVERY live post. Search Console only lists pages that had at least one
+    // impression, so a post missing from its report gets an explicit zero row instead of
+    // silently dropping out of the trend.
+    const inserts = [], noData = [];
+    for (const p of posts) {
+      if (recentSet.has(p.id)) continue; // one row per post per run
+      recentSet.add(p.id);
+      const a = byPage.get(keyOf(p.url));
+      if (!a) noData.push(p.url);
       inserts.push({
-        post_id: pid, recorded_date: today,
-        position: a.impressions ? Math.round((a.posw / a.impressions) * 10) / 10 : null,
-        impressions: a.impressions, clicks: a.clicks,
+        post_id: p.id, recorded_date: today,
+        position: a && a.impressions ? Math.round((a.posw / a.impressions) * 10) / 10 : null,
+        impressions: a ? a.impressions : 0, clicks: a ? a.clicks : 0,
         notes: 'GSC-auto',
       });
     }
+    if (noData.length) console.log(`  [${blog}] ${noData.length} live post(s) had no Search Console data in this window:\n    ` + noData.join('\n    '));
     // insert in batches
     for (let i = 0; i < inserts.length; i += 50) {
       const batch = inserts.slice(i, i + 50);
