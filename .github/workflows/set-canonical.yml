@@ -1,0 +1,32 @@
+name: Set canonical address
+
+# Manual only. Gives live posts a self-referencing canonical address (body untouched).
+
+on:
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: 'esc or nms'
+        default: esc
+      slugs:
+        description: 'Post slugs, separated by spaces'
+        required: true
+      mode:
+        description: 'live = change the posts, dry = report only'
+        type: choice
+        default: live
+        options: [live, dry]
+
+jobs:
+  canonical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set canonical addresses
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GHL_API_TOKEN: ${{ secrets.GHL_API_TOKEN }}
+        run: node scripts/set-canonical.mjs ${{ inputs.brand }} ${{ inputs.slugs }} ${{ inputs.mode == 'dry' && '--dry' || '' }}

@@ -162,7 +162,7 @@ export async function getBlogPostBySlug({ brand, slug, pit }) {
 // title/description/imageUrl but IGNORES rawHTML (body is locked at create) — verified
 // 2026-07-10. Sends the full current object with the new title/description so nothing
 // else is wiped. `current` = the object from getBlogPostDetail.
-export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, title, description, urlSlug }) {
+export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, title, description, urlSlug, canonicalLink }) {
   const b = BRANDS[brand];
   const payload = {
     title: title != null ? title : current.title,
@@ -177,6 +177,8 @@ export async function updateBlogPost({ ghlPostId, brand, pit, current = {}, titl
     author: current.author || b.authorId,
     publishedAt: current.publishedAt || new Date().toISOString(),
   };
+  const canon = canonicalLink != null ? canonicalLink : current.canonicalLink;
+  if (canon) payload.canonicalLink = canon;
   const r = await fetch(`${GHL}/blogs/posts/${ghlPostId}`, {
     method: 'PUT', headers: { Authorization: `Bearer ${pit}`, Version: '2021-07-28', 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
