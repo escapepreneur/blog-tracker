@@ -84,7 +84,22 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`GHL create ${res.status}: ${JSON.stringify(data).slice(0, 300)}`);
   const created = data.blogPost || data.data || data;
-  return { id: created._id || created.id, slug: created.urlSlug || draft.slug, url: publicUrl(brand, created.urlSlug || draft.slug), raw: created };
+  const id = created._id || created.id;
+  const url = publicUrl(brand, created.urlSlug || draft.slug);
+  await setCanonicalAfterCreate({ id, brand, pit, url });
+  return { id, slug: created.urlSlug || draft.slug, url, raw: created };
+}
+
+// New posts used to go live with no canonical tag, so Google had to guess which similar page
+// was the original and collapsed unrelated posts into each other as duplicates. Set a
+// self-referencing canonical straight after creation (verified to work on a PUT, body untouched).
+// Best-effort so a hiccup here never blocks publishing, but it is logged.
+async function setCanonicalAfterCreate({ id, brand, pit, url }) {
+  if (!id) return;
+  try {
+    const cur = await getBlogPostDetail({ ghlPostId: id, pit });
+    await updateBlogPost({ ghlPostId: id, brand, pit, current: cur, canonicalLink: url });
+  } catch (e) { console.error(`[ghl] canonical NOT set for ${url}: ${e.message}`); }
 }
 
 // Flip an existing GHL post to PUBLISHED (used by the scheduled go-live cron).
@@ -208,7 +223,9 @@ export async function createPostRaw({ brand, pit, title, rawHTML, description, u
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`GHL createRaw ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
   const p = d.blogPost || d.data || d;
-  return { id: p._id || p.id, urlSlug: p.urlSlug };
+  const id = p._id || p.id;
+  await setCanonicalAfterCreate({ id, brand, pit, url: publicUrl(brand, p.urlSlug || urlSlug) });
+  return { id, urlSlug: p.urlSlug };
 }
 
 // Upload an image buffer to the GHL media library -> { fileId, url }.
