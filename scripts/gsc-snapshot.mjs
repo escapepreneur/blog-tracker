@@ -95,23 +95,37 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     if (noData.length) {
       console.log(`  [${blog}] ${noData.length} live post(s) with no Search Console data, checking each:`);
       let notIndexed = 0, broken = 0, corrected = 0;
-      for (const p of noData) {
-        let code = 0;
-        try { code = (await fetch(p.url, { redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (compatible; blog-tracker-audit)' } })).status; } catch { code = 0; }
-        const d = await inspectIndexDetail(prop, p.url).catch(() => null);
-        const why = d ? `${d.coverage || 'unknown'}${d.lastCrawled ? ', last crawled ' + d.lastCrawled.slice(0, 10) : ''}` : 'could not inspect';
-        if (code === 0 || code >= 400) { broken++; failures++; console.error(`    BROKEN  http ${code}  ${p.url}  (${why})`); }
-        else if (d && d.indexed === 'no') { notIndexed++; console.log(`    NOT INDEXED  ${p.url}  (${why})`); }
-        else console.log(`    indexed, no impressions yet  ${p.url}`);
-        let fix = null;
-        if (d && d.indexed === 'yes' && p.indexed !== 'yes') fix = 'yes';
-        if (d && d.indexed === 'no' && p.indexed === 'yes') fix = 'no';
-        if (fix) {
-          const r = await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: fix }) });
-          if (r.ok) corrected++; else { console.error(`    could not update indexed flag for ${p.url}: ${r.status}`); failures++; }
+      // Checked 5 at a time: one by one, Google's inspection call made this job take 11 minutes.
+      let next = 0;
+      const worker = async () => {
+        while (next < noData.length) {
+          const p = noData[next++];
+          let code = 0, finalUrl = p.url;
+          try {
+            const r = await fetch(p.url, { redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (compatible; blog-tracker-audit)' } });
+            code = r.status; finalUrl = r.url || p.url;
+          } catch { code = 0; }
+          // A "live" post that redirects somewhere else (for example a deleted post sent to a 404
+          // page) still answers 200 once the redirect is followed, so compare where it ended up.
+          const movedAway = code > 0 && code < 400 && keyOf(finalUrl) !== keyOf(p.url);
+          const d = await inspectIndexDetail(prop, p.url).catch(() => null);
+          const why = d ? `${d.coverage || 'unknown'}${d.lastCrawled ? ', last crawled ' + d.lastCrawled.slice(0, 10) : ''}` : 'could not inspect';
+          if (code === 0 || code >= 400 || movedAway) {
+            broken++; failures++;
+            console.error(`    BROKEN  ${movedAway ? 'redirects to ' + finalUrl : 'http ' + code}  ${p.url}  (${why})`);
+          }
+          else if (d && d.indexed === 'no') { notIndexed++; console.log(`    NOT INDEXED  ${p.url}  (${why})`); }
+          else console.log(`    indexed, no impressions yet  ${p.url}`);
+          let fix = null;
+          if (d && d.indexed === 'yes' && p.indexed !== 'yes') fix = 'yes';
+          if (d && d.indexed === 'no' && p.indexed === 'yes') fix = 'no';
+          if (fix) {
+            const r = await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: fix }) });
+            if (r.ok) corrected++; else { console.error(`    could not update indexed flag for ${p.url}: ${r.status}`); failures++; }
+          }
         }
-        await new Promise(r => setTimeout(r, 200)); // stay well under the URL Inspection rate limit
-      }
+      };
+      await Promise.all(Array.from({ length: 5 }, worker));
       console.log(`  [${blog}] audit: ${notIndexed} not indexed, ${broken} broken, ${corrected} indexed flag(s) corrected`);
     }
     // insert in batches
