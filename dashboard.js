@@ -2774,7 +2774,7 @@ Post topic: "${post.primary_keyword||post.title||''}"
 Current image title: "${curTitle||'(none set)'}"
 Current image tagline: "${curTag||'(none set)'}"
 
-Rules for the TITLE: 2-3 words, punchy, the single keyword/phrase a reader would recognise. Short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness. Mix the lengths across the 5, don't make them all the same word count; aim for at least two at 3 words, not all clipped down to 2.
+Rules for the TITLE: 2-3 words, punchy, the single keyword/phrase a reader would recognise. Where it fits, build the title from the post's primary keyword ("${post.primary_keyword||''}") or its key words, so the image says what the post is about; if the keyword is long, use its strongest two or three words. Short titles render much bigger and bolder on the image than long ones, so brevity matters more than completeness. Mix the lengths across the 5, don't make them all the same word count; aim for at least two at 3 words, not all clipped down to 2.
 Rules for the TAGLINE: one short supporting line (under 8 words) that adds context the title doesn't cover.
 Vary the angle across the 5 (e.g. benefit-led, curiosity-led, direct/plain, question, contrast) so they're genuinely different from each other, not minor rewordings.
 

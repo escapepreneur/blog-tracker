@@ -22,7 +22,7 @@ const TOOL = {
       },
       canva_title: { type: 'string', description: 'Featured-image line 1 (white).' },
       canva_subtitle: { type: 'string', description: 'Featured-image line 2 (teal).' },
-      featured_title: { type: 'string', description: 'Short, punchy featured-image headline (3-6 words) — scroll-stopping, may differ from the H1. The renderer splits it into a balanced two lines (white + teal).' },
+      featured_title: { type: 'string', description: 'Short, punchy featured-image headline (3-6 words) — scroll-stopping, may differ from the H1. Where it fits, build it from the primary keyword (or its strongest words) so the image says what the post is about. The renderer places it left-aligned on the left of the image, split into a white part and a teal part.' },
       featured_tagline: { type: 'string', description: 'Short script tagline for the featured image (4-7 words) that complements the title.' },
       featured_image_search: { type: 'string', description: 'A stock-photo search term for a relevant, visually strong hero background (people/work/lifestyle suiting the topic; avoid text-heavy or busy images).' },
       body_image_searches: { type: 'array', items: { type: 'string' }, description: 'Stock-photo search terms, one per body image slot (2-3).' },
