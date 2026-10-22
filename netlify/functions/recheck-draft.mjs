@@ -2,6 +2,7 @@
 // store the new report. No AI and no regeneration, so it takes about a second. Use it after
 // editing a draft (or after changing the CTA field) to refresh the check results.
 import { runChecks } from './_lib/checker.mjs';
+import { getRecentOpenings } from './_lib/openings.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,12 +25,13 @@ export const handler = async (event) => {
     if (!post || !draft) return json(404, { error: 'post or draft not found' });
 
     const a = draft.assets || {};
+    const openings = await getRecentOpenings({ supabaseUrl: SUPABASE_URL, headers: h, blog: post.blog, limit: 400, exclude: post_id });
     const report = runChecks({
-      brand: post.blog, post,
+      brand: post.blog, post, openings,
       draft: {
         title: a.title, body_html: draft.body_html, meta_title: draft.meta_title,
         meta_description: draft.meta_description, slug: draft.slug, category: draft.category,
-        internal_links: draft.internal_links, cta_choice: a.cta_choice,
+        internal_links: draft.internal_links, cta_choice: a.cta_choice, assets: a,
       },
     });
     const w = await rest(`post_drafts?post_id=eq.${post_id}`, {

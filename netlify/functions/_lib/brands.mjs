@@ -13,7 +13,16 @@ export const BANNED = [
   'elevate','dynamic','deep dive','dive','delve','unpack','harness','tap into','leverage','robust',
   'comprehensive','cultivate','foster','navigate','thrive','resonate','cutting-edge','streamline',
   'fast-paced world','unlock your potential','make the most of','without further ado',
-  'at the end of the day','refreshing'
+  'at the end of the day','refreshing',
+  'quietly' // Karen's rule: never "quietly". It slipped through into 23 live posts because it was never on this list.
+];
+
+// Phrases that make an opening read like every other post. Checked in the first two paragraphs
+// (amber, not red) and forbidden in the writer's instructions. Matched case-insensitively,
+// with curly and straight apostrophes treated the same.
+export const OPENING_PHRASES = [
+  'you already', 'and yet here you are', 'here you are', "you've known for a while", 'you have known for a while',
+  'the freedom you were promised', "here's the short version", 'i know that feeling', 'you signed up for',
 ];
 
 // Banned multi-word phrases (checked as substrings, case-insensitive).
@@ -56,9 +65,16 @@ const SHARED_GEO = `GET CITED BY AI (write so AI assistants and AI search engine
 - Define key terms plainly and keep terminology consistent.
 - Include an FAQ section near the end - <h2>Frequently Asked Questions</h2> followed by 3 to 5 questions as <h3> with concise 1-3 sentence answers - placed BEFORE the closing paragraph (the FAQ is never the last thing). Also return those same items in the faq field.`;
 
+const SHARED_OPENING = `OPENING (the first two lines decide whether the reader keeps going):
+- Open on how the reader feels RIGHT NOW, through something concrete and specific: a thought she says to herself, a moment in her day, what her body does, a small social moment, an object on her desk, a private admission. Within the first two lines she must know this post is for her.
+- NEVER recap what she has already done, tried or knows. Never open (first or second paragraph) with: ${OPENING_PHRASES.map(p => `"${p}"`).join(', ')}. Do not start with "You've built...", "You've done...", or "You signed up for...". Describing her history is the old pattern; describing her present moment is the new one.
+- Your brief names ONE angle for this post. Use it, and make the first sentence a specific scene or sentence, not a summary of her situation. Angles: a thought she mutters to herself; a specific moment in her day; what her body does (shoulders, jaw, stomach, hands on the keyboard); a small social moment (a question at dinner, a friend's post, a client message); an object on her desk or screen; a private admission she would never say aloud.
+- Openings must vary from post to post. The brief lists how recent posts on this blog open. Use a different angle, different first words and a different sentence shape, and do not reuse their phrases.
+- The second paragraph must not be a recap or a "here's the short version". Move into the point of the post.`;
+
 const SHARED_STRUCTURE = `STRUCTURE & FORMAT:
 - Output the article as clean HTML: <p>, <h2>, <h3>, <a href>, <ul>/<li>. No <style>, no class attributes, no inline font styling (the blog theme controls fonts).
-- Open on the reader's problem/situation, not a definition, not background, not "In this article we will...".
+- Open the way the OPENING section below says. Never open on a definition, on background, or on "In this article we will...".
 - Build a clear logical case and end with a clear point of view (not "it depends").
 - Weave in exactly 3 contextual in-body links to OTHER posts on this same blog, using descriptive anchor text (never "click here"). Pick from the provided list of existing posts.`;
 
@@ -160,6 +176,8 @@ POSITIONING: ${b.positioning}
 ${b.personRule}
 ${brand === 'nms' ? '\n' + KAREN_STORY + '\n' : ''}
 ${SHARED_VOICE}
+
+${SHARED_OPENING}
 
 ${SHARED_STRUCTURE}
 

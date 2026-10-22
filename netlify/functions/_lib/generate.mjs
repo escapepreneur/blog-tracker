@@ -44,7 +44,24 @@ function toolFor(brand) {
   return t;
 }
 
-function buildBrief(post, brand, liveLinks, clusterLinks) {
+// One opening angle per post, so openings differ. In a cluster launch the posts are written side by
+// side and cannot see each other, so each is handed a different angle by its position in the
+// launch (post._angleIndex); a single post gets one picked from its id.
+const OPENING_ANGLES = [
+  'a thought she says to herself',
+  'a specific moment in her day',
+  'what her body does (shoulders, jaw, stomach, hands on the keyboard)',
+  'a small social moment (a question at dinner, a friend\'s post, a client message)',
+  'an object on her desk or screen',
+  'a private admission she would never say aloud',
+];
+function angleFor(post) {
+  if (Number.isInteger(post._angleIndex)) return OPENING_ANGLES[post._angleIndex % OPENING_ANGLES.length];
+  let h = 0; for (const c of String(post.id || post.primary_keyword || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return OPENING_ANGLES[h % OPENING_ANGLES.length];
+}
+
+function buildBrief(post, brand, liveLinks, clusterLinks, openings) {
   const b = BRANDS[brand];
   const supp = post.supplementary_keywords || '';
   const all = liveLinks || [];
@@ -80,6 +97,13 @@ Internal-linking rule for clusters: ${post.is_pillar
   : (pillar ? 'you MUST include a link to the PILLAR post above (descriptive anchor), then link to relevant siblings before any other posts.' : 'link to relevant sibling posts above before any other posts.')}`;
   }
 
+  const recent = (openings || []).slice(0, 12).map(o => `- "${String(o.text).replace(/\s+/g, ' ').slice(0, 170)}"`).join('\n');
+  const openingBlock = `
+
+OPENING FOR THIS POST: use this angle: ${angleFor(post)}. Start with a specific scene or sentence, not a summary of her situation. Never recap what she has already done or knows.${recent ? `
+How the most recent posts on this blog open. Do NOT echo their angle, first words, phrases or sentence shape:
+${recent}` : ''}`;
+
   return `Blog: ${b.name} (${b.blogIndex})
 Primary keyword: ${post.primary_keyword || ''}
 KS Score: ${post.ks_score ?? '—'}
@@ -90,19 +114,19 @@ ${post.serp_notes ? `SERP notes: ${post.serp_notes}` : ''}
 
 Existing ${b.name} posts you may link to (choose 3 relevant ones for in-body internal links, with descriptive anchor text). The bracketed number is how many OTHER posts already link to it:
 ${list}
-Internal-linking rule: prioritize posts with a LOW or [0] count above — those aren't getting any internal links yet, which hurts how often Google crawls and ranks them. Only pick a heavily-linked post instead of an under-linked one when it's genuinely the better topical match; don't default to a familiar/well-known post just because it's obviously related.${clusterBlock}
+Internal-linking rule: prioritize posts with a LOW or [0] count above — those aren't getting any internal links yet, which hurts how often Google crawls and ranks them. Only pick a heavily-linked post instead of an under-linked one when it's genuinely the better topical match; don't default to a familiar/well-known post just because it's obviously related.${clusterBlock}${openingBlock}
 
 Write the complete post now and return it via the emit_blog_package tool.`;
 }
 
-export async function generateDraft({ post, brand, liveLinks, clusterLinks, anthropicKey, model = MODEL }) {
+export async function generateDraft({ post, brand, liveLinks, clusterLinks, openings, anthropicKey, model = MODEL }) {
   const body = {
     model,
     max_tokens: 8000,
     system: systemPrompt(brand),
     tools: [toolFor(brand)],
     tool_choice: { type: 'tool', name: 'emit_blog_package' },
-    messages: [{ role: 'user', content: buildBrief(post, brand, liveLinks, clusterLinks) }],
+    messages: [{ role: 'user', content: buildBrief(post, brand, liveLinks, clusterLinks, openings) }],
   };
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

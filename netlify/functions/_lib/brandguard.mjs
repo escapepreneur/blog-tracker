@@ -22,12 +22,12 @@ function bannedHits(text = '') {
 export async function autoFix({ draft, anthropicKey, model = 'claude-opus-4-8' }) {
   const d = { ...draft };
   // 1. dashes + heading capitalisation — deterministic
-  for (const k of ['body_html', 'title', 'meta_title', 'meta_description']) {
+  for (const k of ['body_html', 'title', 'meta_title', 'meta_description', 'facebook_caption', 'instagram_caption', 'pinterest_description']) {
     if (typeof d[k] === 'string') d[k] = d[k].replace(/—/g, ' - ').replace(/–/g, '-');
   }
   if (typeof d.body_html === 'string') d.body_html = capitalizeHeadings(d.body_html);
   // 2. banned words — one targeted rewrite if any remain
-  const blob = [d.body_html, d.title, d.meta_title, d.meta_description].filter(Boolean).join(' ');
+  const blob = [d.body_html, d.title, d.meta_title, d.meta_description, d.facebook_caption, d.instagram_caption, d.pinterest_description].filter(Boolean).join(' ');
   const found = bannedHits(blob);
   if (!found.length) return { draft: d, fixed: [] };
 
@@ -36,6 +36,7 @@ export async function autoFix({ draft, anthropicKey, model = 'claude-opus-4-8' }
     input_schema: { type: 'object', properties: {
       title: { type: 'string' }, meta_title: { type: 'string' },
       meta_description: { type: 'string' }, body_html: { type: 'string' },
+      facebook_caption: { type: 'string' }, instagram_caption: { type: 'string' }, pinterest_description: { type: 'string' },
     }, required: ['title', 'meta_title', 'meta_description', 'body_html'] },
   };
   const prompt = `These blog fields contain words/phrases banned in this brand's voice. Rewrite to REMOVE every one of them, swapping in plainer wording. Keep the meaning, the HTML structure, every link, the CTA and the voice identical. Change nothing else.
@@ -45,6 +46,9 @@ BANNED TO REMOVE: ${found.join(', ')}
 title: ${d.title}
 meta_title: ${d.meta_title}
 meta_description: ${d.meta_description}
+facebook_caption: ${d.facebook_caption || ''}
+instagram_caption: ${d.instagram_caption || ''}
+pinterest_description: ${d.pinterest_description || ''}
 body_html:
 ${d.body_html}`;
 

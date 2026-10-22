@@ -16,6 +16,7 @@ import { syncInternalLinks, countInboundLinks } from './_lib/links.mjs';
 import { createBlogPost, slugExists, slugify, publicUrl } from './_lib/ghl.mjs';
 import { requestIndexing } from './_lib/google.mjs';
 import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
+import { getRecentOpenings } from './_lib/openings.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -122,16 +123,21 @@ export const handler = async (event) => {
     const inbound = await countInboundLinks({ rest, brand: blog });
     const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar, inbound: inbound.get(p.id) || 0 }));
 
+    // Openings of the other posts on this blog, and a different opening angle for each post in the launch
+    // (they are written side by side and cannot see each other).
+    const allOpenings = await getRecentOpenings({ supabaseUrl: SUPABASE_URL, headers: h, blog, limit: 400 });
+    toPublish.forEach((p, i) => { p._angleIndex = i; });
+
     await finish({ status: 'working', result: { phase: 'generating', total: toPublish.length } });
 
     // 4. Generate each post with the full cluster map (capped concurrency).
     const generated = await pool(toPublish, CONCURRENCY, async (p) => {
       try {
         const postCtx = { ...p, _selfUrl: p._url };
-        const gen = await generateDraft({ post: postCtx, brand: blog, liveLinks, clusterLinks, anthropicKey: AKEY });
+        const gen = await generateDraft({ post: postCtx, brand: blog, liveLinks, clusterLinks, openings: allOpenings.slice(0, 12), anthropicKey: AKEY });
         const { draft } = await autoFix({ draft: gen.draft, anthropicKey: AKEY });
         draft.slug = p._slug; // force the reserved slug so the URL is exactly what we linked to
-        const report = runChecks({ brand: blog, post: p, draft });
+        const report = runChecks({ brand: blog, post: p, draft, openings: allOpenings });
         let bodyImages = [];
         if (PEXELS && Array.isArray(draft.body_image_searches)) {
           for (const term of draft.body_image_searches.slice(0, 4)) {

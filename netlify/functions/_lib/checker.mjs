@@ -4,6 +4,7 @@
 // hard = blocks approval; warn = surfaced for the reviewer; pass = confirmed-clean.
 
 import { BRANDS, BANNED, BANNED_PHRASES, SPARINGLY } from './brands.mjs';
+import { openingPhraseHits, similarOpenings } from './openings.mjs';
 
 const stripTags = (html='') => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
 const firstWords = (text, n) => text.split(/\s+/).slice(0, n).join(' ');
@@ -50,7 +51,9 @@ export function leadMagnetUse(brand, html) {
   return { magnets, hits, keys };
 }
 
-export function runChecks({ brand, post, draft }) {
+// openings: optional list of other posts' openings on this blog ({ title, text }). Without it the
+// "too similar to another opening" check is skipped; the stock-phrase check always runs.
+export function runChecks({ brand, post, draft, openings }) {
   const b = BRANDS[brand];
   const r = { verdict: 'pass', hard: [], warn: [], pass: [] };
   const HARD = (m) => r.hard.push(m);
@@ -70,11 +73,29 @@ export function runChecks({ brand, post, draft }) {
   if (/–/.test(html)) WARN(`En dash (–) found — review.`);
 
   // 2. Banned words & phrases (hard)
-  const bannedHits = [];
-  for (const w of BANNED) { const n = occurrences(text, w); if (n) bannedHits.push(`${w} (${n})`); }
-  for (const p of BANNED_PHRASES) { const n = phraseHits(text, p); if (n) bannedHits.push(`"${p}" (${n})`); }
-  if (bannedHits.length) HARD(`Banned words/phrases: ${bannedHits.join(', ')}.`);
-  else PASS('No banned words.');
+  // Scanned everywhere a reader or Google can see words: the article (which includes the FAQ), the
+  // headline, the search title and description, the social captions and the FAQ list. It used to
+  // look at the article only, which is how "quietly" reached 23 live posts.
+  const field = (k) => (draft[k] != null ? draft[k] : (draft.assets || {})[k]);
+  const faqList = (field('faq') || []).map(f => `${f.question || ''} ${f.answer || ''}`).join(' ');
+  const bannedScopes = [
+    ['the article', text],
+    ['the headline', title],
+    ['the search title', draft.meta_title],
+    ['the search description', draft.meta_description],
+    ['the social captions', [field('facebook_caption'), field('instagram_caption'), field('pinterest_description')].filter(Boolean).join(' ')],
+    ['the FAQ list', faqList],
+  ];
+  const bannedMsgs = [];
+  for (const [where, txt] of bannedScopes) {
+    if (!txt) continue;
+    const hits = [];
+    for (const w of BANNED) { const n = occurrences(txt, w); if (n) hits.push(`${w} (${n})`); }
+    for (const p of BANNED_PHRASES) { const n = phraseHits(txt, p); if (n) hits.push(`"${p}" (${n})`); }
+    if (hits.length) bannedMsgs.push(`${where}: ${hits.join(', ')}`);
+  }
+  if (bannedMsgs.length) HARD(`Banned words/phrases in ${bannedMsgs.join('; ')}.`);
+  else PASS('No banned words (article, headline, search text, captions, FAQ).');
   for (const s of SPARINGLY) { const n = phraseHits(text, s); if (n > 1) WARN(`"${s}" used ${n}× (max once).`); }
 
   // 3. Lead-magnet resource link — one contextual link in the body (footer carries the rest)
@@ -192,6 +213,16 @@ export function runChecks({ brand, post, draft }) {
   else WARN('No external citation/source link — cite a reputable source for AI trust.');
   if ([...h2s, ...h3s].some(hd => hd.trim().endsWith('?'))) PASS('Question-style heading(s) present.');
   else WARN('No question-style headings — AI search favours them.');
+
+  // 14. Opening: no stock phrases, and not a copy of another post's opening (amber, a judgment call).
+  const stock = openingPhraseHits(html);
+  if (stock.length) WARN(`The opening leans on a stock phrase (${stock.map(p => `"${p}"`).join(', ')}). Open on a specific moment or feeling instead.`);
+  else PASS('The opening avoids the stock phrases.');
+  if (Array.isArray(openings)) {
+    const near = similarOpenings(html, openings);
+    if (near.length) WARN(`The opening ${near.map(n => `${n.why} "${n.title}"`).join(' and ')}. Try a different angle so posts don't all start the same way.`);
+    else PASS('The opening is different from the other posts on this blog.');
+  }
 
   r.verdict = r.hard.length ? 'fail' : (r.warn.length ? 'review' : 'pass');
   r.wordCount = wc;

@@ -8,6 +8,7 @@ import { runChecks } from './_lib/checker.mjs';
 import { searchPexels } from './_lib/pexels.mjs';
 import { syncInternalLinks, countInboundLinks } from './_lib/links.mjs';
 import { dispatchFeaturedRender } from './_lib/dispatch.mjs';
+import { getRecentOpenings } from './_lib/openings.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,10 +38,12 @@ export const handler = async (event) => {
     const inbound = await countInboundLinks({ rest, brand });
     const liveLinks = live.map(p => ({ title: p.title || p.primary_keyword, url: p.url, cluster: p.cluster || null, is_pillar: !!p.is_pillar, inbound: inbound.get(p.id) || 0 }));
 
-    const gen = await generateDraft({ post, brand, liveLinks, anthropicKey: AKEY });
+    // How other posts on this blog open: the writer gets the 12 most recent to steer away from; the check compares against all of them.
+    const allOpenings = await getRecentOpenings({ supabaseUrl: SUPABASE_URL, headers: h, blog: brand, limit: 400, exclude: postId });
+    const gen = await generateDraft({ post, brand, liveLinks, openings: allOpenings.slice(0, 12), anthropicKey: AKEY });
     const { draft, fixed } = await autoFix({ draft: gen.draft, anthropicKey: AKEY });
     const { usage, model } = gen;
-    const report = runChecks({ brand, post, draft });
+    const report = runChecks({ brand, post, draft, openings: allOpenings });
 
     let bodyImages = [];
     if (PEXELS && Array.isArray(draft.body_image_searches)) {

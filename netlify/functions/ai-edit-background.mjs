@@ -6,6 +6,7 @@ import { autoFix } from './_lib/brandguard.mjs';
 import { runChecks, leadMagnetUse } from './_lib/checker.mjs';
 import { BRANDS } from './_lib/brands.mjs';
 import { syncInternalLinks } from './_lib/links.mjs';
+import { getRecentOpenings } from './_lib/openings.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,9 +60,10 @@ export const handler = async (event) => {
     const checkDraft = {
       title: clean.title, body_html: clean.body_html, meta_title: clean.meta_title,
       meta_description: clean.meta_description, slug: draft.slug, category: draft.category,
-      internal_links: draft.internal_links, cta_choice: ctaKey,
+      internal_links: draft.internal_links, cta_choice: ctaKey, assets: draft.assets,
     };
-    const report = runChecks({ brand: post.blog, post, draft: checkDraft });
+    const openings = await getRecentOpenings({ supabaseUrl: SUPABASE_URL, headers: h, blog: post.blog, limit: 400, exclude: post_id });
+    const report = runChecks({ brand: post.blog, post, draft: checkDraft, openings });
 
     const assets = { ...(draft.assets || {}), title: clean.title };
     if (ctaKey) assets.cta_choice = ctaKey;
