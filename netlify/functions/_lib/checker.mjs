@@ -37,6 +37,19 @@ function getLinks(html) {
   return [...html.matchAll(/<a\s[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis)].map(m => ({ href: m[1], anchor: stripTags(m[2]) }));
 }
 
+// Compare addresses ignoring protocol, www, ?query, #fragment and a trailing slash.
+const linkKey = (u) => String(u || '').split('#')[0].split('?')[0].replace(/^https?:\/\/(www\.)?/i, '').replace(/\/+$/, '').toLowerCase();
+
+// Which of the blog's lead-magnet resources does this HTML link to? Exact address match only.
+// The ESC Hub trial IS eschub.com, so a loose "contains" test also counted every link to an
+// eschub.com/post/... article as a lead-magnet link.
+export function leadMagnetUse(brand, html) {
+  const magnets = (BRANDS[brand] && BRANDS[brand].leadMagnets) || [];
+  const hits = getLinks(html || '').filter(l => magnets.some(m => linkKey(l.href) === linkKey(m.url)));
+  const keys = [...new Set(hits.map(l => magnets.find(m => linkKey(m.url) === linkKey(l.href)).key))];
+  return { magnets, hits, keys };
+}
+
 export function runChecks({ brand, post, draft }) {
   const b = BRANDS[brand];
   const r = { verdict: 'pass', hard: [], warn: [], pass: [] };
@@ -65,11 +78,18 @@ export function runChecks({ brand, post, draft }) {
   for (const s of SPARINGLY) { const n = phraseHits(text, s); if (n > 1) WARN(`"${s}" used ${n}× (max once).`); }
 
   // 3. Lead-magnet resource link — one contextual link in the body (footer carries the rest)
-  const lmUrls = (b.leadMagnets || []).map(m => m.url.replace(/^https?:\/\//, ''));
-  const lmLinks = getLinks(html).filter(l => lmUrls.some(u => l.href.includes(u)));
-  if (lmLinks.length === 0) WARN(`No contextual link to a lead magnet (${(b.leadMagnets || []).map(m => m.label).join(' or ')}).`);
-  else if (lmLinks.length > 2) WARN(`${lmLinks.length} lead-magnet links — keep it to one contextual mention.`);
-  else PASS(`Lead-magnet link present (${lmLinks.length}).`);
+  const lm = leadMagnetUse(brand, html);
+  const lmLabel = (k) => (lm.magnets.find(m => m.key === k) || {}).label || k;
+  const chosenMagnet = draft.cta_choice ? lm.magnets.find(m => m.key === draft.cta_choice) : null;
+  if (chosenMagnet) {
+    // The "Matched CTA link" field and the article's real closing link must agree.
+    const others = lm.keys.filter(k => k !== chosenMagnet.key);
+    if (!lm.keys.includes(chosenMagnet.key)) HARD(`CTA mismatch: the CTA field says "${chosenMagnet.label}" but the article does not link to it${others.length ? ` (it links to ${others.map(lmLabel).join(', ')} instead)` : ''}. Pick the right one in Matched CTA link and save.`);
+    else if (others.length) WARN(`CTA mismatch: the CTA field says "${chosenMagnet.label}" but the article also links to ${others.map(lmLabel).join(', ')}. Check which one you want in Matched CTA link.`);
+    else PASS(`Closing link matches the CTA field (${chosenMagnet.label}).`);
+  } else if (lm.hits.length === 0) WARN(`No contextual link to a lead magnet (${lm.magnets.map(m => m.label).join(' or ')}).`);
+  else PASS(`Lead-magnet link present (${lm.hits.length}).`);
+  if (lm.hits.length > 2) WARN(`${lm.hits.length} lead-magnet links, keep it to one contextual mention.`);
 
   // 4. Voice / person (hard for ESC first-person, warn for NMS).
   // Only AUTHOR narrative counts. Ignore quoted/illustrative spans AND questions —
@@ -110,7 +130,10 @@ export function runChecks({ brand, post, draft }) {
   const badDomain = links.filter(l => (b.forbiddenLinkDomains || []).some(d => l.href.includes(d)));
   if (badDomain.length) HARD(`Links to forbidden domains: ${badDomain.map(l => l.href).join(', ')}.`);
   const sameBlogHost = b.blogIndex.split('/')[0];
-  const internal = links.filter(l => l.href.includes(sameBlogHost) && !/\/blog\/?$/.test(l.href));
+  // Links to OTHER posts only: an article path on this blog. The lead-magnet link (for example
+  // the ESC Hub trial, or the Reality Check on escapepreneur.com) is a different thing and must
+  // not be counted here, or the two checks fight each other.
+  const internal = links.filter(l => { const k = linkKey(l.href); return k.startsWith(sameBlogHost + '/post/') || k.startsWith('/post/'); });
   if (internal.length < 3) WARN(`Only ${internal.length} in-body internal link(s) — need 3 to other ${b.name} posts.`);
   else PASS(`${internal.length} internal links.`);
   if (links.some(l => /^(click here|read more|here)$/i.test(l.anchor))) WARN('Generic anchor text ("click here"/"read more") found.');

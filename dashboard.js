@@ -2729,13 +2729,13 @@ async function publishNow(override){
 }
 function aiEditAsk(){const i=document.getElementById('ai-instr');if(!i||!i.value.trim()){toast('Type an instruction for Claude');return}aiEditRun(i.value.trim());}
 function aiEditFix(){const r=(_curDraft&&_curDraft.check_report)||{};const items=[...(r.hard||[]),...(r.warn||[])];if(!items.length){toast('Nothing flagged');return}aiEditRun('Resolve these flagged issues, changing only what is needed: '+items.join('; '));}
-async function aiEditRun(instruction,clearEditorial){
+async function aiEditRun(instruction,clearEditorial,ctaChoice){
   const pid=curPost;
   const before=await loadDraft(pid);const prevTs=before?before.generated_at:null;
   const el=document.getElementById('pm-draft-body');
-  if(el)el.innerHTML='<div style="text-align:center;padding:2.5rem 1rem"><div style="font-size:14px;font-weight:600;color:var(--text)">Claude is revising the draft…</div><div style="font-size:12px;color:var(--text2);margin-top:8px">About 30-60 seconds. The checks re-run automatically.</div></div>';
+  if(el)el.innerHTML='<div style="text-align:center;padding:2.5rem 1rem"><div style="font-size:14px;font-weight:600;color:var(--text)">'+(ctaChoice?'Updating the closing link…':'Claude is revising the draft…')+'</div><div style="font-size:12px;color:var(--text2);margin-top:8px">'+(ctaChoice?'Up to a minute. ':'About 30-60 seconds. ')+'The checks re-run automatically.</div></div>';
   let status;
-  try{const res=await fetch('/.netlify/functions/ai-edit-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,instruction})});status=res.status;}catch(e){status='err';}
+  try{const res=await fetch('/.netlify/functions/ai-edit-background',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid,instruction:instruction||undefined,cta_choice:ctaChoice||undefined})});status=res.status;}catch(e){status='err';}
   if(status!==202&&status!==200){if(curPost===pid)renderDraftTab();toast('Could not start AI edit ('+status+')',4000);return;}
   const start=Date.now();
   const iv=setInterval(async()=>{
@@ -2745,7 +2745,7 @@ async function aiEditRun(instruction,clearEditorial){
       // The editorial issues just addressed are stale now — clear them so the Draft tab
       // doesn't keep showing "fixed" issues as still-flagged; re-run for a fresh read.
       if(clearEditorial)await sb.from('post_drafts').update({editorial:null}).eq('post_id',pid);
-      if(curPost===pid)renderDraftTab();toast('Draft updated by Claude ✓',3000);
+      if(curPost===pid)renderDraftTab();toast(ctaChoice?'Closing link updated ✓':'Draft updated by Claude ✓',3000);
     }
     else if(Date.now()-start>180000){clearInterval(iv);if(curPost===pid)renderDraftTab();toast('AI edit timed out, try again',4000);}
   },6000);
@@ -2771,6 +2771,44 @@ async function runEditorialReview(){
 // its own distinct block instead of blurring into the next one.
 function _secHead(icon,label){
   return `<div style="display:flex;align-items:center;gap:7px;margin:24px 0 10px;padding-top:16px;border-top:2px solid var(--border)"><span style="font-size:15px">${icon}</span><span style="font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em">${label}</span></div>`;
+}
+// The closing-link resources each blog can use. Mirror of leadMagnets in
+// netlify/functions/_lib/brands.mjs: keep the keys identical, they are what the checker matches.
+const _CTA_OPTS={
+  esc:[{key:'trial',label:'ESC Hub free trial'},{key:'savings',label:'Savings Simulator'}],
+  nms:[{key:'reality-check',label:'The Reality Check'}],
+};
+const _CTA_LABELS={trial:'ESC Hub free trial',savings:'Savings Simulator','reality-check':'The Reality Check',blueprint:'The Freedom Blueprint (retired)'};
+function _ctaPicker(blog,current){
+  const opts=(_CTA_OPTS[blog]||[]).slice();
+  if(current&&!opts.some(o=>o.key===current))opts.push({key:current,label:_CTA_LABELS[current]||current});
+  const html=(current?'':'<option value="">Not set</option>')+opts.map(o=>`<option value="${esc(o.key)}"${o.key===current?' selected':''}>${esc(o.label)}</option>`).join('');
+  return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <select id="cta-select" onchange="ctaSelChanged()" style="width:auto;min-width:200px;font-size:13px;padding:5px 8px">${html}</select>
+    <button id="cta-save" class="btn btn-p btn-sm" onclick="saveCta()" disabled>Save</button>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-top:5px">Saving also rewrites the closing paragraph so its link matches. The checks re-run automatically.</div>`;
+}
+function ctaSelChanged(){
+  const s=document.getElementById('cta-select'),b=document.getElementById('cta-save');if(!s||!b)return;
+  const cur=((_curDraft&&_curDraft.assets)||{}).cta_choice||'';
+  b.disabled=!s.value||s.value===cur;
+}
+function saveCta(){
+  const s=document.getElementById('cta-select');if(!s||!s.value)return;
+  aiEditRun('',true,s.value);
+}
+// Re-check the draft as it is saved now. No rewrite and no regeneration, about a second.
+async function recheckDraft(){
+  const pid=curPost;
+  const btn=document.getElementById('recheck-btn');if(btn){btn.disabled=true;btn.textContent='Checking…';}
+  try{
+    const res=await fetch('/.netlify/functions/recheck-draft',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:pid})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
+    toast('Checks re-run: '+(d.hard?d.hard+' to fix':'nothing to fix')+(d.warn?', '+d.warn+' to look at':''),3500);
+  }catch(e){toast('Could not re-run the checks: '+e.message,4500);}
+  if(curPost===pid)renderDraftTab();
 }
 function _draftRow(label,value,copyKey){
   return `<div style="margin-bottom:10px">
@@ -2880,7 +2918,7 @@ function _draftViewHtml(d){
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="generateDraftNow()">Regenerate</button>
+    <span style="margin-left:auto;display:flex;gap:6px"><button id="recheck-btn" class="btn btn-ghost btn-sm" onclick="recheckDraft()" title="Re-check the draft as it is saved now. No rewrite.">Re-run checks</button><button class="btn btn-ghost btn-sm" onclick="generateDraftNow()">Regenerate</button></span>
   </div>
   ${_secHead('🔎','Worth a look')}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:14px">
@@ -2909,7 +2947,7 @@ function _draftViewHtml(d){
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
   ${_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'n/a'))}
-  ${_draftRow('Matched CTA link',a.cta_choice?esc(({trial:'ESC Hub trial',savings:'Savings Simulator',blueprint:'Freedom Blueprint','reality-check':'Reality Check'})[a.cta_choice]||a.cta_choice):'None (footer CTAs only)')}
+  ${(!post.ghl_post_id&&post.status!=='live')?_draftRow('Matched CTA link',_ctaPicker(post.blog,a.cta_choice)):_draftRow('Matched CTA link',a.cta_choice?esc((_CTA_LABELS[a.cta_choice])||a.cta_choice):'None (footer CTAs only)')}
   ${_secHead('📷','Body Images &amp; Captions')}
   <details style="margin-bottom:6px;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg2);padding:2px 13px" open><summary style="font-size:12px;color:var(--text2);cursor:pointer;font-weight:600;padding:9px 0">Images &amp; captions</summary>
     <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:2px;padding-bottom:11px">
