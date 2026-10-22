@@ -2545,11 +2545,79 @@ function copyDraftField(k){
   const v=k==='title'?(_curDraft.assets||{}).title:_curDraft[k];
   navigator.clipboard.writeText(v||'').then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
 }
+// ---- Upload your own photo (featured background or a body slot) ----
+// Phone photos are huge, so shrink in the browser first, then send. Returns { base64, w, h, bytes }.
+async function _prepImage(file,{maxW,minW,minH}){
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type))throw new Error('Use a JPG, PNG or WebP photo. iPhone HEIC files need exporting as JPG first.');
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('That file could not be read as an image.'));i.src=url;});
+    const w0=img.naturalWidth,h0=img.naturalHeight;
+    if((minW&&w0<minW)||(minH&&h0<minH))throw new Error('That photo is too small ('+w0+' x '+h0+' px). It needs to be at least '+minW+' x '+minH+' px, and 1800 px wide or more looks best.');
+    const scale=Math.min(1,maxW/w0);
+    const w=Math.round(w0*scale),h=Math.round(h0*scale);
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+    let q=0.88,blob=null;
+    for(let t=0;t<5;t++){blob=await new Promise(r=>c.toBlob(r,'image/jpeg',q));if(blob&&blob.size<=3*1024*1024)break;q-=0.1;}
+    if(!blob||blob.size>3*1024*1024)throw new Error('That photo is still too large after shrinking. Try a smaller one.');
+    const base64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(blob);});
+    return{base64,w,h,bytes:blob.size};
+  }finally{URL.revokeObjectURL(url);}
+}
+async function _uploadImage(file,opts){
+  const p=await _prepImage(file,opts);
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('Please sign in again.');
+  const res=await fetch('/.netlify/functions/upload-image',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({post_id:curPost,content_type:'image/jpeg',data:p.base64})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
+  return{url:d.url,w:p.w,h:p.h};
+}
+// Featured image: the upload becomes the photo behind the headline, then the image is rebuilt.
+async function uploadFeaturedFile(input){
+  const f=input.files&&input.files[0];input.value='';if(!f)return;
+  const pid=curPost;
+  toast('Uploading your photo…',2500);
+  try{
+    const up=await _uploadImage(f,{maxW:2400,minW:1200,minH:560});
+    if(curPost!==pid)return;
+    await rerenderFeatured(false,up.url);
+  }catch(e){toast('Upload failed: '+e.message,6000);}
+}
+// Body image: the upload is added to the slot as the chosen photo.
+async function uploadBodyFile(i,input){
+  const f=input.files&&input.files[0];input.value='';if(!f)return;
+  if(!_curDraft||!_curDraft.assets||!_curDraft.assets.body_images)return;
+  const slot=_curDraft.assets.body_images[i];if(!slot)return;
+  const pid=curPost;
+  const btn=document.getElementById('bup-'+i);if(btn){btn.disabled=true;btn.textContent='Uploading…';}
+  try{
+    const up=await _uploadImage(f,{maxW:1800,minW:800,minH:450});
+    if(curPost!==pid)return;
+    const dflt=((document.getElementById('bterm-'+i)||{}).value||slot.term||'').trim();
+    const alt=((prompt('Describe the photo in a few words. This is its alt text, used by search engines and screen readers.',dflt)||dflt)).trim();
+    const mine=(slot.candidates||[]).filter(c=>c.uploaded).slice(0,2);
+    slot.candidates=[{url:up.url,thumb:up.url,alt,photographer:'Uploaded by you',uploaded:true},...mine,...(slot.candidates||[]).filter(c=>!c.uploaded)];
+    slot.chosen=up.url;
+    const{error}=await sb.from('post_drafts').update({assets:_curDraft.assets}).eq('post_id',pid);
+    if(error)throw new Error(error.message);
+    const el=document.getElementById('bslot-'+i);if(el)el.innerHTML=_bodyImageSlot(slot,i);
+    toast('Photo uploaded and selected',2500);
+  }catch(e){
+    toast('Upload failed: '+e.message,6000);
+    const b=document.getElementById('bup-'+i);if(b){b.disabled=false;b.textContent='Upload';}
+  }
+}
+// Body images are baked into the article when it is sent to ESC Hub, so uploads only make
+// sense before that.
+function _canUploadBody(){const p=gp(curPost)||{};return !p.ghl_post_id&&p.status!=='live';}
 function _bodyImageSlot(slot,i){
   const thumbs=(slot.candidates||[]).map((c,j)=>`<img id="bimg-${i}-${j}" src="${esc(c.thumb||c.url)}" title="${esc(c.photographer||'')}" onclick="chooseBodyImage(${i},${j})" style="width:180px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${slot.chosen===c.url?'#29abab':'transparent'}">`).join('')||'<span style="font-size:11px;color:var(--text3)">no matches, edit the term and Regenerate</span>';
   return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
     <input id="bterm-${i}" value="${esc(slot.term||'')}" onkeydown="if(event.key==='Enter')regenSlotImages(${i})" style="flex:1;font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 7px;background:#fff;color:var(--text2)" title="Edit the search term, then Regenerate">
     <button id="bregen-${i}" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="regenSlotImages(${i})">Regenerate</button>
+    ${_canUploadBody()?`<button id="bup-${i}" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 9px;white-space:nowrap" onclick="document.getElementById('bfile-${i}').click()" title="Use your own photo. At least 800 px wide, 1600 px or more looks best.">Upload</button><input type="file" id="bfile-${i}" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadBodyFile(${i},this)">`:''}
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">${thumbs}</div>`;
 }
@@ -2570,7 +2638,8 @@ async function regenSlotImages(i){
     const res=await fetch('/.netlify/functions/regen-image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({post_id:curPost,index:i,term})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok){toast('Regenerate failed: '+(d.error||('HTTP '+res.status)),4000);return}
-    slot.candidates=d.candidates||[];slot.term=d.term||slot.term;slot.page=d.page;
+    slot.candidates=[...(slot.candidates||[]).filter(c=>c.uploaded),...(d.candidates||[])]; // keep your own uploads
+    slot.term=d.term||slot.term;slot.page=d.page;
     if(slot.chosen&&!slot.candidates.some(c=>c.url===slot.chosen))slot.chosen=null;
     const el=document.getElementById('bslot-'+i);if(el)el.innerHTML=_bodyImageSlot(slot,i);
     toast(slot.candidates.length?'New photos loaded':'No more results, try a different term',2500);
@@ -2935,11 +3004,13 @@ function _draftViewHtml(d){
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button id="feat-rerender" class="btn btn-p btn-sm" style="font-size:11px" onclick="rerenderFeatured(false)">Re-render image</button>
       <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="rerenderFeatured(true)">Swap background</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="document.getElementById('feat-file').click()" title="Use your own photo as the background. At least 1200 x 560 px, 1800 px wide or more looks best.">Upload your own</button>
+      <input type="file" id="feat-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadFeaturedFile(this)">
       <button id="feat-suggest-btn" class="btn btn-ghost btn-sm" style="font-size:11px" onclick="suggestFeaturedTitles()">✨ Suggest alternatives</button>
     </div>
     <div id="feat-suggest-area"></div>
     ${_featBgGrid(a)}
-    <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute.</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:5px">Edit the title/tagline (separate from the post title), then re-render. Takes about a minute. Your own photo: landscape, at least 1200 x 560 px (1800 px wide or more is best), no text in the picture. It is darkened and the headline sits over it.</div>
   </div>`:''}
   ${_secHead('🏷️','Titles &amp; Meta')}
   ${_draftRow('Title (H1)',esc(a.title||'n/a'))}
