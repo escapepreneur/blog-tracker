@@ -15,3 +15,11 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Share links for drafts: /preview/<token> is served by the preview function (a rewrite, so the
+# address stays /preview/<token>). The page is noindex and never cached.
+[[redirects]]
+  from = "/preview/*"
+  to = "/.netlify/functions/preview?t=:splat"
+  status = 200
+  force = true

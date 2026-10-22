@@ -2887,6 +2887,40 @@ function saveCta(){
   const s=document.getElementById('cta-select');if(!s||!s.value)return;
   aiEditRun('',true,s.value);
 }
+// ---- Share link: a no-login, read-only preview of the draft (preview.mjs) ----
+async function _shareCall(action){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('Please sign in again.');
+  const res=await fetch('/.netlify/functions/share-link',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({post_id:curPost,action})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
+  return d;
+}
+function _shareShowOff(on){
+  if(_curDraft)_curDraft.share_token=on?(_curDraft.share_token||'on'):null;
+  const b=document.getElementById('share-off-btn');if(b)b.style.display=on?'':'none';
+}
+async function previewDraft(){
+  const w=window.open('about:blank','_blank'); // opened first so the browser doesn't block it
+  try{
+    const d=await _shareCall('create');
+    _shareShowOff(!d.live);
+    if(w)w.location.href=d.url;else window.open(d.url,'_blank');
+  }catch(e){if(w)w.close();toast('Could not open the preview: '+e.message,5000);}
+}
+async function copyShareLink(){
+  try{
+    const d=await _shareCall('create');
+    _shareShowOff(!d.live);
+    try{await navigator.clipboard.writeText(d.url);toast('Share link copied. Anyone with it can read this draft until you turn it off.',4500);}
+    catch(_){prompt('Copy this share link:',d.url);}
+  }catch(e){toast('Could not make the share link: '+e.message,5000);}
+}
+async function turnOffShareLink(){
+  if(!confirm('Turn off the share link? Anyone who has it will no longer be able to open it.'))return;
+  try{await _shareCall('off');_shareShowOff(false);toast('Share link turned off',3000);}
+  catch(e){toast('Could not turn it off: '+e.message,5000);}
+}
 // Re-check the draft as it is saved now. No rewrite and no regeneration, about a second.
 async function recheckDraft(){
   const pid=curPost;
@@ -3004,6 +3038,12 @@ function _draftViewHtml(d){
     </div>
     ${((r.hard&&r.hard.length)||(r.warn&&r.warn.length))?`<button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px" onclick="aiEditFix()">Fix flagged issues with Claude</button>`:''}
   </div>`}
+  ${(post.status!=='live'||d.share_token)?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    ${post.status!=='live'?`<button class="btn btn-sm" onclick="previewDraft()" title="Open the draft the way a reader will see it, in a new tab">Preview</button>
+    <button class="btn btn-sm" onclick="copyShareLink()" title="Copy a link anyone can open without logging in. It always shows the latest saved draft.">Copy share link</button>`:''}
+    <button id="share-off-btn" class="btn btn-ghost btn-sm" style="${d.share_token?'':'display:none'}" onclick="turnOffShareLink()" title="Stop the share link working">Turn off link</button>
+    <span style="font-size:11px;color:var(--text3)">${post.status==='live'?'This post is live, so its share link now goes to the live page.':'The link works without a login and is hidden from search engines.'}</span>
+  </div>`:''}
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
     ${_verdictBadge(r.verdict)}
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>

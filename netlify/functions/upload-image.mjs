@@ -4,6 +4,7 @@
 //   featured background or a body image.
 // Only a signed-in Blog Studio user may upload, so the media library can't be filled by strangers.
 import { uploadMedia } from './_lib/ghl.mjs';
+import { requireUser } from './_lib/auth.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,10 +26,8 @@ export const handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
   if (!SKEY || !PIT) return json(500, { error: 'Server not configured (missing SUPABASE_SERVICE_ROLE_KEY or GHL_API_TOKEN).' });
 
-  const token = String((event.headers && (event.headers.authorization || event.headers.Authorization)) || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return json(401, { error: 'Please sign in to Blog Studio again.' });
-  const who = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SKEY, Authorization: `Bearer ${token}` } }).catch(() => null);
-  if (!who || !who.ok) return json(401, { error: 'Your sign-in has expired. Refresh the page and sign in again.' });
+  const denied = await requireUser(event);
+  if (denied) return json(denied.status, { error: denied.error });
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid JSON' }); }
