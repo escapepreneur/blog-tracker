@@ -2916,7 +2916,7 @@ function _slugEditor(post,d){
     <button id="slug-save" class="btn btn-p btn-sm" onclick="saveSlug()" disabled>Save</button>
   </div>
   ${stale&&sug?`<div style="background:var(--amber-l);border:1px solid #f0d8a0;border-radius:var(--r2);padding:8px 10px;margin-top:8px;font-size:12px;color:var(--amber-t);line-height:1.5">The primary keyword is <b>${esc(kw)}</b>, but this address doesn't contain it. Suggested: <b>${esc(sug)}</b> <button class="btn btn-xs" onclick="useSuggestedSlug()">Use this</button></div>`:''}
-  <div style="font-size:11px;color:var(--text3);margin-top:5px">Lowercase letters, numbers and hyphens. This is the address the post goes live on. It locks once the post is sent to ESC Hub.</div>`;
+  <div style="font-size:11px;color:var(--text3);margin-top:5px">Lowercase letters, numbers and hyphens. This is the address the post goes live on. On a scheduled post it is changed in ESC Hub too. It locks once the post is live.</div>`;
 }
 function slugInputChanged(){
   const i=document.getElementById('slug-input'),b=document.getElementById('slug-save');if(!i||!b)return;
@@ -2938,7 +2938,8 @@ async function saveSlug(){
     const res=await fetch('/.netlify/functions/set-slug',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({post_id:pid,slug})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
-    toast('Web address saved'+(d.links_updated?' and '+d.links_updated+' link'+(d.links_updated===1?'':'s')+' in other drafts updated':''),4500);
+    toast('Web address saved'+(d.ghl_updated?' in ESC Hub and here':'')+(d.links_updated?' and '+d.links_updated+' link'+(d.links_updated===1?'':'s')+' in other drafts updated':''),4500);
+    if(d.locked_links&&d.locked_links.length)alert('The address is changed, but these posts are already in ESC Hub and still link to the old address. Their links need fixing by hand in the ESC Hub editor:\n\n'+d.locked_links.map(l=>'- '+(l.title||l.url)).join('\n'));
     await recheckDraft(); // refreshes the checks and redraws the tab with the new address
   }catch(e){
     toast('Could not change the address: '+e.message,6000);
@@ -3134,7 +3135,7 @@ function _draftViewHtml(d){
   ${_draftRow('Title (H1)',esc(a.title||'n/a'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
-  ${(!post.ghl_post_id&&post.status!=='live')?_draftRow('Slug (web address)',_slugEditor(post,d)):_draftRow('Slug',esc(d.slug||''))}
+  ${(post.status!=='live'&&(!post.ghl_post_id||post.status==='scheduled'))?_draftRow('Slug (web address)',_slugEditor(post,d)):_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'n/a'))}
   ${(!post.ghl_post_id&&post.status!=='live')?_draftRow('Matched CTA link',_ctaPicker(post.blog,a.cta_choice)):_draftRow('Matched CTA link',a.cta_choice?esc((_CTA_LABELS[a.cta_choice])||a.cta_choice):'None (footer CTAs only)')}
   ${_secHead('📷','Body Images &amp; Captions')}
