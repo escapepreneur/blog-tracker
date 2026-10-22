@@ -3,6 +3,8 @@
 # generation prompt/brand rules in _lib stay private.
 [build]
   publish = "."
+  # Stamps the deploy version onto dashboard.js in index.html so a normal reload gets new code.
+  command = "node scripts/stamp-version.mjs"
 
 [build.environment]
   # DATAFORSEO_LOGIN is Karen's public email (also the reminder-recipient default in

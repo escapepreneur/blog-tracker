@@ -402,7 +402,7 @@ input[type=file]{width:100%}
           <button class="fchip" onclick="setFilter('idea',this)">Idea</button>
           <button class="fchip" onclick="setFilter('needs-work',this)">Needs work</button>
           <button class="fchip" onclick="setFilter('not-indexed',this)">Not indexed</button>
-          <input type="text" id="post-search" class="srch" placeholder="Search keyword or title..." oninput="renderPosts()">
+          <input type="text" id="post-search" class="srch" autocomplete="off" placeholder="Search keyword or title..." oninput="renderPosts()">
         </div>
         <div id="bulk-actions" style="display:none;align-items:center;gap:8px;background:var(--teal-l);border:1px solid var(--teal);border-radius:var(--r2);padding:8px 12px;margin-bottom:10px;flex-wrap:wrap">
           <span id="bulk-count" style="font-size:12px;font-weight:600;color:var(--teal-d)">0 selected</span>
@@ -1012,7 +1012,7 @@ input[type=file]{width:100%}
 </div>
 </div>
 
-<script src="dashboard.js"></script>
+<script src="dashboard.js?v=dev"></script>
 <script>
 window.addEventListener('load',function(){
   try{

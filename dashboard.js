@@ -160,7 +160,15 @@ function saveCadence(){
 
 // DATA
 async function loadAll(){await Promise.all([loadPosts(),loadDests()]);await loadLinks();render();updateWeeklyButtons();}
-async function loadPosts(){const{data}=await sb.from('posts').select('*,social_tracking(*)').order('scheduled_date',{ascending:true,nullsFirst:false});allPosts=data||[];}
+// Until the first load finishes the Posts list says "Loading", not "No posts found" (a filter
+// clicked straight after a reload used to look empty). A failed load keeps the posts already on
+// screen and says so, instead of quietly replacing them with an empty list.
+let _postsLoaded=false,_postsErr='';
+async function loadPosts(){
+  const{data,error}=await sb.from('posts').select('*,social_tracking(*)').order('scheduled_date',{ascending:true,nullsFirst:false});
+  if(error){console.error('loadPosts',error);_postsErr=error.message||'unknown error';toast('Could not load posts: '+_postsErr,6000);return;}
+  _postsErr='';_postsLoaded=true;allPosts=data||[];
+}
 async function loadDests(){const{data}=await sb.from('link_destinations').select('*');allDests=data||[];}
 async function loadLinks(){
   const ids=bp().map(p=>p.id);if(!ids.length){_links=[];return}
@@ -522,16 +530,28 @@ async function renderDashRankings(){const el=document.getElementById('dash-ranki
 function renderPosts(){
   document.getElementById('posts-sub').textContent=BM[activeBlog].sub;
   const search=(document.getElementById('post-search')?.value||'').toLowerCase();
+  if(!_postsLoaded){
+    document.getElementById('posts-list').innerHTML=_postsErr
+      ?'<div class="empty">Could not load posts ('+esc(_postsErr)+'). <button class="btn btn-sm" onclick="loadAll()">Try again</button></div>'
+      :'<div class="empty">Loading posts…</div>';
+    return;
+  }
   let posts=bp();
+  const _st=s=>String(s||'').trim().toLowerCase();
   if(sfilt==='not-indexed')posts=posts.filter(p=>(p.indexed==='no'||!p.indexed||p.indexed==='requested')&&p.status!=='idea');
   else if(sfilt==='needs-work')posts=posts.filter(p=>!['idea','pending-review','approved'].includes(p.status)&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
-  else if(sfilt!=='all')posts=posts.filter(p=>p.status===sfilt);
+  else if(sfilt!=='all')posts=posts.filter(p=>_st(p.status)===_st(sfilt));
   if(sfilt==='live'||sfilt==='all')posts=[...posts].sort((a,b)=>new Date(b.published_date||0)-new Date(a.published_date||0));
   if(sfilt==='approved')posts=[...posts].sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)||new Date(a.scheduled_date||'9999')-new Date(b.scheduled_date||'9999'));
   if(sfilt==='review'||sfilt==='pending-review')posts=[...posts].sort((a,b)=>new Date(a.updated_at||0)-new Date(b.updated_at||0));
   const searchVal=(document.getElementById('post-search')?.value||'').toLowerCase();
   if(searchVal)posts=posts.filter(p=>(p.title||'').toLowerCase().includes(searchVal)||(p.primary_keyword||'').toLowerCase().includes(searchVal));
-  if(!posts.length){document.getElementById('posts-list').innerHTML='<div class="empty">No posts found.</div>';return}
+  if(!posts.length){
+    // Say WHY it is empty, so a leftover search word or the wrong blog is obvious at a glance.
+    const why=searchVal?'No posts match "'+esc(searchVal)+'" here. <button class="btn btn-sm" onclick="document.getElementById(\'post-search\').value=\'\';renderPosts()">Clear the search</button>':'No posts found.';
+    document.getElementById('posts-list').innerHTML='<div class="empty">'+why+'</div>';
+    return;
+  }
   const isN=activeBlog==='nms';
   document.getElementById('posts-list').innerHTML=posts.map(p=>{
     const isIdea=p.status==='idea'||p.status==='drafted';
@@ -2989,7 +3009,7 @@ function _draftViewHtml(d){
     <span style="font-size:11px;color:var(--text3)">${r.wordCount||'?'} words · ${esc(d.model||'')}</span>
     <span style="margin-left:auto;display:flex;gap:6px"><button id="recheck-btn" class="btn btn-ghost btn-sm" onclick="recheckDraft()" title="Re-check the draft as it is saved now. No rewrite.">Re-run checks</button><button class="btn btn-ghost btn-sm" onclick="generateDraftNow()">Regenerate</button></span>
   </div>
-  ${_secHead('🔎','Worth a look')}
+  ${_secHead('🔎',(r.warn&&r.warn.length)?'Worth a look':'Checks')}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;margin-bottom:14px">
     ${_reportBlock('Must fix before publishing',r.hard,'var(--red-t)')}
     ${_reportBlock('Worth a look',r.warn,'var(--amber-t)')}
