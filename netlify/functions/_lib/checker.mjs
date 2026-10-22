@@ -190,15 +190,20 @@ export function runChecks({ brand, post, draft, openings }) {
   // be dropped, as the writer does). Red, so a slug that went stale when the keyword changed is
   // caught before the post is scheduled.
   if (kw) {
-    // Plural-tolerant: coaches/coach, templates/template, processes/process, but business stays business.
+    // Plural-tolerant (coaches/coach, processes/process) and apostrophe-blind (you're/youre).
     const stem = (w) => w.replace(/ies$/, 'y').replace(/(ch|sh|ss|x|z)es$/, '$1').replace(/([^s])s$/, '$1');
-    // Small and question words are normally left out of an address ("what is a vision board" ->
-    // what-a-vision-board), so they don't count as missing.
-    const SLUG_SKIP = new Set([...KW_STOP, 'is', 'are', 'was', 'be', 'what', 'how', 'why', 'do', 'does', 'can', 'should', 'i', 'you', 'it']);
-    const toks = (s) => (String(s || '').toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => !SLUG_SKIP.has(w)).map(stem);
+    // Small, question and linking words are normally left out of an address
+    // ("what is a vision board" -> what-a-vision-board, "when to switch" -> when-switch), so they never count as missing.
+    const SLUG_SKIP = new Set([...KW_STOP, 'is', 'are', 'was', 'be', 'been', 'has', 'have', 'had', 'what', 'whats', 'how', 'why', 'when', 'where', 'while', 'if',
+      'that', 'this', 'from', 'than', 'less', 'more', 'much', 'one', 'really', 'very', 'just', 'actually', 'do', 'does', 'can', 'should', 'i', 'you', 'it']);
+    const toks = (s) => [...new Set((String(s || '').toLowerCase().replace(/['‘’]/g, '').match(/[a-z0-9]+/g) || []).filter(w => w.length > 1 && !SLUG_SKIP.has(w)).map(stem))];
     const slugWords = new Set(toks(slug));
-    const missing = toks(kw).filter(t => !slugWords.has(t));
-    if (missing.length) HARD(`The slug "${slug}" does not contain the primary keyword "${kw}" (missing: ${missing.join(', ')}). Edit the slug in the Draft tab.`);
+    const need = toks(kw);
+    const missing = need.filter(t => !slugWords.has(t));
+    // Short keywords must be fully in the address. A long keyword that reads like a sentence may lose a word or two
+    // when the writer shortens it (one missing from 5 to 6 words, two from 7 or more).
+    const allowed = need.length <= 4 ? 0 : need.length <= 6 ? 1 : 2;
+    if (missing.length > allowed) HARD(`The slug "${slug}" does not contain the primary keyword "${kw}" (missing: ${missing.join(', ')}). Edit the slug in the Draft tab.`);
     else PASS('The slug contains the primary keyword.');
   }
 

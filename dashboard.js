@@ -2898,11 +2898,12 @@ function saveCta(){
 }
 // ---- Slug (web address): editable until the post is sent to ESC Hub ----
 const _POST_HOST={esc:'eschub.com/post/',nms:'escapepreneur.com/post/'};
-const _SLUG_SKIP=new Set(['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with','is','are','was','be','what','how','why','do','does','can','should','i','you','it']);
+const _SLUG_SKIP=new Set(['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with','is','are','was','be','been','has','have','had','what','whats','how','why','when','where','while','if','that','this','from','than','less','more','much','one','really','very','just','actually','do','does','can','should','i','you','it']);
 const _slugStem=w=>w.replace(/ies$/,'y').replace(/(ch|sh|ss|x|z)es$/,'$1').replace(/([^s])s$/,'$1');
-const _slugWords=s=>(String(s||'').toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>!_SLUG_SKIP.has(w)).map(_slugStem);
-// Same rule as the red check in checker.mjs: every word of the keyword (small words aside) is in the slug.
-function _slugMatchesKeyword(slug,kw){if(!kw)return true;const have=new Set(_slugWords(slug));return _slugWords(kw).every(w=>have.has(w));}
+const _slugWords=s=>[...new Set((String(s||'').toLowerCase().replace(/['‘’]/g,'').match(/[a-z0-9]+/g)||[]).filter(w=>w.length>1&&!_SLUG_SKIP.has(w)).map(_slugStem))];
+// Same rule as the red check in checker.mjs (keep the two skip lists and the allowance identical):
+// short keywords must be fully in the slug, a long one may lose a word or two when shortened.
+function _slugMatchesKeyword(slug,kw){if(!kw)return true;const have=new Set(_slugWords(slug));const need=_slugWords(kw);const miss=need.filter(w=>!have.has(w)).length;return miss<=(need.length<=4?0:need.length<=6?1:2);}
 // A slug from a keyword: its words joined by hyphens, small words dropped, like the writer does.
 function _slugFromKeyword(kw){return (String(kw||'').toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>!['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with'].includes(w)).join('-').slice(0,80).replace(/-+$/,'');}
 function _slugEditor(post,d){
