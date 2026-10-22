@@ -3,6 +3,7 @@
 // address, without touching the body. Posts built through the tool never had one, so Google
 // had to guess, and collapsed unrelated posts into each other as "duplicates".
 //   node scripts/set-canonical.mjs <brand> <slug> [<slug> ...] [--dry]
+//   node scripts/set-canonical.mjs <brand> all [--dry]      (every live post in the tracker)
 //   env: SUPABASE_SERVICE_ROLE_KEY, GHL_API_TOKEN
 import { getBlogPostDetail, getBlogPostBySlug, updateBlogPost, publicUrl } from '../netlify/functions/_lib/ghl.mjs';
 
@@ -13,11 +14,17 @@ if (!KEY || !PIT) { console.error('Missing SUPABASE_SERVICE_ROLE_KEY or GHL_API_
 
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
-const [brand, ...slugs] = args.filter(a => !a.startsWith('--'));
+let [brand, ...slugs] = args.filter(a => !a.startsWith('--'));
 if (!brand || !slugs.length) { console.error('usage: set-canonical.mjs <esc|nms> <slug> [<slug> ...] [--dry]'); process.exit(1); }
 
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 let failures = 0;
+
+if (slugs.length === 1 && slugs[0] === 'all') {
+  const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/posts?blog=eq.${brand}&status=eq.live&url=like.*/post/*&select=url&order=url&limit=1000`, { headers: h })).json();
+  slugs = (Array.isArray(rows) ? rows : []).map(r => String(r.url).replace(/^.*\/post\//, '').replace(/[/?#].*$/, '')).filter(Boolean);
+  console.log(`${slugs.length} live ${brand} posts`);
+}
 
 for (const slug of slugs) {
   const url = publicUrl(brand, slug);
