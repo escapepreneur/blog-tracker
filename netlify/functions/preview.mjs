@@ -52,7 +52,10 @@ function notFound() {
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'GET' && event.httpMethod !== 'HEAD') return { statusCode: 405, headers: SAFE_HEADERS, body: 'GET only' };
-  const token = String((event.queryStringParameters && event.queryStringParameters.t) || '').replace(/\/+$/, '');
+  // The token is the last part of the address that was asked for (/preview/<token>). Read it from
+  // there first: the rewrite's ?t= value did not always arrive. ?t= still works if called directly.
+  const fromPath = (s) => { const m = String(s || '').match(/\/preview\/([A-Za-z0-9_-]+)/); return m ? m[1] : ''; };
+  const token = (fromPath(event.rawUrl) || fromPath(event.path) || String((event.queryStringParameters && event.queryStringParameters.t) || '')).replace(/\/+$/, '');
   if (!SKEY || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) return notFound();
 
   const h = { apikey: SKEY, Authorization: `Bearer ${SKEY}` };
