@@ -186,6 +186,21 @@ export function runChecks({ brand, post, draft, openings }) {
   // 10. Slug
   const slug = draft.slug || '';
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) WARN(`Slug "${slug}" should be lowercase words joined by hyphens.`); else PASS('Slug format OK.');
+  // The web address must contain the primary keyword's words (small words like "a" or "for" may
+  // be dropped, as the writer does). Red, so a slug that went stale when the keyword changed is
+  // caught before the post is scheduled.
+  if (kw) {
+    // Plural-tolerant: coaches/coach, templates/template, processes/process, but business stays business.
+    const stem = (w) => w.replace(/ies$/, 'y').replace(/(ch|sh|ss|x|z)es$/, '$1').replace(/([^s])s$/, '$1');
+    // Small and question words are normally left out of an address ("what is a vision board" ->
+    // what-a-vision-board), so they don't count as missing.
+    const SLUG_SKIP = new Set([...KW_STOP, 'is', 'are', 'was', 'be', 'what', 'how', 'why', 'do', 'does', 'can', 'should', 'i', 'you', 'it']);
+    const toks = (s) => (String(s || '').toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => !SLUG_SKIP.has(w)).map(stem);
+    const slugWords = new Set(toks(slug));
+    const missing = toks(kw).filter(t => !slugWords.has(t));
+    if (missing.length) HARD(`The slug "${slug}" does not contain the primary keyword "${kw}" (missing: ${missing.join(', ')}). Edit the slug in the Draft tab.`);
+    else PASS('The slug contains the primary keyword.');
+  }
 
   // 11. TOC marker after intro, before first H2
   const tocIdx = html.indexOf('<!-- TOC -->');

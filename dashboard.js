@@ -911,9 +911,18 @@ async function savePost(){
       cluster:document.getElementById('pm-cluster')?.value.trim()||null,
       is_pillar:document.getElementById('pm-pillar')?.value==='yes',
     };
+    const before=(gp(curPost)||{}).primary_keyword||'';
     const{error}=await sb.from('posts').update(u).eq('id',curPost);
     if(error)throw error;
     await loadPosts();render();toast('Saved ✓');
+    // The keyword changed after a draft was written: the web address may now be out of date.
+    if(u.primary_keyword&&u.primary_keyword!==before){
+      const cp=gp(curPost)||{};
+      if(!cp.ghl_post_id&&cp.status!=='live'){
+        const dr=await loadDraft(curPost);
+        if(dr&&!_slugMatchesKeyword(dr.slug,u.primary_keyword))toast('Keyword changed. The web address no longer contains it, so update it in the Draft tab (suggested: '+_slugFromKeyword(u.primary_keyword)+').',9000);
+      }
+    }
   }catch(e){
     toast('Error: '+e.message);
     console.error('savePost error:',e);
@@ -2887,6 +2896,54 @@ function saveCta(){
   const s=document.getElementById('cta-select');if(!s||!s.value)return;
   aiEditRun('',true,s.value);
 }
+// ---- Slug (web address): editable until the post is sent to ESC Hub ----
+const _POST_HOST={esc:'eschub.com/post/',nms:'escapepreneur.com/post/'};
+const _SLUG_SKIP=new Set(['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with','is','are','was','be','what','how','why','do','does','can','should','i','you','it']);
+const _slugStem=w=>w.replace(/ies$/,'y').replace(/(ch|sh|ss|x|z)es$/,'$1').replace(/([^s])s$/,'$1');
+const _slugWords=s=>(String(s||'').toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>!_SLUG_SKIP.has(w)).map(_slugStem);
+// Same rule as the red check in checker.mjs: every word of the keyword (small words aside) is in the slug.
+function _slugMatchesKeyword(slug,kw){if(!kw)return true;const have=new Set(_slugWords(slug));return _slugWords(kw).every(w=>have.has(w));}
+// A slug from a keyword: its words joined by hyphens, small words dropped, like the writer does.
+function _slugFromKeyword(kw){return (String(kw||'').toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>!['a','an','the','for','of','to','in','on','and','or','your','my','as','at','with'].includes(w)).join('-').slice(0,80).replace(/-+$/,'');}
+function _slugEditor(post,d){
+  const kw=post.primary_keyword||'';
+  const stale=!_slugMatchesKeyword(d.slug,kw);
+  const sug=_slugFromKeyword(kw);
+  return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--text3);white-space:nowrap">${esc(_POST_HOST[post.blog]||'')}</span>
+    <input id="slug-input" value="${esc(d.slug||'')}" oninput="slugInputChanged()" onkeydown="if(event.key==='Enter')saveSlug()" spellcheck="false" style="flex:1;min-width:200px;font-size:13px;padding:5px 8px">
+    <button id="slug-save" class="btn btn-p btn-sm" onclick="saveSlug()" disabled>Save</button>
+  </div>
+  ${stale&&sug?`<div style="background:var(--amber-l);border:1px solid #f0d8a0;border-radius:var(--r2);padding:8px 10px;margin-top:8px;font-size:12px;color:var(--amber-t);line-height:1.5">The primary keyword is <b>${esc(kw)}</b>, but this address doesn't contain it. Suggested: <b>${esc(sug)}</b> <button class="btn btn-xs" onclick="useSuggestedSlug()">Use this</button></div>`:''}
+  <div style="font-size:11px;color:var(--text3);margin-top:5px">Lowercase letters, numbers and hyphens. This is the address the post goes live on. It locks once the post is sent to ESC Hub.</div>`;
+}
+function slugInputChanged(){
+  const i=document.getElementById('slug-input'),b=document.getElementById('slug-save');if(!i||!b)return;
+  const cur=(_curDraft&&_curDraft.slug)||'';
+  b.disabled=!i.value.trim()||i.value.trim()===cur;
+}
+function useSuggestedSlug(){
+  const p=gp(curPost)||{};const i=document.getElementById('slug-input');if(!i)return;
+  i.value=_slugFromKeyword(p.primary_keyword);slugInputChanged();i.focus();
+}
+async function saveSlug(){
+  const i=document.getElementById('slug-input');if(!i)return;
+  const slug=i.value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  if(!slug){toast('Type a web address first',3000);return;}
+  const pid=curPost,b=document.getElementById('slug-save');if(b){b.disabled=true;b.textContent='Saving…';}
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session)throw new Error('Please sign in again.');
+    const res=await fetch('/.netlify/functions/set-slug',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({post_id:pid,slug})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok||!d.ok)throw new Error(d.error||('HTTP '+res.status));
+    toast('Web address saved'+(d.links_updated?' and '+d.links_updated+' link'+(d.links_updated===1?'':'s')+' in other drafts updated':''),4500);
+    await recheckDraft(); // refreshes the checks and redraws the tab with the new address
+  }catch(e){
+    toast('Could not change the address: '+e.message,6000);
+    if(curPost===pid){const b2=document.getElementById('slug-save');if(b2){b2.textContent='Save';slugInputChanged();}}
+  }
+}
 // ---- Share link: a no-login, read-only preview of the draft (preview.mjs) ----
 async function _shareCall(action){
   const{data:{session}}=await sb.auth.getSession();
@@ -3076,7 +3133,7 @@ function _draftViewHtml(d){
   ${_draftRow('Title (H1)',esc(a.title||'n/a'))}
   ${_draftRow('Meta title',`${esc(d.meta_title||'')} <span style="color:var(--text3)">(${(d.meta_title||'').length})</span>`)}
   ${_draftRow('Meta description',`${esc(d.meta_description||'')} <span style="color:var(--text3)">(${(d.meta_description||'').length})</span>`)}
-  ${_draftRow('Slug',esc(d.slug||''))}
+  ${(!post.ghl_post_id&&post.status!=='live')?_draftRow('Slug (web address)',_slugEditor(post,d)):_draftRow('Slug',esc(d.slug||''))}
   ${_draftRow('Category',esc(d.category||'n/a'))}
   ${(!post.ghl_post_id&&post.status!=='live')?_draftRow('Matched CTA link',_ctaPicker(post.blog,a.cta_choice)):_draftRow('Matched CTA link',a.cta_choice?esc((_CTA_LABELS[a.cta_choice])||a.cta_choice):'None (footer CTAs only)')}
   ${_secHead('📷','Body Images &amp; Captions')}
