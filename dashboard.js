@@ -263,7 +263,10 @@ function switchPTab(name){
 function setFilter(f,btn){sfilt=f;document.querySelectorAll('.fchip').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderPosts()}
 
 // HELPERS
-function bp(){return allPosts.filter(p=>p.blog===activeBlog)}
+// Removed posts (merged or taken down, old address redirects elsewhere) stay in the tracker for history but
+// are left out of every list, count and check that bp() feeds. Only the Posts list asks for them (bpAll).
+function bp(){return allPosts.filter(p=>p.blog===activeBlog&&p.status!=='removed')}
+function bpAll(){return allPosts.filter(p=>p.blog===activeBlog)}
 function bd(){return allDests.filter(d=>d.blog===activeBlog)}
 function gp(id){return allPosts.find(p=>p.id===id)}
 function gt(id){const p=allPosts.find(x=>x.id===id);if(p)return{label:p.title||p.primary_keyword,url:p.url,type:'post'};const d=allDests.find(x=>x.id===id);if(d)return{label:d.label,url:d.url,type:'dest'};return null}
@@ -271,8 +274,8 @@ function fl(n){return n===0?'red':n<3?'amber':'green'}
 function fd(d){if(!d)return'n/a';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function sbadge(s){
-  const m={live:'b-live',scheduled:'b-scheduled',approved:'b-approved',review:'b-review','pending-review':'b-review',drafted:'b-drafted',idea:'b-idea'};
-  const labels={live:'Live',scheduled:'Scheduled',approved:'Approved',review:'Pending Review','pending-review':'Pending Review',drafted:'Drafted',idea:'Idea'};
+  const m={live:'b-live',scheduled:'b-scheduled',approved:'b-approved',review:'b-review','pending-review':'b-review',drafted:'b-drafted',idea:'b-idea',removed:'b-removed'};
+  const labels={live:'Live',scheduled:'Scheduled',approved:'Approved',review:'Pending Review','pending-review':'Pending Review',drafted:'Drafted',idea:'Idea',removed:'Removed'};
   return`<span class="badge ${m[s]||'b-idea'}">${labels[s]||s}</span>`;
 }
 function idxBadge(v){const x=IDX[v||'no'];return`<span class="idx-dot ${x.cls}"><span class="idx-dot-circle ${x.dc}"></span>${x.label}</span>`}
@@ -536,7 +539,7 @@ function renderPosts(){
       :'<div class="empty">Loading posts…</div>';
     return;
   }
-  let posts=bp();
+  let posts=(sfilt==='all'||sfilt==='removed')?bpAll():bp();
   const _st=s=>String(s||'').trim().toLowerCase();
   if(sfilt==='not-indexed')posts=posts.filter(p=>(p.indexed==='no'||!p.indexed||p.indexed==='requested')&&p.status!=='idea');
   else if(sfilt==='needs-work')posts=posts.filter(p=>!['idea','pending-review','approved'].includes(p.status)&&(p.current_step||0)<6).sort((a,b)=>(a.current_step||0)-(b.current_step||0));
@@ -567,20 +570,21 @@ function renderPosts(){
     return`<div class="post-row" onclick="openPost('${p.id}','draft')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${sbadge(p.status)}${stepLabel(p.current_step)}${sfilt==='needs-work'?stuckLabel(p.current_step):''}</div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${sbadge(p.status)}${p.status==='removed'?'':stepLabel(p.current_step)}${sfilt==='needs-work'?stuckLabel(p.current_step):''}</div>
           <div class="kw-primary">${esc(titleCase(p.primary_keyword)||titleCase(p.title)||'Untitled')}</div>
           ${p.title?`<div class="post-title-sub">${esc(p.title)}</div>`:''}
+          ${p.status==='removed'?`<div style="font-size:11px;color:var(--text3);margin-top:3px;word-break:break-all">${p.url?esc(p.url.replace(/^https?:\/\//,''))+' ':''}${p.redirects_to?'redirects to '+esc(p.redirects_to.replace(/^https?:\/\//,'')):'no redirect recorded'}</div>`:''}
           ${p.ks_score!=null?`<div class="prk">KS ${p.ks_score}${p.search_volume?' · '+p.search_volume.toLocaleString()+'/mo':''}</div>`:''}
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
             ${dateStr?`<span class="pill pill-g">${dateStr}</span>`:''}
             ${p.status==='live'&&(p.indexed==='no'||!p.indexed)?`<button class="btn btn-xs f-red" style="border:1px solid #f0c8c8;background:var(--red-l);color:var(--red-t)" onclick="event.stopPropagation();requestIndexing('${p.id}')">Request indexing →</button>`:''}
             ${p.status==='live'&&p.indexed==='requested'?`<span class="idx-dot idx-req" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-req"></span>Index requested</span><button class="btn btn-xs" style="font-size:9px;padding:1px 7px" onclick="event.stopPropagation();checkIndexing('${p.id}')">Check →</button><button class="btn btn-xs f-green" style="border:1px solid #b8dfc6;background:var(--green-l);color:var(--green);font-size:9px;padding:1px 7px" onclick="event.stopPropagation();confirmIndexed('${p.id}')">Confirm ✓</button>`:''}
-            ${p.indexed==='yes'?`<span class="idx-dot idx-yes" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-yes"></span>Indexed</span>`:''}
+            ${p.status!=='removed'&&p.indexed==='yes'?`<span class="idx-dot idx-yes" style="font-size:9px;padding:1px 6px"><span class="idx-dot-circle idc-yes"></span>Indexed</span>`:''}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
           ${score!==null&&isIdea?`<div class="score-badge" style="${isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
-          ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:p.status==='pending-review'?`<button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>`:`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
+          ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:p.status==='pending-review'?`<button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>`:p.status==='removed'?'':`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
           ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
         </div>
       </div></div>`;
@@ -848,6 +852,7 @@ async function openPost(id,tab){
   {const st=document.getElementById('pm-subtitle');if(st)st.value=post.subtitle||'';}
   document.getElementById('pm-url').value=post.url||'';
   document.getElementById('pm-status').value=post.status||'idea';
+  {const r=document.getElementById('pm-redirect');if(r)r.value=post.redirects_to||'';pmStatusChanged();}
   const pmSched=document.getElementById('pm-sched');if(pmSched)pmSched.value=post.scheduled_date||'';
   const pmPub=document.getElementById('pm-pub');if(pmPub)pmPub.value=post.published_date||'';
   const pmProp=document.getElementById('pm-proposed');if(pmProp)pmProp.value=post.proposed_date||'';
@@ -887,6 +892,9 @@ async function openPost(id,tab){
   document.getElementById('post-modal').classList.add('on');
   switchPTab(tab||'draft');
 }
+// Removed posts: where the old address now redirects. A bare slug becomes a full address on this blog.
+function _redirectUrl(v){v=String(v||'').trim();if(!v)return null;if(/^https?:\/\//i.test(v))return v;return 'https://'+(_POST_HOST[activeBlog]||'')+v.replace(/^\/+(post\/)?/,'');}
+function pmStatusChanged(){const s=document.getElementById('pm-status'),f=document.getElementById('pm-redirect-fd');if(f)f.style.display=(s&&s.value==='removed')?'':'none';}
 async function savePost(){
   if(!curPost)return;
   const btn=document.getElementById('pm-save-btn');
@@ -897,6 +905,7 @@ async function savePost(){
       subtitle:document.getElementById('pm-subtitle')?.value.trim()||null,
       url:document.getElementById('pm-url')?.value.trim()||null,
       status:document.getElementById('pm-status')?.value||'idea',
+      redirects_to:(document.getElementById('pm-status')?.value==='removed')?_redirectUrl(document.getElementById('pm-redirect')?.value):null,
       scheduled_date:document.getElementById('pm-sched')?.value||null,
       published_date:document.getElementById('pm-pub')?.value||null,
       proposed_date:document.getElementById('pm-proposed')?.value||null,
@@ -2330,7 +2339,7 @@ async function addContentCluster(){
 }
 // CONTENT CLUSTER VIEW (Insights): existing posts grouped by their cluster tag.
 function _statusPill(s){
-  const m={idea:['#6b7280','Idea'],drafted:['#b45309','Draft'],'pending-review':['#b45309','Review'],approved:['#0891b2','Approved'],scheduled:['#0891b2','Scheduled'],live:['var(--green)','Live']};
+  const m={idea:['#6b7280','Idea'],drafted:['#b45309','Draft'],'pending-review':['#b45309','Review'],approved:['#0891b2','Approved'],scheduled:['#0891b2','Scheduled'],live:['var(--green)','Live'],removed:['#9a3412','Removed']};
   const x=m[s]||['#6b7280',esc(s||'n/a')];
   return `<span style="font-size:10px;font-weight:700;color:${x[0]}">${x[1]}</span>`;
 }

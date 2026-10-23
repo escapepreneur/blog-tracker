@@ -106,6 +106,7 @@ input[type=file]{width:100%}
 .b-drafted{background:var(--purple-l);color:var(--purple-t);border:1px solid #d8c8f0}
 .b-review{background:#fff0e6;color:#d4680a;border:1px solid #f0d0a0}
 .b-idea{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.b-removed{background:#fdeee6;color:#9a3412;border:1px solid #f2cdb8}
 .idx-dot{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
 .idx-no{background:#fff0f0;color:#992222;border:1px solid #f0c8c8}
 .idx-req{background:#fff0e6;color:#d4680a;border:1px solid #f0d0a0}
@@ -400,6 +401,7 @@ input[type=file]{width:100%}
           <button class="fchip" onclick="setFilter('pending-review',this)">Pending Review</button>
           <button class="fchip" onclick="setFilter('drafted',this)">Drafted</button>
           <button class="fchip" onclick="setFilter('idea',this)">Idea</button>
+          <button class="fchip" onclick="setFilter('removed',this)">Removed</button>
           <button class="fchip" onclick="setFilter('needs-work',this)">Needs work</button>
           <button class="fchip" onclick="setFilter('not-indexed',this)">Not indexed</button>
           <input type="text" id="post-search" class="srch" autocomplete="off" placeholder="Search keyword or title..." oninput="renderPosts()">
@@ -678,12 +680,14 @@ input[type=file]{width:100%}
     <div class="row">
       <div class="fd w3"><label class="fl">Title</label><input type="text" id="pm-title-i" placeholder="Added after brief is generated"></div>
       <div class="fd"><label class="fl">Status</label>
-        <select id="pm-status">
+        <select id="pm-status" onchange="pmStatusChanged()">
           <option value="idea">Idea</option><option value="drafted">Drafted</option>
           <option value="pending-review">Pending Review</option><option value="approved">Approved</option>
           <option value="scheduled">Scheduled</option><option value="live">Live</option>
+          <option value="removed">Removed (redirected)</option>
         </select>
       </div>
+      <div class="fd" id="pm-redirect-fd" style="display:none"><label class="fl">Old address now redirects to</label><input type="text" id="pm-redirect" placeholder="https://eschub.com/post/new-address or just the slug"><div style="font-size:11px;color:var(--text3);margin-top:3px">Only recorded here. Nothing is changed in ESC Hub.</div></div>
     </div>
     <div class="row">
       <div class="fd w3"><label class="fl">Subtitle <span style="text-transform:none;font-weight:400;color:var(--text3)">(the tagline on the pin/featured image + article subheading)</span></label><input type="text" id="pm-subtitle" placeholder="e.g. Which one works for you?"></div>
