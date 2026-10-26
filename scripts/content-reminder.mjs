@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 // content-reminder: each day, look at the date LEAD days out. For each blog, if nothing is
 // scheduled to go live on that day OR LATER (and nothing already published from then on), the
-// queue is about to run dry, so email Karen and Sienna to leave lead time to queue content.
+// queue is about to run dry, so email Karen to leave lead time to queue content.
 // Emails only when a queue is running out. Sends via Resend.
 //   env: SUPABASE_SERVICE_ROLE_KEY (required), RESEND_API_KEY (required to actually send),
-//        REMINDER_EMAIL (default karen + sienna), REMINDER_LEAD_DAYS (default 2)
+//        REMINDER_EMAIL (default karen), REMINDER_LEAD_DAYS (default 2)
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://vpprrknnkjyluhgtoezu.supabase.co';
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND = process.env.RESEND_API_KEY;
-const TO = (process.env.REMINDER_EMAIL || 'karen@escapepreneur.com,sienna@thekings.com.au').split(',').map(s => s.trim()).filter(Boolean);
+const TO = (process.env.REMINDER_EMAIL || 'karen@escapepreneur.com').split(',').map(s => s.trim()).filter(Boolean);
 const LEAD = parseInt(process.env.REMINDER_LEAD_DAYS || '2', 10);
 const TRACKER = 'https://blog.escapepreneur.com';
 if (!KEY) { console.error('Missing SUPABASE_SERVICE_ROLE_KEY'); process.exit(1); }
