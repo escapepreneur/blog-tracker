@@ -2,7 +2,7 @@ name: Status auto-sync
 
 # Fallback + housekeeping run. The primary publisher is the Netlify function publish-due
 # (every 5 minutes), because GitHub delays scheduled runs by hours. This run still publishes
-# anything that was missed (and emails Karen if it had to), plus indexing, Pinterest and
+# anything that was missed (and emails Karen if it had to), plus indexing and
 # link housekeeping.
 
 on:

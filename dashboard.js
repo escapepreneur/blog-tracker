@@ -328,7 +328,6 @@ function socialIconRow(s,p){
   const icons=[];
   const mkIcon=(label,color,missing)=>missing?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${color}20;color:${color};border:1px solid ${color}40">${label}</span>`:'';
   icons.push(mkIcon('📌 Pin','#e04444',!s.pinterest_shared));
-  icons.push(mkIcon('🔗 Blog','#e04444',!s.pinterest_in_blog));
   icons.push(mkIcon('📘 FB','#1877f2',!s.fb_shared));
   icons.push(mkIcon('📷 IG','#c13584',!s.ig_shared));
   const filtered=icons.filter(Boolean);
@@ -368,7 +367,7 @@ function renderDashboard(){
   }
 
   // SOCIAL INCOMPLETE — live posts with missing social items
-  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.fb_shared||!s.ig_shared||!s.pinterest_shared||!s.pinterest_in_blog)});
+  const si=posts.filter(p=>{const s=p.social_tracking?.[0];return s&&p.status==='live'&&(!s.fb_shared||!s.ig_shared||!s.pinterest_shared)});
   const siEl=document.getElementById('dash-social-incomplete');
   if(siEl){
     if(!si.length){siEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All social complete.</div>'}
@@ -384,11 +383,11 @@ function renderDashboard(){
   }
 
   // PINTEREST ACTION
-  const pinNeeded=posts.filter(p=>{const s=p.social_tracking?.[0];return p.status==='live'&&s&&(!s.pinterest_shared||!s.pinterest_in_blog)});
+  const pinNeeded=posts.filter(p=>{const s=p.social_tracking?.[0];return p.status==='live'&&s&&(!s.pinterest_shared)});
   const pinEl=document.getElementById('dash-pinterest-action');
   if(pinEl){
     if(!pinNeeded.length){pinEl.innerHTML='<div style="font-size:12px;color:var(--green);padding:6px 0">✓ All Pinterest actions complete.</div>'}
-    else{pinEl.innerHTML=pinNeeded.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};return`<div class="post-row" onclick="openPost('${p.id}','social')" style="border-left:3px solid #e04444"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);margin-top:2px">${!s.pinterest_shared?'📌 Not yet pinned ':''}${!s.pinterest_in_blog?'🔗 Not linked in blog':''}</div></div></div>`}).join('')}
+    else{pinEl.innerHTML=pinNeeded.slice(0,5).map(p=>{const s=p.social_tracking?.[0]||{};return`<div class="post-row" onclick="openPost('${p.id}','social')" style="border-left:3px solid #e04444"><div style="flex:1;min-width:0"><div class="kw-primary">${esc(p.primary_keyword||p.title)}</div><div style="font-size:11px;color:var(--red-t);margin-top:2px">📌 Not yet shared on Pinterest</div></div></div>`}).join('')}
   }
 
   // INDEXING
@@ -563,7 +562,7 @@ function renderPosts(){
     const pageLn=_links.filter(l=>l.from_post_id===p.id&&l.to_dest_id).length;
     const lv=postLn>=3&&pageLn>=2?'green':(postLn>0||pageLn>0)?'amber':'red';
     const s=p.social_tracking?.[0]||{};
-    const sd=[s.pinterest_image_created,s.pinterest_shared,s.fb_shared,s.ig_shared].filter(Boolean).length;
+    const sd=[s.pinterest_shared,s.fb_shared,s.ig_shared].filter(Boolean).length;
     const dateStr=p.status==='live'?fd(p.published_date):p.scheduled_date?fd(p.scheduled_date):'';
     const ix=IDX[p.indexed||'no'];
     const score=calcScore(p.ks_score,p.search_volume);
@@ -585,7 +584,7 @@ function renderPosts(){
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
           ${score!==null&&isIdea?`<div class="score-badge" style="${isN?'border-color:var(--purple);background:var(--purple-l);color:var(--purple-t)':'border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)'}">${score}</div>`:''}
           ${isIdea?`<button class="btn ${isN?'btn-pp':'btn-p'} btn-xs" onclick="event.stopPropagation();getBriefForPost('${p.id}')">Get brief →</button>`:p.status==='pending-review'?`<button class="btn btn-p btn-xs" onclick="event.stopPropagation();openApproveModal('${p.id}')">Review →</button>`:p.status==='removed'?'':`<span class="flag f-${lv}">${postLn}/3 · ${pageLn}/2</span>`}
-          ${p.status==='live'?`<span class="flag" style="${sd>=4?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/4 social</span>`:''}
+          ${p.status==='live'?`<span class="flag" style="${sd>=3?'background:var(--green-l);color:var(--green);border:1px solid #b8dfc6':'background:var(--amber-l);color:var(--amber-t);border:1px solid #f0d8a0'}">${sd}/3 social</span>`:''}
         </div>
       </div></div>`;
   }).join('');
@@ -873,8 +872,8 @@ async function openPost(id,tab){
   document.getElementById('pm-add-link-btn').className='btn '+(isN?'btn-pp':'btn-p')+' btn-sm';
   document.getElementById('sug-btn').className='btn '+(isN?'btn-pp':'btn-p')+' btn-sm';
   const social=post.social_tracking?.[0];curSocId=social?.id||null;
-  const cks=['pin-img','pin-sched','pin-shared','pin-blog','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'];
-  const flds=['pinterest_image_created','pinterest_scheduled','pinterest_shared','pinterest_in_blog','fb_image_created','fb_scheduled','fb_shared','ig_image_created','ig_scheduled','ig_shared'];
+  const cks=['pin-shared','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'];
+  const flds=['pinterest_shared','fb_image_created','fb_scheduled','fb_shared','ig_image_created','ig_scheduled','ig_shared'];
   cks.forEach((c,i)=>{const el=document.getElementById('ch-'+c),ci=document.getElementById('ci-'+c);if(el){el.checked=!!(social?.[flds[i]]);if(ci)ci.classList.toggle('done',el.checked)}});
   document.getElementById('pm-del-row').classList.remove('on');
   document.getElementById('sug-area').innerHTML='';
@@ -942,10 +941,7 @@ async function savePost(){
 async function saveSocial(){
   if(!curSocId&&!curPost)return;
   const u={
-    pinterest_image_created:document.getElementById('ch-pin-img').checked,
-    pinterest_scheduled:document.getElementById('ch-pin-sched')?.checked||false,
     pinterest_shared:document.getElementById('ch-pin-shared').checked,
-    pinterest_in_blog:document.getElementById('ch-pin-blog').checked,
     fb_image_created:document.getElementById('ch-fb-img').checked,
     fb_scheduled:document.getElementById('ch-fb-sched')?.checked||false,
     fb_shared:document.getElementById('ch-fb-shared').checked,
@@ -954,7 +950,7 @@ async function saveSocial(){
     ig_shared:document.getElementById('ch-ig-shared').checked
   };
   // Update UI
-  ['pin-img','pin-sched','pin-shared','pin-blog','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'].forEach(c=>{
+  ['pin-shared','fb-img','fb-sched','fb-shared','ig-img','ig-sched','ig-shared'].forEach(c=>{
     const ci=document.getElementById('ci-'+c),el=document.getElementById('ch-'+c);
     if(ci&&el)ci.classList.toggle('done',el.checked);
   });
@@ -2766,7 +2762,7 @@ async function loadFeaturedBgOptions(){
   }catch(e){toast('Error: '+e.message,4000)}
   finally{const b=document.getElementById('feat-bg-load-btn');if(b){b.disabled=false;b.textContent='More options';}}
 }
-// IMAGE TITLE/TAGLINE SUGGESTIONS — a few alternate options for the featured/pin image text,
+// IMAGE TITLE/TAGLINE SUGGESTIONS — a few alternate options for the featured image text,
 // each one click away from filling the fields above (still needs Re-render to apply).
 async function suggestFeaturedTitles(){
   const post=gp(curPost);if(!post)return;
@@ -2777,7 +2773,7 @@ async function suggestFeaturedTitles(){
   btn.disabled=true;btn.textContent='Thinking…';
   area.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:6px"><div class="spinner"></div>Asking Claude…</div>';
   const brandNm=(BM[post.blog]||{}).name||'the blog';
-  const prompt=`Suggest 5 alternate title+tagline pairs for the featured/Pinterest image on this ${brandNm} blog post.
+  const prompt=`Suggest 5 alternate title+tagline pairs for the featured image on this ${brandNm} blog post.
 
 Post topic: "${post.primary_keyword||post.title||''}"
 Current image title: "${curTitle||'(none set)'}"

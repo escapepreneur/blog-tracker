@@ -12,7 +12,6 @@ import { publishDue, goLiveAt } from '../netlify/functions/_lib/publishdue.mjs';
 import { alertHtml, sendAlert } from '../netlify/functions/_lib/alertmail.mjs';
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
-import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
 import { syncInternalLinks } from '../netlify/functions/_lib/linksync.mjs';
 import { syncInternalLinks as reconcileLinksFromBody } from '../netlify/functions/_lib/links.mjs';
 import { dispatchFeaturedRender } from '../netlify/functions/_lib/dispatch.mjs';
@@ -143,30 +142,6 @@ async function verifyLive(url) {
       console.log(`  RE-DISPATCH featured image  ${row.post_id} (pending since ${row.generated_at})`);
     }
     if (reDispatched) console.log(`[status-sync] featured images: ${reDispatched} stuck render(s) re-dispatched`);
-  }
-
-  // Pinterest auto-posting: live posts with a rendered pin that haven't been pinned yet ->
-  // pin to their topic board + brand blog board via Blotato, then mark pinterest_posted.
-  let pinned = 0;
-  const pinUserId = (LIVE && PIT) ? await getGhlUserId(PIT) : null;
-  if (LIVE && PIT && pinUserId) {
-    const rows = await (await rest(`posts?status=eq.live&pinterest_posted=eq.false&url=not.is.null&select=id,blog,title,primary_keyword,url,cluster`)).json();
-    for (const p of (Array.isArray(rows) ? rows : [])) {
-      const [d] = await (await rest(`post_drafts?post_id=eq.${p.id}&select=assets,meta_description`)).json();
-      if (!d || !d.assets || !d.assets.pin_image_url) continue; // pin not rendered yet — try again next run
-      try {
-        const res = await postPinsForPost({ pit: PIT, userId: pinUserId, brand: p.blog, post: p, draft: d });
-        const ok = res.posted && res.posted.some(x => !x.error);
-        if (ok) {
-          await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ pinterest_posted: true }) });
-          pinned++;
-          console.log(`  PIN  [${p.blog}] ${p.title || p.primary_keyword} -> ${res.posted.map(x => x.board + (x.error ? ' (ERR)' : '')).join(', ')}`);
-        } else {
-          console.log(`  PIN-SKIP  [${p.blog}] ${p.title || p.primary_keyword}: ${res.skipped || (res.posted || []).map(x => x.error).join('; ')}`);
-        }
-      } catch (e) { console.error(`  FAIL pin ${p.id}: ${e.message}`); }
-    }
-    console.log(`[status-sync] pinterest: ${pinned} post(s) pinned`);
   }
 
   // Title backfill: live posts with no tracker title -> pull it from the GHL post (by

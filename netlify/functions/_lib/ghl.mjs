@@ -47,22 +47,6 @@ export async function createBlogPost({ brand, post, draft, pit, status = 'DRAFT'
   const b = BRANDS[brand];
   const title = (draft.assets && draft.assets.title) || post.title || post.primary_keyword;
   let rawHTML = affiliateLinkify(embedBodyImages(draft.body_html, draft.assets && draft.assets.body_images));
-  // Embed the Pinterest pin near the end (a "save this" graphic). Body is final at create
-  // time, so it must be baked in here. Inline styles only — GHL strips classes.
-  const pinUrl = draft.assets && draft.assets.pin_image_url;
-  if (pinUrl) {
-    const alt = String(title).replace(/"/g, '&quot;');
-    // Make the pin a "Save to Pinterest" link — Pinterest's Pin It URL opens a save
-    // dialog pre-filled with this post's URL + image + description (no JS needed, since
-    // GHL strips <script>), so readers can pin it to their own board.
-    const postUrl = publicUrl(brand, draft.slug);
-    const desc = String(draft.meta_description || title || '').replace(/"/g, '&quot;').slice(0, 480);
-    const saveHref = `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(postUrl)}&media=${encodeURIComponent(pinUrl)}&description=${encodeURIComponent(desc)}`;
-    rawHTML += `<div style="max-width:300px;margin:32px auto;text-align:center">`
-      + `<a href="${saveHref}" target="_blank" rel="nofollow noopener" title="Save this to Pinterest"><img src="${pinUrl}" alt="${alt}" style="display:block;width:100%;height:auto;border-radius:10px"></a>`
-      + `<div style="font-size:13px;margin-top:6px"><a href="${saveHref}" target="_blank" rel="nofollow noopener" style="color:#29abab;font-weight:600;text-decoration:none">📌 Save this to Pinterest</a></div>`
-      + `</div>`;
-  }
   const payload = {
     title,
     locationId: LOC,
