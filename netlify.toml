@@ -16,6 +16,16 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Scheduled posts go live at 15:00 SAST (13:00 UTC). GitHub's own cron is delayed by hours, so
+# publishing runs here instead: every 5 minutes, only acting once a post's go-live moment has
+# passed. The watchdog emails Karen at 16:00 SAST (14:00 UTC) if anything is still not live.
+# Scheduled functions cannot be called over HTTP.
+[functions."publish-due"]
+  schedule = "*/5 * * * *"
+
+[functions."publish-watchdog"]
+  schedule = "0 14 * * *"
+
 # Share links for drafts: /preview/<token> is served by the preview function (a rewrite, so the
 # address stays /preview/<token>). The page is noindex and never cached.
 [[redirects]]

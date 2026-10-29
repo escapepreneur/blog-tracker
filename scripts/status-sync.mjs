@@ -7,7 +7,9 @@
 //  - Indexing: on go-live, ask Google to crawl the URL (Indexing API); each run also
 //    flips Indexed no/requested -> yes once Search Console confirms. Needs GOOGLE_SA_KEY.
 //   env: SUPABASE_SERVICE_ROLE_KEY, GHL_API_TOKEN, GOOGLE_SA_KEY (optional)
-import { publishBlogPost, getBlogPostDetail, getBlogPostBySlug } from '../netlify/functions/_lib/ghl.mjs';
+import { getBlogPostDetail, getBlogPostBySlug } from '../netlify/functions/_lib/ghl.mjs';
+import { publishDue, goLiveAt } from '../netlify/functions/_lib/publishdue.mjs';
+import { alertHtml, sendAlert } from '../netlify/functions/_lib/alertmail.mjs';
 import { BRANDS } from '../netlify/functions/_lib/brands.mjs';
 import { requestIndexing, inspectIndexed, getServiceAccount } from '../netlify/functions/_lib/google.mjs';
 import { postPinsForPost, getGhlUserId } from '../netlify/functions/_lib/pinterest.mjs';
@@ -50,33 +52,37 @@ async function verifyLive(url) {
   const posts = await getScheduled();
   console.log(`[status-sync] ${posts.length} scheduled post(s)`);
   let published = 0, flipped = 0, waiting = 0, failed = 0;
+
+  // GHL-managed posts: publish once their go-live moment (15:00 SAST on the scheduled date)
+  // has passed. The Netlify function publish-due does this every 5 minutes and is the primary
+  // publisher; this run is the fallback. If it ends up publishing anything an hour or more
+  // after the go-live moment, the primary missed it, so email Karen (an independent signal
+  // from the Netlify watchdog, which only checks at 16:00 SAST).
+  if (PIT) {
+    const res = await publishDue({ rest, h, pit: PIT, live: LIVE });
+    published += res.published.length; failed += res.failed.length; waiting += res.waiting;
+    const late = res.published.filter(x => x.at && Date.parse(x.at) - goLiveAt(x.goLive) > 60 * 60000);
+    if (late.length || res.failed.length) {
+      const items = [
+        ...late.map(x => `<b>${x.label}</b> only went live at ${new Date(x.at).toISOString().slice(11, 16)} UTC, over an hour after its 3pm SAST time.`),
+        ...res.failed.map(x => `<b>${x.label}</b> could not be published: ${x.error}`),
+      ];
+      try {
+        await sendAlert({
+          subject: `⚠️ Scheduled post ${late.length ? 'went live late' : 'failed to publish'}`,
+          html: alertHtml({ intro: 'The automatic 3pm SAST publish did not do its job for:', items, note: 'The backup daily run caught this. Worth checking that the every-5-minutes publisher is still running.' }),
+        });
+      } catch (e) { console.error(`  could not send late-publish email: ${e.message}`); }
+    }
+  } else if (posts.some(p => p.ghl_post_id)) console.log('  HOLD  (no GHL_API_TOKEN) GHL-managed posts not published');
+
   for (const p of posts) {
     const label = `[${p.blog}] ${p.title || p.primary_keyword || p.id}`;
     const goLive = p.scheduled_date || p.published_date;
     if (!goLive)        { console.log(`  WAIT  (no date)            ${label}`); waiting++; continue; }
     if (goLive > today) { console.log(`  WAIT  (${goLive} > today)  ${label}`); waiting++; continue; }
 
-    if (p.ghl_post_id) {                       // GHL-managed -> publish live on its date
-      if (!PIT) { console.log(`  HOLD  (no GHL_API_TOKEN)   ${label}`); waiting++; continue; }
-      console.log(`  PUBLISH  ${label}  (ghl ${p.ghl_post_id})`);
-      if (LIVE) {
-        try {
-          const img = await getFeatured(p.id);
-          await publishBlogPost({ ghlPostId: p.ghl_post_id, pit: PIT, brand: p.blog, imageUrl: img, imageAltText: p.title || p.primary_keyword });
-          await setLive(p, goLive);
-          published++;
-          // Verify the page is actually serving before asking Google to crawl it — publishing
-          // can take a moment to propagate, and a too-early request just gets a 404 that then
-          // sits stale for weeks. If it's not up yet, leave indexed as-is; the self-heal loop
-          // below (ageDays 2-30) will verify + request once the page is confirmed live.
-          if (p.url) { try { if ((await verifyLive(p.url)) === 200) { await requestIndexing(p.url); await rest(`posts?id=eq.${p.id}`, { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ indexed: 'requested' }) }); } } catch (e) { /* indexing best-effort */ } }
-          // Mirror the real in-body links the generator already wrote into the tracking
-          // table, so "Needs Links" reflects what's actually in the published article.
-          try { await syncInternalLinks({ rest, h, blog: p.blog, postId: p.id }); } catch (e) { /* best-effort */ }
-        } catch (e) { console.error(`  FAIL publish ${label}: ${e.message}`); failed++; }
-      } else published++;
-      continue;
-    }
+    if (p.ghl_post_id) continue;               // GHL-managed posts were handled by publishDue above
 
     // legacy posts (no ghl_post_id)
     if (p.url) {

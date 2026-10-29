@@ -1,11 +1,13 @@
 name: Status auto-sync
 
-# Flips scheduled posts to "live" once their go-live date arrives, so the
-# tracker can't drift out of sync with what's actually published.
+# Fallback + housekeeping run. The primary publisher is the Netlify function publish-due
+# (every 5 minutes), because GitHub delays scheduled runs by hours. This run still publishes
+# anything that was missed (and emails Karen if it had to), plus indexing, Pinterest and
+# link housekeeping.
 
 on:
   schedule:
-    - cron: '0 13 * * *'   # daily ~09:00 America/New_York (13:00 UTC)
+    - cron: '0 13 * * *'   # daily, 13:00 UTC = 15:00 SAST (GitHub may start it hours late)
   workflow_dispatch:
     inputs:
       mode:
@@ -25,6 +27,7 @@ jobs:
       - name: Run status sync (${{ inputs.mode || 'live' }})
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           GHL_API_TOKEN: ${{ secrets.GHL_API_TOKEN }}
           GOOGLE_SA_KEY: ${{ secrets.GOOGLE_SA_KEY }}
           GITHUB_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
